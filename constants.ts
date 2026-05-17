@@ -32,13 +32,104 @@ export const DEFAULT_SYSTEM_INSTRUCTION = `Sei Ada, un'assistente AI avanzata sp
 - **Contesto-Aware:** Sei consapevole del contesto specifico (es. tipo di scuola, età degli studenti, materie) e adatti le tue proposte di conseguenza.
 - **Personalizzata:** Sei consapevole del profilo del docente con cui stai interagendo (nome, materia, ruolo) e lo usi per rendere la conversazione più pertinente.`;
 
-export const DEFAULT_CONSTITUTION = ``;
-export const DEFAULT_CREW_CONTEXT = ``;
-export const DEFAULT_RULES_CONTEXT = ``;
-export const DEFAULT_TEACHER_PROFILE = `Nome: 
-Materia: 
+export const DEFAULT_CONSTITUTION = `MODULO 0: Orientamento
+Ruolo: Modulo introduttivo per accogliere gli studenti e presentare il percorso formativo, il metodo di lavoro e gli strumenti del laboratorio.
+Significato: È il momento in cui il gruppo-classe prende forma come comunità di pratica. Si stabiliscono le regole di convivenza, si esplorano le aspettative reciproche e si attivano le prime competenze progettuali.
+
+MODULO 1: Fondamenti del Design
+Ruolo: Introduzione ai principi fondamentali del design: storia, linguaggi visivi, teoria del colore, tipografia e composizione.
+Significato: Gli studenti sviluppano un vocabolario visivo condiviso e imparano a "leggere" gli artefatti del mondo artificiale con occhio critico.
+⦁ Pilastri di Sintonizzazione: Osservazione consapevole; Analisi visiva; Storia del design
+⦁ Pilastri Operativi: Teoria del colore; Tipografia; Composizione e layout
+⦁ Attività Chiave: Autopsia dell'oggetto; Moodboard; Brief di progetto
+
+MODULO 2: Processo Progettuale
+Ruolo: Apprendimento e applicazione del metodo progettuale: dalla ricerca all'ideazione, dal prototipo alla presentazione.
+Significato: Gli studenti sperimentano l'intero ciclo del design thinking, dalla comprensione del problema alla soluzione comunicata con chiarezza.
+⦁ Pilastri di Sintonizzazione: Design Thinking; Ricerca utente; Problem framing
+⦁ Pilastri Operativi: Sketching e ideazione; Prototipazione rapida; Presentazione del progetto
+⦁ Attività Chiave: Mappa di empatia; Prototipo carta; Pitch di progetto
+
+MODULO 3: Progetto Integrato
+Ruolo: Applicazione autonoma delle competenze acquisite in un progetto complesso e multidisciplinare, con consegna finale.
+Significato: Il modulo conclusivo verifica la capacità degli studenti di gestire un processo progettuale in autonomia, integrando competenze tecniche, creative e comunicative.
+⦁ Pilastri di Sintonizzazione: Autonomia progettuale; Pensiero sistemico; Autovalutazione
+⦁ Pilastri Operativi: Project management; Documentazione del processo; Comunicazione del progetto
+⦁ Attività Chiave: Portfolio; Esposizione finale; Peer review
+
+MODULO 4: Riflessione e Bilancio
+Ruolo: Modulo conclusivo dedicato alla valutazione del percorso, alla riflessione metacognitiva e alla proiezione verso il futuro.
+Significato: Gli studenti guardano indietro con consapevolezza e in avanti con intenzione. È il momento della narrazione personale del proprio apprendimento.`;
+
+export const DEFAULT_ROUTE_CONTEXT = `Settimana 1: 15-19 settembre 2025 (3 blocchi) - Accoglienza e presentazione del corso
+Settimana 2: 22-26 settembre 2025 (3 blocchi) - Fondamenti: osservare e descrivere
+Settimana 3: 29 settembre - 3 ottobre 2025 (3 blocchi) - Teoria del colore e linguaggi visivi
+Settimana 4: 6-10 ottobre 2025 (3 blocchi) - Tipografia: leggere e progettare il testo
+Settimana 5: 13-17 ottobre 2025 (3 blocchi) - Composizione e layout
+Settimana 6: 20-24 ottobre 2025 (3 blocchi) - Autopsia dell'oggetto e analisi critica
+Settimana 7: 3-7 novembre 2025 (3 blocchi) - Introduzione al Design Thinking
+Settimana 8: 10-14 novembre 2025 (3 blocchi) - Ricerca utente e mappa di empatia
+Settimana 9: 17-21 novembre 2025 (3 blocchi) - Ideazione e sketching
+Settimana 10: 24-28 novembre 2025 (3 blocchi) - Prototipazione rapida
+Settimana 11: 1-5 dicembre 2025 (3 blocchi) - Test e iterazione
+Settimana 12: 8-12 dicembre 2025 (3 blocchi) - Presentazione e pitch
+Settimana 13: 15-19 dicembre 2025 (3 blocchi) - Revisione e bilancio del primo periodo
+Settimana 14: 12-16 gennaio 2026 (3 blocchi) - Avvio progetto integrato: brief e ricerca
+Settimana 15: 19-23 gennaio 2026 (3 blocchi) - Progetto integrato: ideazione
+Settimana 16: 26-30 gennaio 2026 (3 blocchi) - Progetto integrato: sviluppo
+Settimana 17: 2-6 febbraio 2026 (3 blocchi) - Progetto integrato: prototipo
+Settimana 18: 9-13 febbraio 2026 (3 blocchi) - Progetto integrato: comunicazione
+Settimana 19: 23-27 febbraio 2026 (3 blocchi) - Progetto integrato: revisione finale
+Settimana 20: 2-6 marzo 2026 (3 blocchi) - Esposizione e peer review
+Settimana 21: 9-13 marzo 2026 (3 blocchi) - Portfolio e documentazione
+Settimana 22: 16-20 marzo 2026 (3 blocchi) - Riflessione metacognitiva
+Settimana 23: 23-27 marzo 2026 (3 blocchi) - Bilancio del percorso e autovalutazione`;
+
+export const DEFAULT_CREW_CONTEXT = `[Sostituisci con i nomi reali delle tue studentesse/studenti, uno per riga]
+
+Sofia Bianchi
+Giulia Rossi
+Martina Ferrari
+Elena Conti
+Alessia Ricci
+Sara Lombardi
+Valentina Greco
+Chiara Romano
+Federica Esposito
+Alice Moretti
+Laura Fontana
+Emma De Luca
+Giorgia Barbieri
+Beatrice Gallo
+Francesca Marini`;
+
+export const DEFAULT_RULES_CONTEXT = `# Sistema di Valutazione — Laboratorio di Design
+
+## Criteri di Valutazione
+
+### 1. Qualità degli Elaborati (40%)
+Valuta la qualità tecnica e concettuale dei lavori prodotti: coerenza progettuale, cura formale, originalità delle soluzioni e padronanza degli strumenti.
+
+### 2. Partecipazione Attiva (20%)
+Valuta il contributo durante le attività in aula: interventi, domande, disponibilità al confronto e capacità di alimentare la discussione collettiva.
+
+### 3. Collaborazione (20%)
+Valuta la capacità di lavorare in gruppo: ascolto attivo, rispetto dei ruoli, contributo al lavoro collettivo e gestione dei conflitti creativi.
+
+### 4. Resilienza Creativa (20%)
+Valuta la capacità di affrontare l'errore come risorsa: disponibilità a iterare, a cambiare prospettiva e a non fermarsi di fronte alle difficoltà progettuali.
+
+## Scale di Valutazione Qualitativa
+- **Punto di Forza** → competenza consolidata, elemento distintivo del profilo dello studente
+- **Stabile** → competenza adeguata, in linea con le attese
+- **Da Potenziare** → competenza in sviluppo, richiede attenzione e supporto mirato
+
+## Note
+La valutazione è prevalentemente formativa: accompagna il processo più che misurare il prodotto. Le osservazioni raccolte durante le lezioni alimentano il profilo individuale di ciascuno studente e guidano le scelte didattiche del docente.`;
+
+export const DEFAULT_TEACHER_PROFILE = `Nome:
+Materia:
 Ruolo: `;
-export const DEFAULT_ROUTE_CONTEXT = ``;
 
 
 export const GEMINI_API_ERROR_MESSAGE = "Oops! Qualcosa è andato storto. Assicurati che la tua chiave API sia configurata correttamente e riprova.";
