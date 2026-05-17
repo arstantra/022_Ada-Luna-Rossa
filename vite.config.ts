@@ -3,7 +3,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  // base: '/' è il default — corretto per il sottodominio ada.nuovadidattica.eu
+  // Quando aggiungi il dominio ada.nuovadidattica.eu, cambia base a '/'
+  base: '/022_Ada-Luna-Rossa/',
   server: {
     port: 3000,
     host: '0.0.0.0',
