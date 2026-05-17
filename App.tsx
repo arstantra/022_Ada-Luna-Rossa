@@ -1,26 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useMasterContext } from './hooks/useMasterContext';
 import { ConstitutionCacheProvider } from './contexts/ConstitutionCacheContext';
 import MainApp from './components/MainApp';
-import LoginView from './components/LoginView';
 import FoundingDocumentsView from './components/FoundingDocumentsView';
 import ApiKeySetup from './components/ApiKeySetup';
-import { APP_CONFIG } from './config';
+import AppHeader from './components/AppHeader';
+import AppFooter from './components/AppFooter';
 import { SparklesIcon } from './components/Icons';
 import { ADA_API_KEY_STORAGE } from './services/gemini';
 
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(ADA_API_KEY_STORAGE) || '');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const masterContext = useMasterContext();
-
-  useEffect(() => {
-      // Allow access without password in development if password is not robust
-      if (APP_CONFIG.PASSWORD === 'INSERISCI_UNA_PASSWORD_ROBUSTA_QUI') {
-          setIsAuthenticated(true);
-      }
-  }, []);
 
   const handleApiKeySet = (key: string) => {
     localStorage.setItem(ADA_API_KEY_STORAGE, key);
@@ -28,22 +20,9 @@ const App: React.FC = () => {
     setShowApiKeyModal(false);
   };
 
-  const handleLogin = (password: string): boolean => {
-    if (password === APP_CONFIG.PASSWORD) {
-        // Use component state for authentication, avoiding sessionStorage
-        setIsAuthenticated(true);
-        return true;
-    }
-    return false;
-  };
-
   // Primo step: inserimento chiave API
   if (!apiKey) {
     return <ApiKeySetup onApiKeySet={handleApiKeySet} />;
-  }
-
-  if (!isAuthenticated) {
-    return <LoginView onLogin={handleLogin} />;
   }
   
   if (masterContext.isLoading) {
@@ -76,7 +55,13 @@ const App: React.FC = () => {
           onClose={() => setShowApiKeyModal(false)}
         />
       )}
-      <MainApp masterContext={masterContext} onOpenApiSettings={() => setShowApiKeyModal(true)} />
+      <div className="flex flex-col h-screen w-screen">
+        <AppHeader />
+        <div className="flex-1 overflow-hidden pt-14">
+          <MainApp masterContext={masterContext} onOpenApiSettings={() => setShowApiKeyModal(true)} />
+        </div>
+        <AppFooter />
+      </div>
     </ConstitutionCacheProvider>
   );
 };
