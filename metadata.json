@@ -1,0 +1,6 @@
+{
+  "name": "Ada - Lab Designer",
+  "description": "Laboratorio di Design Didattico avanzato con integrazione Gemini AI, gestione registro e pianificazione settimanale.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

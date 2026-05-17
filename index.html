@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ada Gemini - Laboratorio di Design</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Lora', 'serif'],
+            },
+            keyframes: {
+              'fade-in-down': {
+                '0%': {
+                  opacity: '0',
+                  transform: 'translateY(-10px)'
+                },
+                '100%': {
+                  opacity: '1',
+                  transform: 'translateY(0)'
+                },
+              },
+              'fade-in-up': {
+                '0%': {
+                  opacity: '0',
+                  transform: 'translateY(10px)'
+                },
+                '100%': {
+                  opacity: '1',
+                  transform: 'translateY(0)'
+                },
+              },
+              'ping': {
+                '75%, 100%': {
+                  transform: 'scale(2)',
+                  opacity: '0'
+                }
+              }
+            },
+            animation: {
+              'fade-in-down': 'fade-in-down 0.2s ease-out',
+              'fade-in-up': 'fade-in-up 0.3s ease-out',
+              'ping': 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      /* Custom scrollbar for Webkit browsers */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #3B82F6; /* blue-500 */
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: #60A5FA; /* blue-400 */
+      }
+      .prose {
+        color: #d1d5db; /* gray-300 */
+      }
+      .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+        color: #f9fafb; /* gray-50 */
+      }
+      .prose strong {
+        color: #f9fafb; /* gray-50 */
+      }
+      .prose blockquote {
+        border-left-color: #4b5563; /* gray-600 */
+        color: #9ca3af; /* gray-400 */
+      }
+      .prose code {
+        color: #fcd34d; /* amber-300 */
+      }
+      .prose a {
+        color: #60a5fa; /* blue-400 */
+      }
+      .prose ul > li::before {
+        background-color: #6b7280; /* gray-500 */
+      }
+
+      /* Vertical rhythm for WYSIWYG content */
+      .prose p, 
+      .prose ul, 
+      .prose ol, 
+      .prose blockquote, 
+      .prose pre {
+        margin-top: 1em;
+        margin-bottom: 1em;
+      }
+      .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+        margin-top: 1.5em;
+        margin-bottom: 1em;
+      }
+      /* Prevent extra space at the start and end of a message */
+      .prose > :first-child {
+        margin-top: 0;
+      }
+      .prose > :last-child {
+        margin-bottom: 0;
+      }
+
+      /* Styles for the new Document Editor */
+      .document-editor-page {
+        color: #1f2937; /* gray-800 */
+        font-family: 'Lora', serif;
+        line-height: 1.7;
+        width: 21cm;
+        min-height: 29.7cm;
+        padding: 2.54cm; /* 1 inch margins */
+        margin: 2rem auto;
+        background: white;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        border-radius: 4px;
+      }
+      .document-editor-page:focus {
+        outline: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1), 0 0 0 3px rgba(96, 165, 250, 0.5); /* blue-400 focus */
+      }
+      .document-editor-page h1 { font-size: 2em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; line-height: 1.2; }
+      .document-editor-page h2 { font-size: 1.5em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; line-height: 1.3; }
+      .document-editor-page h3 { font-size: 1.17em; font-weight: 600; margin-top: 1em; margin-bottom: 0.5em; line-height: 1.4; }
+      .document-editor-page p { margin-bottom: 1em; }
+      .document-editor-page ul { list-style: disc; padding-left: 1.5em; margin-bottom: 1em; }
+      .document-editor-page ol { list-style: decimal; padding-left: 1.5em; margin-bottom: 1em; }
+      .document-editor-page li { margin-bottom: 0.5em; }
+      .document-editor-page blockquote {
+        border-left: 3px solid #d1d5db; /* gray-300 */
+        padding-left: 1em;
+        margin-left: 0;
+        font-style: italic;
+        color: #4b5563; /* gray-600 */
+      }
+      .document-editor-page a { color: #2563eb; text-decoration: underline; }
+      .document-editor-page hr.page-break {
+        border: 0;
+        height: 1px;
+        background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+        margin: 2em 0;
+      }
+
+      .editor-toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .editor-toolbar-button {
+        @apply p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors;
+      }
+      .editor-toolbar-button.is-active {
+        @apply bg-blue-600 text-white hover:bg-blue-500;
+      }
+      .editor-format-select option {
+        background: black;
+        color: #7dd3fc; /* sky-300 from tailwind */
+      }
+      
+      @media print {
+        body {
+          background-color: white !important;
+          color: black !important;
+        }
+        .no-print, .sidebar-container {
+          display: none !important;
+        }
+        main.print-container {
+          display: block !important;
+          width: 100% !important;
+          height: auto !important;
+          overflow: visible !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background-color: white !important;
+        }
+        .strategic-dashboard-print details {
+          page-break-inside: avoid;
+          border: 1px solid #ccc !important;
+        }
+        .strategic-dashboard-print details[open] {
+          padding-bottom: 1rem;
+        }
+        .strategic-dashboard-print details summary {
+          list-style: none;
+        }
+        .strategic-dashboard-print details summary::-webkit-details-marker {
+          display: none;
+        }
+        .strategic-dashboard-print .print-header {
+          display: flex !important;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 2px solid #ccc;
+          padding-bottom: 0.5rem;
+          margin-bottom: 1rem;
+        }
+        .strategic-dashboard-print input[type="text"] {
+          border: none !important;
+          background: transparent !important;
+          padding: 2px;
+          width: 100%;
+          color: black !important;
+        }
+        .bg-gray-800, .bg-gray-800\/50, .bg-gray-900\/50, .bg-gray-700, .bg-gray-800\/80 {
+          background-color: transparent !important;
+        }
+        .text-white, .text-gray-200, .text-gray-300, .text-gray-400 {
+          color: black !important;
+        }
+        .border-gray-700, .border-gray-700\/50 {
+          border-color: #ccc !important;
+        }
+      }
+
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0",
+    "marked": "https://aistudiocdn.com/marked@^13.0.0",
+    "turndown": "https://aistudiocdn.com/turndown@^7.2.0",
+    "idb": "https://aistudiocdn.com/idb@^8.0.0",
+    "crypto-js": "https://aistudiocdn.com/crypto-js@^4.2.0",
+    "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.1.0",
+    "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^8.0.0",
+    "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-[#0D1117]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
