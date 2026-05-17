@@ -36,6 +36,9 @@ jobs:
       - name: Build dell'applicazione
         run: npm run build
 
+      - name: Crea file CNAME per dominio personalizzato
+        run: echo "ada.nuovadidattica.eu" > ./dist/CNAME
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
