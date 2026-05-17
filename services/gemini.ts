@@ -80,7 +80,7 @@ export const distillText = async (textToDistill: string): Promise<string> => {
     const prompt = `Sei un esperto di sintesi e chiarezza. Distilla il seguente testo, migliorandone la struttura, la leggibilità e l'impatto, mantenendo il significato originale. Rimuovi ogni ridondanza e rendilo più conciso e potente. Restituisci solo il testo distillato, senza commenti o introduzioni.\n\nTESTO DA DISTILLARE:\n\n${textToDistill}`;
     
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: { 
             temperature: 0.3,
@@ -145,7 +145,7 @@ export const streamChatResponse = async (
     }
 
     return getAI().models.generateContentStream({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents,
         config
     });
@@ -197,7 +197,7 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
     const prompt = `Obiettivo: ${objective}\nLista Studentesse:\n${studentList}\n\nCrea gruppi di lavoro bilanciati. Considera possibili dinamiche di gruppo e crea combinazioni eterogenee o omogenee a seconda dell'obiettivo, fornendo una motivazione per ogni gruppo. Ogni gruppo deve avere un massimo di ${maxGroupSize} studentesse. Se il numero totale di studentesse non è divisibile equamente, crea gruppi di dimensioni il più possibile simili, rispettando questo limite massimo (ad esempio, alcuni gruppi potrebbero avere una studentessa in più o in meno).`;
     
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [groupSuggestionSchema] }],
@@ -233,7 +233,7 @@ export const generateLessonAnalysis = async (notes: string, studentNames: string
     const prompt = `Analizza le seguenti note di lezione. I nomi delle studentesse sono: ${studentNames.join(', ')}.\n\nNOTE:\n${notes}`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [lessonAnalysisSchema] }],
@@ -269,7 +269,7 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
     const prompt = `Sei un'assistente pedagogico. Analizza il seguente testo di valutazione per la studentessa "${studentName}" ed estrai le informazioni strutturate usando lo schema fornito. Se non riesci a inferire un campo opzionale, omettilo. Il campo 'notes' deve contenere un riassunto qualitativo della valutazione.\n\nTESTO DA ANALIZZARE:\n"${evaluationText}"`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [evaluationAnalysisSchema] }],
@@ -368,7 +368,7 @@ ${corpus}
 Estrai i dati in modo rigoroso e strutturato.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [qualitativeAnalysisSchema] }],
@@ -394,7 +394,7 @@ export const generateClassroomTrendAnalysis = async (qualitativeData: string, qu
     const prompt = `Sei un'analista didattico. Ti fornirò dati qualitativi sull'andamento della classe (derivati da inferenze) e le note qualitative generali del docente. Il tuo compito è incrociare queste informazioni per generare una sintesi strategica.\n\n**DATI QUALITATIVI E TREND INFERITI:**\n${qualitativeData}\n\n**NOTE QUALITATIVE DEL DOCENTE:**\n${qualitativeNotes}\n\n**TUA ANALISI:**\nBasandoti su tutto questo, fornisci una sintesi che includa:\n1. Un'analisi del trend generale dell'energia della classe.\n2. Identificazione di cluster di studentesse (es. profili di crescita simili).\n3. Suggerimenti strategici concreti per le prossime lezioni basati sulla mappa dei concetti.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             thinkingConfig: { thinkingBudget: 32768 }
@@ -426,7 +426,7 @@ Basandoti su tutto questo, fornisci una sintesi che includa:
 Usa un tono costruttivo e professionale. Formatta la risposta in Markdown.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             temperature: 0.5,
@@ -458,7 +458,7 @@ ${weekContext}
 Usa la funzione 'suggest_week_theme' per la tua risposta.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [themeSchema] }],
@@ -505,7 +505,7 @@ Basandoti su una sintesi di **entrambi** i testi ("Estratto dalla Costituzione" 
 Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti. Assicurati che ogni variante sia una diretta conseguenza dei contenuti forniti.`;
     
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [objectiveSuggestionsSchema] }],
@@ -548,7 +548,7 @@ ${pillarContext ? `- **Pilastro di Focus:** ${pillarContext}\n` : ''}
 Usa la funzione 'generate_strategic_suggestions' per la tua risposta. Fornisci un tema, 2-3 obiettivi e una motivazione.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [strategicSuggestionsSchema] }],
@@ -588,7 +588,7 @@ export const generateBlockDetails = async (objective: string, theme: string): Pr
 Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i materiali dovrebbero essere liste di punti. Il titolo può usare markdown per la formattazione.`;
 
     const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [blockDetailsSchema] }],
