@@ -14,10 +14,19 @@ interface ChatViewProps {
 }
 
 const WelcomeScreen: React.FC = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center">
-        <div className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-4">Ada Gemini</div>
-        <p className="text-xl text-gray-400">Laboratorio di Design</p>
-        <p className="mt-2 text-gray-500">Seleziona una conversazione o creane una nuova per iniziare.</p>
+    <div className="flex flex-col items-center justify-center h-full text-center px-8 gap-6">
+        <div className="space-y-2">
+            <div className="font-display text-6xl font-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-gray-200 to-gray-500">
+                Ada
+            </div>
+            <p className="font-display text-sm font-600 tracking-[0.3em] uppercase text-purple-400">
+                Laboratorio di Design
+            </p>
+        </div>
+        <div className="w-16 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+        <p className="text-sm text-gray-500 max-w-sm leading-relaxed">
+            Seleziona una conversazione dalla barra laterale o creane una nuova per iniziare a lavorare con Ada.
+        </p>
     </div>
 );
 
@@ -49,36 +58,48 @@ const ChatView: React.FC<ChatViewProps> = ({
 
 
   if (!conversation) {
-    return <main className="flex-1 flex flex-col bg-[#0D1117]"><WelcomeScreen /></main>;
+    return (
+      <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
+        <WelcomeScreen />
+        <div className="flex-shrink-0 px-6 pb-6 max-w-3xl mx-auto w-full">
+          <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
-        <header className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-700/50 bg-gray-800">
-            <div className="flex items-center gap-3">
-                <ChatBubbleOvalLeftEllipsisIcon className="h-6 w-6 text-gray-400" />
-                <h1 className="text-lg font-semibold text-white">{conversation.title}</h1>
-            </div>
-        </header>
-        
+      {/* Header conversazione */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-6 py-4 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
+        <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 text-purple-400 flex-shrink-0" />
+        <h1 className="font-display font-600 text-white truncate">{conversation.title}</h1>
+      </div>
+
       {studentForConversation && <StudentSheetHeader student={studentForConversation} />}
 
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-        {conversation.messages.filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
-          <div key={msg.id} id={`message-${msg.id}`} className="animate-fade-in-up">
-            <MessageView 
-              message={msg} 
-              onShowToast={onShowToast} 
-              isLastMessage={index === conversation.messages.length - 1}
-              onSendMessage={onSendMessage}
-            />
-          </div>
-        ))}
+      {/* Messaggi */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+          {conversation.messages.filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
+            <div key={msg.id} id={`message-${msg.id}`} className="animate-fade-in-up">
+              <MessageView
+                message={msg}
+                onShowToast={onShowToast}
+                isLastMessage={index === conversation.messages.length - 1}
+                onSendMessage={onSendMessage}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      
-      <footer className="flex-shrink-0 p-4 bg-[#1F2937]">
-        <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
-      </footer>
+
+      {/* Input */}
+      <div className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto">
+          <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
+        </div>
+      </div>
     </main>
   );
 };

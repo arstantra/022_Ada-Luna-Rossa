@@ -1308,7 +1308,7 @@ ${htmlBody}
 
   return (
     <>
-      <div className="flex h-screen w-screen bg-gray-900 text-gray-100 font-sans">
+      <div className="flex h-full w-full bg-gray-900 text-gray-100 font-sans">
         <input type="file" ref={importFileRef} onChange={handleFileSelectedForImport} accept=".ada_encrypted" className="hidden" />
         <Sidebar
           conversations={conversations} activeConversationId={activeConversationId}
