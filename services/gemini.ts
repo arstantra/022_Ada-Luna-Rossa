@@ -137,7 +137,7 @@ export const streamChatResponse = async (
             role: 'system',
             parts: [{ text: `${systemInstruction}\n\n# CONTESTO GLOBALE:\n${fullContext}` }]
         },
-        thinkingConfig: { thinkingBudget: 32768 }
+        thinkingConfig: { thinkingBudget: 8192 }
     };
     
     if (useGoogleSearch) {
@@ -202,7 +202,7 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
         config: {
             tools: [{ functionDeclarations: [groupSuggestionSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
 
@@ -238,7 +238,7 @@ export const generateLessonAnalysis = async (notes: string, studentNames: string
         config: {
             tools: [{ functionDeclarations: [lessonAnalysisSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
 
@@ -274,7 +274,7 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
         config: {
             tools: [{ functionDeclarations: [evaluationAnalysisSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
 
@@ -373,7 +373,7 @@ Estrai i dati in modo rigoroso e strutturato.`;
         config: {
             tools: [{ functionDeclarations: [qualitativeAnalysisSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
 
@@ -397,7 +397,7 @@ export const generateClassroomTrendAnalysis = async (qualitativeData: string, qu
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
     return response.text.trim();
@@ -430,7 +430,7 @@ Usa un tono costruttivo e professionale. Formatta la risposta in Markdown.`;
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             temperature: 0.5,
-            thinkingConfig: { thinkingBudget: 32768 }
+            thinkingConfig: { thinkingBudget: 8192 }
         }
     });
     return response.text.trim();
