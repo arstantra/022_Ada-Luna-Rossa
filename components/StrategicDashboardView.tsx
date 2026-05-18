@@ -282,8 +282,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     const BlockDot: React.FC<{ state: keyof typeof DOT_CONFIG; label: string }> = ({ state, label }) => {
         const cfg = DOT_CONFIG[state];
         return (
-            <div className="flex flex-col items-center gap-0.5" title={state.replace('_', ' ')}>
-                <span className={`text-[8px] font-mono font-bold leading-none ${cfg.label}`}>{label}</span>
+            <div className="flex flex-col items-center gap-1" title={state.replace('_', ' ')}>
+                <span className={`text-[9px] font-mono font-medium leading-none tracking-tight ${cfg.label}`}>{label}</span>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
             </div>
         );
@@ -319,7 +319,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                 <div className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm no-print">
                     <div className="flex items-center gap-3">
                         <ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400/80" />
-                        <h2 className="text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
+                        <h2 className="font-display text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
                     </div>
                     <div className="flex items-center gap-1">
                         <button onClick={handleCollapseAll} className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60">
@@ -348,15 +348,16 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                             <details key={week.weekNumber} className="group rounded-xl border border-gray-700/40 bg-gray-800/35 overflow-hidden transition-all duration-200 hover:border-gray-600/50">
                                 <summary className="list-none [&::-webkit-details-marker]:hidden px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/20 transition-colors">
                                     <div className="flex-grow flex items-center gap-5 min-w-0">
-                                        <div className="flex-shrink-0">
-                                            <div className="flex items-baseline gap-2">
-                                                <h3 className="font-bold text-xl text-white tracking-tight">
+                                        {/* Week info box */}
+                                        <div className="flex-shrink-0 flex flex-col gap-2 bg-gray-800/60 border border-gray-700/35 rounded-xl px-3.5 py-2.5" style={{minWidth: '96px'}}>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="font-display font-bold text-sm text-white leading-tight tracking-tight">
                                                     Settimana {week.weekNumber}
-                                                </h3>
-                                                <span className="text-xs text-gray-500 font-mono">{week.dates}</span>
+                                                </span>
+                                                <span className="font-mono text-[10px] text-gray-500 leading-none">{week.dates}</span>
                                             </div>
                                             {/* Dots stato blocchi */}
-                                            <div className="flex items-end gap-2 mt-2">
+                                            <div className="flex items-center gap-2">
                                                 {week.blocks.map((block, i) => (
                                                     <BlockDot
                                                         key={block.id}
@@ -393,7 +394,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                             <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/30 transition-colors">
                                                 <div className="flex-grow flex flex-col gap-3">
                                                     <div className="flex items-center gap-2.5">
-                                                        <span className="text-xs font-mono font-semibold text-gray-500 flex-shrink-0 uppercase tracking-wide">Bl.{index + 1}{dateString}</span>
+                                                        <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
@@ -510,18 +511,18 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                             </summary>
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
                                                 <div>
-                                                    <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600">Estratto dalla Costituzione</label>
+                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Estratto dalla Costituzione</label>
                                                     <EditableTextarea value={block.lessonTitle || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="Verrà popolato selezionando un modulo..." rows={1} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600">Idea / Prompt per Ada</label>
+                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label>
                                                     <EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                             </div>
                                         </details>
                                     )})}
                                     <div className="mt-3 pt-4 border-t border-gray-700/30">
-                                        <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600 mb-1 block">Note sulla Settimana</label>
+                                        <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Note sulla Settimana</label>
                                         <EditableTextarea value={week.notes || ''} onSave={(val) => onUpdateWeekDetails(week.weekNumber, { notes: val })} placeholder="Appunti, promemoria, collegamenti interdisciplinari..." />
                                     </div>
                                 </div>
