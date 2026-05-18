@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus } from '../types';
-import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, CheckCircleIcon } from './Icons';
+import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
@@ -21,7 +21,6 @@ interface StrategicDashboardViewProps {
     onGenerateBlockDetails: (weekNumber: number, blockIndex: number) => Promise<void>;
     onUpdateWeekDetails: (weekNumber: number, details: Partial<Pick<WeekPlan, 'notes'>>) => void;
     onUpdateBlockDetails: (weekNumber: number, blockIndex: number, details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonMaterials' | 'isLocked'>>) => void;
-    onToggleWeekCompletion: (weekNumber: number) => void;
     onStartPlanning: (weekInfo: WeekRouteInfo) => void;
     onUpdateBlockModuleAndPillar: (weekNumber: number, blockIndex: number, module: string, pillar: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
@@ -30,7 +29,7 @@ interface StrategicDashboardViewProps {
 
 const pillarTypes = ['Pilastri di Sintonizzazione', 'Pilastri Operativi', 'Attività Chiave'];
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onToggleWeekCompletion, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
@@ -66,7 +65,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                 ...week,
                 theme: plan?.theme || '',
                 notes: plan?.notes || '',
-                completionStatus: plan?.completionStatus || 'pending',
                 blocks: plan?.blocks || Array.from({ length: week.totalBlocks }, (_, i) => ({ id: `stub-${week.weekNumber}-${i}`, day: 'N/D', status: 'da definire' } as BlockDetails)),
             };
         });
@@ -259,28 +257,54 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     }, [weekData]);
 
-    const getStatusStyles = (status: 'pending' | 'current' | 'completed') => {
-        switch (status) {
-            case 'current':
-                return {
-                    detailsClass: 'bg-orange-900/20 opacity-100 border-l-4 border-orange-500/50',
-                    iconClass: 'text-orange-500',
-                    title: "Marca come 'completata'",
-                };
-            case 'completed':
-                return {
-                    detailsClass: 'bg-gray-900/50 opacity-80 border-l-4 border-green-600/50',
-                    iconClass: 'text-green-500',
-                    title: "Marca come 'da fare'",
-                };
-            case 'pending':
-            default:
-                return {
-                    detailsClass: 'bg-gray-800/50 border-gray-700/50',
-                    iconClass: 'text-gray-500 group-hover:text-gray-300',
-                    title: "Marca come 'settimana corrente'",
-                };
+    // ── Derivazione stato blocco ────────────────────────────────────────────────
+    const getBlockProgressState = (block: BlockDetails): 'da_fare' | 'in_corso' | 'completato' | 'speciale' => {
+        if (block.status === 'saltato' || block.status === 'formazione scuola-lavoro' || block.status === 'annullato') {
+            return 'speciale';
         }
+        if (block.contentBlocks && block.contentBlocks.length > 0) {
+            return 'completato';
+        }
+        if (block.objective?.trim() || block.module?.trim() || (block.messages && block.messages.length > 0)) {
+            return 'in_corso';
+        }
+        return 'da_fare';
+    };
+
+    // ── Dot per la riga compressa ───────────────────────────────────────────────
+    const DOT_CONFIG = {
+        da_fare:    { dot: 'bg-red-500',     label: 'text-red-500/80'    },
+        in_corso:   { dot: 'bg-amber-400',   label: 'text-amber-400/80'  },
+        completato: { dot: 'bg-emerald-500', label: 'text-emerald-500/80'},
+        speciale:   { dot: 'bg-gray-500',    label: 'text-gray-500/80'   },
+    } as const;
+
+    const BlockDot: React.FC<{ state: keyof typeof DOT_CONFIG; label: string }> = ({ state, label }) => {
+        const cfg = DOT_CONFIG[state];
+        return (
+            <div className="flex flex-col items-center gap-0.5" title={state.replace('_', ' ')}>
+                <span className={`text-[8px] font-mono font-bold leading-none ${cfg.label}`}>{label}</span>
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+            </div>
+        );
+    };
+
+    // ── Badge per il blocco espanso ─────────────────────────────────────────────
+    const BADGE_CONFIG = {
+        da_fare:    { label: 'Da fare',    cls: 'text-red-400 bg-red-500/10 border-red-500/25'        },
+        in_corso:   { label: 'In corso',   cls: 'text-amber-400 bg-amber-400/10 border-amber-400/25'  },
+        completato: { label: 'Completato', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' },
+        speciale:   { label: '—',          cls: 'text-gray-500 bg-gray-500/10 border-gray-500/20'     },
+    } as const;
+
+    const BlockStateBadge: React.FC<{ state: keyof typeof BADGE_CONFIG }> = ({ state }) => {
+        const cfg = BADGE_CONFIG[state];
+        return (
+            <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${cfg.cls}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${DOT_CONFIG[state].dot}`} />
+                {cfg.label}
+            </span>
+        );
     };
 
     const selectKeyDownHandler = (e: React.KeyboardEvent<HTMLSelectElement>) => {
@@ -315,18 +339,23 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div ref={weeksContainerRef} className="max-w-6xl mx-auto space-y-4">
                         {weekData.map(week => {
-                            const statusStyles = getStatusStyles(week.completionStatus);
-                            
                             return (
-                            <details key={week.weekNumber} className={`group rounded-lg border overflow-hidden transition-all duration-300 ${statusStyles.detailsClass}`}>
+                            <details key={week.weekNumber} className="group rounded-lg border border-gray-700/50 bg-gray-800/50 overflow-hidden transition-all duration-300">
                                 <summary className="list-none [&::-webkit-details-marker]:hidden p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/50">
                                     <div className="flex-grow flex items-center gap-4">
-                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleWeekCompletion(week.weekNumber); }} className="flex-shrink-0 p-1 rounded-full hover:bg-gray-600/50 no-print" title={statusStyles.title}>
-                                            <CheckCircleIcon className={`h-6 w-6 transition-colors ${statusStyles.iconClass}`} />
-                                        </button>
                                         <div className="flex-shrink-0">
                                             <h3 className="font-bold text-lg text-white">Settimana {week.weekNumber}</h3>
                                             <p className="text-xs text-gray-400">{week.dates}</p>
+                                            {/* Dots stato blocchi */}
+                                            <div className="flex items-end gap-2 mt-1.5">
+                                                {week.blocks.map((block, i) => (
+                                                    <BlockDot
+                                                        key={block.id}
+                                                        state={getBlockProgressState(block)}
+                                                        label={`BL${i + 1}`}
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
                                         <div className="flex-grow">
                                             <EditableField value={week.theme} onSave={(newTheme) => onUpdateWeekTheme(week.weekNumber, newTheme)} placeholder="Definisci il tema della settimana..." />
@@ -348,13 +377,15 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const blockHasPillars = block.module ? moduleHasPillars.get(block.module) ?? false : false;
                                         const blockDate = getExactDateForBlock(week.dates, block.day, teacherProfile);
                                         const dateString = blockDate ? ` - ${blockDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}` : '';
+                                        const blockState = getBlockProgressState(block);
 
                                         return (
                                         <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-700">
                                             <summary className="list-none [&::-webkit-details-marker]:hidden p-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/50">
                                                 <div className="flex-grow flex flex-col gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="text-sm font-semibold text-gray-400">Bl. {index + 1}{dateString}:</span>
+                                                        <span className="text-sm font-semibold text-gray-400 flex-shrink-0">Bl. {index + 1}{dateString}:</span>
+                                                        <BlockStateBadge state={blockState} />
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
                                                                 <EditableField 
