@@ -87,6 +87,8 @@ interface SidebarProps {
   onImportData: () => void;
   onExportCourseBook: () => void;
   onOpenApiSettings: () => void;
+  disciplina: string;
+  onSaveDisciplina: (value: string) => void;
 }
 
 const ConversationTab: React.FC<{
@@ -244,6 +246,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenNotebookLM, onOpenFoundingDocuments, onOpenTeacherProfile, onOpenStrategicDashboard,
   onSaveInstructions, onOpenToolkit, onExportData, onImportData, onOpenBlockDayDefaults,
   onExportCourseBook, onOpenApiSettings,
+  disciplina, onSaveDisciplina,
   currentModeId, onModeChange
 }) => {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -252,8 +255,25 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [activeLabelFilter, setActiveLabelFilter] = useState<Label | null>(null);
   const [openSection, setOpenSection] = useState<Section | null>('progettazione');
-  
+  const [isDisciplinaEditing, setIsDisciplinaEditing] = useState(false);
+  const [disciplinaTemp, setDisciplinaTemp] = useState(disciplina);
+  const disciplinaInputRef = useRef<HTMLInputElement>(null);
+
   const instructionImportRef = useRef<HTMLInputElement>(null);
+
+  // Sync disciplinaTemp when prop changes externally
+  React.useEffect(() => { setDisciplinaTemp(disciplina); }, [disciplina]);
+  React.useEffect(() => { if (isDisciplinaEditing) disciplinaInputRef.current?.focus(); }, [isDisciplinaEditing]);
+
+  const handleDisciplinaSave = useCallback(() => {
+    onSaveDisciplina(disciplinaTemp.trim());
+    setIsDisciplinaEditing(false);
+  }, [disciplinaTemp, onSaveDisciplina]);
+
+  const handleDisciplinaKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleDisciplinaSave();
+    else if (e.key === 'Escape') { setDisciplinaTemp(disciplina); setIsDisciplinaEditing(false); }
+  }, [handleDisciplinaSave, disciplina]);
 
   const toggleSection = useCallback((section: Section) => {
     setOpenSection(prev => (prev === section ? null : section));
@@ -418,6 +438,32 @@ const Sidebar: React.FC<SidebarProps> = ({
                   isOpen={openSection === 'gestione'}
                   onToggle={() => toggleSection('gestione')}
                 >
+                    {/* Disciplina — campo inline configurabile, appare nell'header */}
+                    <div className="mb-2 px-2 py-2 rounded-md bg-gray-900/60 border border-gray-700/40">
+                      <p className="text-xs text-gray-600 font-mono uppercase tracking-wider mb-1.5">Disciplina / Corso</p>
+                      {isDisciplinaEditing ? (
+                        <input
+                          ref={disciplinaInputRef}
+                          type="text"
+                          value={disciplinaTemp}
+                          onChange={e => setDisciplinaTemp(e.target.value)}
+                          onBlur={handleDisciplinaSave}
+                          onKeyDown={handleDisciplinaKeyDown}
+                          placeholder="es. Matematica, Scienze, Storia…"
+                          className="w-full bg-gray-800 border border-purple-500/40 rounded-md px-2 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500/60 font-sans"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setIsDisciplinaEditing(true)}
+                          className="w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-gray-700/50 group flex items-center justify-between"
+                        >
+                          <span className={disciplina ? 'text-purple-300 font-medium' : 'text-gray-600 italic'}>
+                            {disciplina || 'Clicca per impostare…'}
+                          </span>
+                          <PencilIcon className="h-3.5 w-3.5 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </button>
+                      )}
+                    </div>
                     <button onClick={onOpenFoundingDocuments} className={`w-full flex items-center gap-3 px-2 py-2 text-sm font-normal rounded-md transition-colors ${activeView === 'founding_documents' ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700/70 hover:text-white'}`}><DocumentTextIcon className="h-5 w-5" />Documenti Fondanti</button>
                     <button onClick={onOpenTeacherProfile} className="w-full flex items-center gap-3 px-2 py-2 text-sm font-normal text-gray-300 rounded-md hover:bg-gray-700/70 hover:text-white transition-colors"><PencilIcon className="h-5 w-5" />Profilo Docente</button>
                     <button onClick={onOpenBlockDayDefaults} className="w-full flex items-center gap-3 px-2 py-2 text-sm font-normal text-gray-300 rounded-md hover:bg-gray-700/70 hover:text-white transition-colors"><CalendarDaysIcon className="h-5 w-5" />Imposta Giorni Predefiniti</button>
@@ -432,7 +478,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button onClick={onOpenApiSettings} className="w-full flex items-center gap-3 px-2 py-2 text-sm font-normal text-gray-500 rounded-md hover:bg-gray-700/70 hover:text-gray-300 transition-colors"><SparklesIcon className="h-5 w-5" />Chiave API Gemini</button>
                 </CollapsibleSection>
             </div>
-            <div className="text-xs text-center text-gray-500 pt-4">Ada Gemini - Laboratorio di Design</div>
+            <div className="text-xs text-center text-gray-700 pt-4 font-mono">Ada · NuovaDidattica.eu</div>
         </div>
       </div>
       <ConfirmationModal isOpen={!!deletingConversation} onClose={() => setDeletingConversation(null)} onConfirm={handleConfirmDelete} title="Conferma Eliminazione">

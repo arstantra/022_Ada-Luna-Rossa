@@ -1333,6 +1333,8 @@ ${htmlBody}
           onModeChange={handleModeChange}
           onOpenBlockDayDefaults={openBlockDayDefaultsModal}
           onOpenApiSettings={onOpenApiSettings}
+          disciplina={masterContext.disciplina}
+          onSaveDisciplina={masterContext.handleSaveDisciplina}
         />
         {
           {

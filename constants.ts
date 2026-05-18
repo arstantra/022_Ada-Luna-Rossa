@@ -9,6 +9,9 @@ export const LOCAL_STORAGE_RULES_KEY = 'ada-rules-context';
 export const LOCAL_STORAGE_TEACHER_KEY = 'ada-teacher-profile';
 export const LOCAL_STORAGE_MODE_KEY = 'ada-mode';
 export const LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY = 'ada-gemini-block-day-defaults';
+export const LOCAL_STORAGE_DISCIPLINA_KEY = 'ada-disciplina';
+
+export const DEFAULT_DISCIPLINA = '';
 
 export const DEFAULT_SYSTEM_INSTRUCTION = `Sei Ada, un'assistente AI avanzata specializzata in pedagogia, didattica e design thinking. Il tuo obiettivo è supportare docenti e formatori nel progettare esperienze di apprendimento innovative, inclusive e personalizzate.
 

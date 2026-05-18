@@ -19,6 +19,8 @@ import {
   LOCAL_STORAGE_TEACHER_KEY,
   LOCAL_STORAGE_MODE_KEY,
   LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY,
+  LOCAL_STORAGE_DISCIPLINA_KEY,
+  DEFAULT_DISCIPLINA,
 } from '../constants';
 
 export const useMasterContext = () => {
@@ -28,6 +30,7 @@ export const useMasterContext = () => {
     const [crewContext, setCrewContext] = useState('');
     const [rulesContext, setRulesContext] = useState('');
     const [teacherProfile, setTeacherProfile] = useState('');
+    const [disciplina, setDisciplina] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
     const [currentModeId, setCurrentModeId] = useState<Mode['id']>(DEFAULT_MODE_ID);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +56,7 @@ export const useMasterContext = () => {
                     loadOrSeedSetting(LOCAL_STORAGE_CREW_KEY, DEFAULT_CREW_CONTEXT, setCrewContext),
                     loadOrSeedSetting(LOCAL_STORAGE_RULES_KEY, DEFAULT_RULES_CONTEXT, setRulesContext),
                     loadOrSeedSetting(LOCAL_STORAGE_TEACHER_KEY, DEFAULT_TEACHER_PROFILE, setTeacherProfile),
+                    loadOrSeedSetting(LOCAL_STORAGE_DISCIPLINA_KEY, DEFAULT_DISCIPLINA, setDisciplina),
                 ]);
 
                 // Load block day defaults separately as it's JSON
@@ -91,6 +95,7 @@ export const useMasterContext = () => {
                 setCrewContext(DEFAULT_CREW_CONTEXT);
                 setRulesContext(DEFAULT_RULES_CONTEXT);
                 setTeacherProfile(DEFAULT_TEACHER_PROFILE);
+                setDisciplina(DEFAULT_DISCIPLINA);
                 setBlockDayDefaults({});
                 setCurrentModeId(DEFAULT_MODE_ID);
             } finally {
@@ -142,6 +147,13 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save teacher profile:", error); }
     }, []);
 
+    const handleSaveDisciplina = useCallback(async (value: string) => {
+        setDisciplina(value);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_DISCIPLINA_KEY, value);
+        } catch (error) { console.error("Failed to save disciplina:", error); }
+    }, []);
+
     const handleSaveBlockDayDefaults = useCallback(async (defaults: Record<string, string>) => {
         setBlockDayDefaults(defaults);
         try {
@@ -166,6 +178,7 @@ export const useMasterContext = () => {
         crewContext,
         rulesContext,
         teacherProfile,
+        disciplina,
         blockDayDefaults,
         currentModeId,
         isUninitialized,
@@ -175,6 +188,7 @@ export const useMasterContext = () => {
         handleSaveCrew,
         handleSaveRules,
         handleSaveTeacherProfile,
+        handleSaveDisciplina,
         handleSaveBlockDayDefaults,
         handleSaveMode,
     };

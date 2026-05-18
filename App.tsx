@@ -56,11 +56,11 @@ const App: React.FC = () => {
         />
       )}
       <div className="flex flex-col h-screen w-screen">
-        <AppHeader />
+        <AppHeader disciplina={masterContext.disciplina} />
         <div className="flex-1 overflow-hidden pt-14">
           <MainApp masterContext={masterContext} onOpenApiSettings={() => setShowApiKeyModal(true)} />
         </div>
-        <AppFooter />
+        <AppFooter disciplina={masterContext.disciplina} />
       </div>
     </ConstitutionCacheProvider>
   );
