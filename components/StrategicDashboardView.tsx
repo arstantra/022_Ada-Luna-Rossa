@@ -233,7 +233,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Visione d'Insieme</title>
+    <title>Progettazione del Corso</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -241,7 +241,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     <style>${styles}</style>
 </head>
 <body>
-    <h1>Visione d'Insieme - Quadro Sinottico</h1>
+    <h1>Progettazione del Corso — Quadro Sinottico</h1>
     ${content}
 </body>
 </html>`;
@@ -316,17 +316,22 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     return (
         <>
             <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden print-container strategic-dashboard-print">
-                <div className="flex-shrink-0 flex items-center justify-between p-3.5 pl-6 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm no-print">
+                <div className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm no-print">
                     <div className="flex items-center gap-3">
-                        <ClipboardDocumentCheckIcon className="h-6 w-6 text-yellow-400" />
-                        <h2 className="text-lg font-semibold truncate">Visione d'Insieme - Quadro Sinottico</h2>
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400/80" />
+                        <h2 className="text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
                     </div>
-                    <div className="flex items-center gap-2">
-                         <button onClick={handleCollapseAll} className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600">Comprimi Tutto</button>
-                         <button onClick={handleExpandAll} className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600">Espandi Tutto</button>
-                         <button onClick={handleExportHtml} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                            <ArrowDownTrayIcon className="h-5 w-5" />
-                            Esporta HTML
+                    <div className="flex items-center gap-1">
+                        <button onClick={handleCollapseAll} className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60">
+                            Comprimi
+                        </button>
+                        <button onClick={handleExpandAll} className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60">
+                            Espandi
+                        </button>
+                        <div className="w-px h-4 bg-gray-700/60 mx-1" />
+                        <button onClick={handleExportHtml} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-gray-200 transition-all">
+                            <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                            Esporta
                         </button>
                     </div>
                 </div>
@@ -340,14 +345,18 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     <div ref={weeksContainerRef} className="max-w-6xl mx-auto space-y-4">
                         {weekData.map(week => {
                             return (
-                            <details key={week.weekNumber} className="group rounded-lg border border-gray-700/50 bg-gray-800/50 overflow-hidden transition-all duration-300">
-                                <summary className="list-none [&::-webkit-details-marker]:hidden p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/50">
-                                    <div className="flex-grow flex items-center gap-4">
+                            <details key={week.weekNumber} className="group rounded-xl border border-gray-700/40 bg-gray-800/35 overflow-hidden transition-all duration-200 hover:border-gray-600/50">
+                                <summary className="list-none [&::-webkit-details-marker]:hidden px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/20 transition-colors">
+                                    <div className="flex-grow flex items-center gap-5 min-w-0">
                                         <div className="flex-shrink-0">
-                                            <h3 className="font-bold text-lg text-white">Settimana {week.weekNumber}</h3>
-                                            <p className="text-xs text-gray-400">{week.dates}</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <h3 className="font-bold text-xl text-white tracking-tight">
+                                                    Settimana {week.weekNumber}
+                                                </h3>
+                                                <span className="text-xs text-gray-500 font-mono">{week.dates}</span>
+                                            </div>
                                             {/* Dots stato blocchi */}
-                                            <div className="flex items-end gap-2 mt-1.5">
+                                            <div className="flex items-end gap-2 mt-2">
                                                 {week.blocks.map((block, i) => (
                                                     <BlockDot
                                                         key={block.id}
@@ -357,21 +366,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex-grow">
-                                            <EditableField value={week.theme} onSave={(newTheme) => onUpdateWeekTheme(week.weekNumber, newTheme)} placeholder="Definisci il tema della settimana..." />
+                                        <div className="flex-grow min-w-0">
+                                            <EditableField value={week.theme} onSave={(newTheme) => onUpdateWeekTheme(week.weekNumber, newTheme)} placeholder="Tema della settimana..." />
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 no-print">
-                                        <button onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }} disabled={generatingThemeFor === week.weekNumber} className="p-2 rounded-full text-purple-400 hover:bg-purple-500/20 disabled:opacity-50 disabled:cursor-wait" title="Usa AI per suggerire un tema">
-                                            <WandIcon className={`h-5 w-5 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
+                                    <div className="flex items-center gap-2 flex-shrink-0 pl-4 no-print">
+                                        <button onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }} disabled={generatingThemeFor === week.weekNumber} className="p-1.5 rounded-lg text-gray-600 hover:text-purple-400 hover:bg-purple-500/10 disabled:opacity-40 disabled:cursor-wait transition-all" title="Suggerisci tema con AI">
+                                            <WandIcon className={`h-4 w-4 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
                                         </button>
-                                        <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors" title="Apri il laboratorio tattico per questa settimana">
+                                        <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-3.5 py-1.5 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/8 hover:border-blue-400/40 hover:text-blue-300 transition-all" title="Apri il laboratorio tattico">
                                             Progetta
                                         </button>
-                                        <ChevronDownIcon className="h-6 w-6 text-gray-400 transition-transform duration-300 group-open:rotate-180" />
+                                        <ChevronDownIcon className="h-5 w-5 text-gray-600 transition-transform duration-200 group-open:rotate-180 ml-1" />
                                     </div>
                                 </summary>
-                                <div className="border-t border-gray-700/50 bg-gray-800 p-4 space-y-4">
+                                <div className="border-t border-gray-700/40 bg-gray-800/60 px-5 py-4 space-y-3">
                                     {week.blocks.map((block, index) => {
                                         const isSpecialStatus = block.status === 'saltato' || block.status === 'formazione scuola-lavoro';
                                         const blockHasPillars = block.module ? moduleHasPillars.get(block.module) ?? false : false;
@@ -380,11 +389,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const blockState = getBlockProgressState(block);
 
                                         return (
-                                        <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-700">
-                                            <summary className="list-none [&::-webkit-details-marker]:hidden p-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/50">
+                                        <details key={block.id} className="group/inner bg-gray-900/30 rounded-lg border border-gray-700/35">
+                                            <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/30 transition-colors">
                                                 <div className="flex-grow flex flex-col gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-sm font-semibold text-gray-400 flex-shrink-0">Bl. {index + 1}{dateString}:</span>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <span className="text-xs font-mono font-semibold text-gray-500 flex-shrink-0 uppercase tracking-wide">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
@@ -499,23 +508,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
                                                 </div>
                                             </summary>
-                                            <div className="border-t border-gray-700/50 p-3 space-y-3">
+                                            <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
                                                 <div>
-                                                    <label className="text-xs text-gray-500 font-semibold">Estratto dalla Costituzione</label>
-                                                    <EditableTextarea value={block.lessonTitle || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="Verrà popolato automaticamente selezionando un modulo..." rows={1} disabled={isSpecialStatus || block.isLocked} />
+                                                    <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600">Estratto dalla Costituzione</label>
+                                                    <EditableTextarea value={block.lessonTitle || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="Verrà popolato selezionando un modulo..." rows={1} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs text-gray-500 font-semibold">Idea / Prompt per Ada</label>
+                                                    <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600">Idea / Prompt per Ada</label>
                                                     <EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                             </div>
                                         </details>
                                     )})}
-                                    <div className="mt-6 pt-4 border-t border-dashed border-gray-700 space-y-4">
-                                        <div>
-                                            <h4 className="font-semibold text-gray-300 mb-1">Note sulla Settimana</h4>
-                                            <EditableTextarea value={week.notes || ''} onSave={(val) => onUpdateWeekDetails(week.weekNumber, { notes: val })} placeholder="Appunti, promemoria, collegamenti interdisciplinari..." />
-                                        </div>
+                                    <div className="mt-3 pt-4 border-t border-gray-700/30">
+                                        <label className="text-[10px] font-mono tracking-wider uppercase text-gray-600 mb-1 block">Note sulla Settimana</label>
+                                        <EditableTextarea value={week.notes || ''} onSave={(val) => onUpdateWeekDetails(week.weekNumber, { notes: val })} placeholder="Appunti, promemoria, collegamenti interdisciplinari..." />
                                     </div>
                                 </div>
                             </details>

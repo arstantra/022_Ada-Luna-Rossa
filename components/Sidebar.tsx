@@ -85,7 +85,7 @@ const CollapsibleSection: React.FC<{
 
 // ── Label di sezione ──────────────────────────────────────────────────────────
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="px-2 pt-3 pb-1 text-[10px] font-mono tracking-[0.14em] uppercase text-gray-600 select-none">
+  <p className="px-2 pt-4 pb-1.5 text-[9px] font-mono tracking-[0.18em] uppercase text-gray-500 select-none">
     {children}
   </p>
 );
@@ -98,19 +98,31 @@ const NavItem: React.FC<{
   onClick: () => void;
   badge?: React.ReactNode;
   indent?: boolean;
-}> = ({ icon, label, isActive, onClick, badge, indent }) => (
+  disabled?: boolean;
+}> = ({ icon, label, isActive, onClick, badge, indent, disabled }) => (
   <button
-    onClick={onClick}
-    className={`w-full flex items-center gap-3 px-2 py-2 text-sm rounded-lg transition-colors
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
+    className={`relative w-full flex items-center gap-3 px-2 py-2 text-sm rounded-lg transition-all duration-150
       ${indent ? 'pl-4' : ''}
-      ${isActive
-        ? 'bg-gray-700/80 text-white font-medium'
-        : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
+      ${disabled
+        ? 'opacity-30 cursor-not-allowed text-gray-500'
+        : isActive
+          ? 'bg-gray-700/60 text-white font-medium'
+          : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
       }`}
   >
+    {isActive && !indent && (
+      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-purple-400/80" />
+    )}
     {icon}
     <span className="flex-1 text-left">{label}</span>
-    {badge}
+    {disabled && (
+      <span className="text-[8px] font-mono tracking-widest text-gray-600 uppercase border border-gray-700/80 rounded px-1 py-0.5 leading-none">
+        API
+      </span>
+    )}
+    {!disabled && badge}
   </button>
 );
 
@@ -176,13 +188,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-shrink-0 p-3 border-b border-gray-800/40">
         <button
           onClick={onOpenConversaConAda}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
             ${activeView === 'chat'
-              ? 'bg-gradient-to-r from-purple-900/60 to-pink-900/40 text-white border border-purple-700/40'
-              : 'text-gray-300 hover:bg-gray-800/60 hover:text-white border border-transparent'
+              ? 'bg-gradient-to-r from-purple-900/50 to-purple-900/20 text-white border border-purple-700/30 shadow-sm'
+              : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border border-transparent'
             }`}
         >
-          <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 text-pink-400 flex-shrink-0" />
+          <ChatBubbleOvalLeftEllipsisIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${activeView === 'chat' ? 'text-purple-400' : 'text-gray-500'}`} />
           <span>Conversa con Ada</span>
         </button>
       </div>
@@ -195,7 +207,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         <NavItem
           icon={<ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />}
-          label="Visione d'Insieme"
+          label="Progettazione del Corso"
           isActive={activeView === 'strategic_dashboard'}
           onClick={onOpenStrategicDashboard}
         />
@@ -219,6 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             isActive={false}
             onClick={onOpenImageGenerator}
             indent
+            disabled
           />
         </CollapsibleSection>
 
