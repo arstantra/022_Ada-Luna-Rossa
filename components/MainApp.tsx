@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // Fix: Corrected a typo in the type import from 'ValidateAndValidatePayload' to 'ValidateAndArchivePayload'.
-import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus } from '../types';
+import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState } from '../types';
 import TurndownService from 'turndown';
 import { GoogleGenAI } from '@google/genai';
 import CryptoJS from 'crypto-js';
@@ -48,9 +48,10 @@ import * as GeminiService from '../services/gemini';
 import { parseRouteContext, parseCrewContextToNames, generateExportContent, fileToAttachment, generateCourseBookHtml } from '../utils';
 import { 
     AUTO_LABELS,
-    DEFAULT_SYSTEM_INSTRUCTION, 
+    DEFAULT_SYSTEM_INSTRUCTION,
     DEFAULT_TEACHER_PROFILE,
     GEMINI_API_ERROR_MESSAGE, MODES,
+    ADA_QUICK_CHAT_ID,
 } from '../constants';
 import LessonNotesModal from './LessonNotesModal';
 import GroupWorkSummary from './GroupWorkSummary';
@@ -85,7 +86,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   const { processPlanningMessage, handleReEditBlock: reEditBlockHandler } = usePlanning(updateConversation, showToast, recordAttendanceForBlock, addEvaluationToStudent);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'in_aula' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive'>('lobby');
+  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive'>('lobby');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [initialPlanningTab, setInitialPlanningTab] = useState<'laboratorio' | 'contenutoMaster' | null>(null);
   const [analysisLoadingBlockId, setAnalysisLoadingBlockId] = useState<string | null>(null);
@@ -522,6 +523,22 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     setView('chat');
   }, [selectConversationHook]);
 
+  // Conversa con Ada — chat singola fissa, non cancellabile
+  const handleOpenConversaConAda = useCallback(() => {
+    const existing = conversationsRef.current.find(c => c.id === ADA_QUICK_CHAT_ID);
+    if (!existing) {
+      const quickChat: Conversation = {
+        id: ADA_QUICK_CHAT_ID,
+        title: 'Conversa con Ada',
+        messages: [],
+        labelIds: [],
+      };
+      // Aggiunge in testa senza cancellare le altre conversazioni
+      setConversations([quickChat, ...conversationsRef.current]);
+    }
+    handleSelectConversation(ADA_QUICK_CHAT_ID);
+  }, [conversationsRef, setConversations, handleSelectConversation]);
+
   const handleStartPlanningForWeek = useCallback((weekInfo: WeekRouteInfo) => {
       const conversation = getOrCreateConversationForWeek(weekInfo);
       handleSelectConversation(conversation.id);
@@ -823,9 +840,69 @@ ${htmlBody}
     setView('student_profile');
   }, []);
 
-  const handleOpenInAula = useCallback(() => {
-    setView('in_aula');
-  }, []);
+  const openLezioneinCorso = useCallback(() => setView('lezione_in_corso'), []);
+  const openArchivioLezioni = useCallback(() => setView('archivio_lezioni'), []);
+
+  // hasActiveLessons — per il dot verde nella sidebar
+  const hasActiveLessons = useMemo(
+    () => conversations.some(c => c.weekPlan?.blocks.some(b => b.lessonState === 'in_corso')),
+    [conversations]
+  );
+
+  // Avvia Lezione: imposta lessonState = 'in_corso' su un blocco (uno solo per volta).
+  // Prima azzera gli altri blocchi in_corso, poi setta quello target.
+  const handleAvviaLezione = useCallback((convoId: string, blockIndex: number) => {
+    // Azzera eventuali lezioni in_corso sulle altre conversazioni
+    conversationsRef.current.forEach(c => {
+      if (!c.weekPlan) return;
+      const hasActive = c.weekPlan.blocks.some(b => b.lessonState === 'in_corso');
+      if (hasActive && c.id !== convoId) {
+        updateConversation(c.id, conv => {
+          if (!conv.weekPlan) return conv;
+          return {
+            ...conv,
+            weekPlan: {
+              ...conv.weekPlan,
+              blocks: conv.weekPlan.blocks.map(b =>
+                b.lessonState === 'in_corso' ? { ...b, lessonState: 'progettata' as LessonState } : b
+              ),
+            },
+          };
+        });
+      }
+    });
+    // Imposta il blocco target come in_corso
+    updateConversation(convoId, c => {
+      if (!c.weekPlan) return c;
+      return {
+        ...c,
+        weekPlan: {
+          ...c.weekPlan,
+          blocks: c.weekPlan.blocks.map((b, i) =>
+            i === blockIndex ? { ...b, lessonState: 'in_corso' as LessonState } : b
+          ),
+        },
+      };
+    });
+    setView('lezione_in_corso');
+  }, [conversationsRef, updateConversation]);
+
+  // Chiudi Lezione: imposta lessonState = 'archiviata' e vai all'archivio
+  const handleChiudiLezione = useCallback((convoId: string, blockIndex: number) => {
+    updateConversation(convoId, c => {
+      if (!c.weekPlan) return c;
+      return {
+        ...c,
+        weekPlan: {
+          ...c.weekPlan,
+          blocks: c.weekPlan.blocks.map((b, i) =>
+            i === blockIndex ? { ...b, lessonState: 'archiviata' as LessonState } : b
+          ),
+        },
+      };
+    });
+    setView('archivio_lezioni');
+  }, [updateConversation]);
   
   const handleFormatBlocks = useCallback((selectedIds: Set<string>) => {
       const turndownService = new TurndownService();
@@ -1285,24 +1362,20 @@ ${htmlBody}
   // --- End of stabilized callbacks ---
 
   const currentView = useMemo(() => {
-    // Non-chat views have priority based on the 'view' state
     if (view === 'strategic_dashboard') return 'strategic_dashboard';
     if (view === 'founding_documents') return 'founding_documents';
     if (view === 'toolkit') return 'toolkit';
-    if (view === 'in_aula') return 'in_aula';
+    if (view === 'lezione_in_corso') return 'lezione_in_corso';
+    if (view === 'archivio_lezioni') return 'archivio_lezioni';
     if (view === 'classroom_trend') return 'classroom_trend';
     if (view === 'groups_archive') return 'groups_archive';
     if (view === 'student_profile' && selectedStudent) return 'student_profile';
     if (view === 'roster') return 'roster';
     if (view === 'notebooklm') return 'notebooklm';
-
-    // If a conversation is active, determine if it's planning or chat
     if (activeConversationId) {
-        if (activeConversation?.weekPlan) return 'planning';
-        return 'chat';
+      if (activeConversation?.weekPlan) return 'planning';
+      return 'chat';
     }
-    
-    // If no conversation is active, show the lobby
     return 'lobby';
   }, [view, activeConversationId, activeConversation, selectedStudent]);
 
@@ -1311,30 +1384,31 @@ ${htmlBody}
       <div className="flex h-full w-full bg-gray-900 text-gray-100 font-sans">
         <input type="file" ref={importFileRef} onChange={handleFileSelectedForImport} accept=".ada_encrypted" className="hidden" />
         <Sidebar
-          conversations={conversations} activeConversationId={activeConversationId}
           activeView={currentView as any}
-          onNewConversation={handleNewConversationClick} onSelectConversation={handleSelectConversation}
-          onRenameConversation={handleRenameConversation} onDeleteConversation={handleDeleteConversation}
-          onReorderConversations={handleReorderConversations} onOpenInstructions={openInstructionsModal}
+          onOpenConversaConAda={handleOpenConversaConAda}
+          onOpenStrategicDashboard={openStrategicDashboard}
+          onOpenToolkit={openToolkit}
           onOpenImageGenerator={openImageModal}
-          onShowToast={showToast} labels={labels}
-          onOpenLabelManager={openLabelManagerModal} onOpenAssignLabels={setAssignLabelsConversation}
-          onOpenStudentRoster={openStudentRoster} onOpenNotebookLM={openNotebookLM}
-          onOpenInAula={handleOpenInAula} onOpenClassroomTrend={openClassroomTrend} onOpenToolkit={openToolkit}
+          onOpenLezioneinCorso={openLezioneinCorso}
+          onOpenArchivioLezioni={openArchivioLezioni}
+          onOpenNotebookLM={openNotebookLM}
+          hasActiveLessons={hasActiveLessons}
+          onOpenClassroomTrend={openClassroomTrend}
+          onOpenGroupsArchive={openGroupsArchive}
+          onOpenStudentRoster={openStudentRoster}
           onOpenFoundingDocuments={openFoundingDocuments}
           onOpenTeacherProfile={openTeacherProfileModal}
-          onOpenStrategicDashboard={openStrategicDashboard}
-          onOpenGroupsArchive={openGroupsArchive}
-          onSaveInstructions={masterContext.handleSaveInstructions}
+          onOpenBlockDayDefaults={openBlockDayDefaultsModal}
+          onOpenInstructions={openInstructionsModal}
+          onOpenLabelManager={openLabelManagerModal}
           onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
           onImportData={() => importFileRef.current?.click()}
           onExportCourseBook={handleExportCourseBook}
-          currentModeId={masterContext.currentModeId}
-          onModeChange={handleModeChange}
-          onOpenBlockDayDefaults={openBlockDayDefaultsModal}
           onOpenApiSettings={onOpenApiSettings}
+          onSaveInstructions={masterContext.handleSaveInstructions}
           disciplina={masterContext.disciplina}
           onSaveDisciplina={masterContext.handleSaveDisciplina}
+          onShowToast={showToast}
         />
         {
           {
@@ -1343,14 +1417,15 @@ ${htmlBody}
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
             'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onToggleWeekCompletion={handleToggleWeekCompletion} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModuleAndPillar={handleUpdateBlockModuleAndPillar} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
-            'in_aula': <InAulaView conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} />,
+            'lezione_in_corso': <InAulaView viewMode="in_corso" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
+            'archivio_lezioni': <InAulaView viewMode="archivio" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
             'classroom_trend': <ClassroomTrendView conversations={conversations} students={students} onClose={() => setView('lobby')} />,
             'groups_archive': <GroupsArchiveView conversations={conversations} students={students} onClose={() => setView('lobby')} masterContext={masterContext} onUpdateBlock={handleUpdateBlockInConversation} />,
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
             'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} students={students} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} />,
-            'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} />
+            'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} />
           }[currentView]
         }
       </div>

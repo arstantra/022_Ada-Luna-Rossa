@@ -576,9 +576,13 @@ interface InAulaViewProps {
     notebooks: Notebook[];
     onAddNotebook: (title: string, url: string, notes: string) => Promise<Notebook | undefined>;
     onUpdateLinkedNotebooks: (convoId: string, blockIndex: number, notebookIds: string[]) => void;
+    /** 'in_corso' = mostra solo la lezione attiva; 'archivio' = lista completa con Avvia */
+    viewMode?: 'in_corso' | 'archivio';
+    onAvviaLezione?: (convoId: string, blockIndex: number) => void;
+    onChiudiLezione?: (convoId: string, blockIndex: number) => void;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, viewMode = 'archivio', onAvviaLezione, onChiudiLezione }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -685,16 +689,99 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 {/* Header */}
                 <div className="flex-shrink-0 flex items-center justify-between p-3.5 pl-6 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
-                        <BriefcaseIcon className="h-6 w-6 text-purple-400" />
-                        <h2 className="text-lg font-semibold truncate">In Aula - Archivio Lezioni Svolte</h2>
+                        <BriefcaseIcon className={`h-6 w-6 ${viewMode === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
+                        <h2 className="text-lg font-semibold truncate">
+                          {viewMode === 'in_corso' ? 'Lezione in Corso' : 'Archivio Lezioni'}
+                        </h2>
+                        {viewMode === 'in_corso' && (
+                          <span className="ml-2 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+                        )}
                     </div>
                     <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Chiudi">
                         <XIcon className="h-5 w-5" />
                     </button>
                 </div>
 
-                {/* Main Content */}
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {/* ── LEZIONE IN CORSO: vista dedicata ───────────────────────── */}
+                {viewMode === 'in_corso' && (() => {
+                  const planningConvos = conversations.filter(c => c.weekPlan);
+                  const activeBlock = planningConvos.flatMap(convo =>
+                    (convo.weekPlan?.blocks || []).map((block, index) => ({
+                      ...block, weekPlan: convo.weekPlan!, convoId: convo.id, blockIndex: index,
+                      uniqueId: `${convo.id}-${index}`,
+                    }))
+                  ).find(b => b.lessonState === 'in_corso');
+
+                  if (!activeBlock) {
+                    return (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-20 gap-4">
+                        <BriefcaseIcon className="h-14 w-14 text-gray-700" />
+                        <p className="text-gray-400 font-semibold">Nessuna lezione in corso</p>
+                        <p className="text-gray-600 text-sm max-w-xs">
+                          Vai all'<strong className="text-gray-500">Archivio Lezioni</strong>, scegli un blocco pianificato e clicca <strong className="text-gray-500">Avvia Lezione</strong>.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                      <div className="max-w-4xl mx-auto space-y-4">
+                        {/* Banner lezione attiva */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-900/20 border border-emerald-700/40">
+                          <div>
+                            <p className="text-xs text-emerald-500 font-mono uppercase tracking-wider mb-1">
+                              Settimana {activeBlock.weekPlan.weekNumber} · {activeBlock.weekPlan.dates}
+                            </p>
+                            <p className="text-white font-semibold">
+                              {activeBlock.lessonTitle || activeBlock.objective || `Blocco ${activeBlock.blockIndex + 1}`}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => onChiudiLezione?.(activeBlock.convoId, activeBlock.blockIndex)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors border border-gray-600"
+                          >
+                            Chiudi Lezione
+                          </button>
+                        </div>
+                        {/* Contenuto del blocco */}
+                        <InAulaBlockItem
+                          key={activeBlock.uniqueId}
+                          block={activeBlock}
+                          isSelected={false}
+                          isGeneratingAnalysis={analysisLoadingBlockId === `${activeBlock.convoId}-${activeBlock.blockIndex}`}
+                          onToggleSelection={() => {}}
+                          onNavigate={() => onNavigateToBlock(activeBlock.convoId, activeBlock.blockIndex)}
+                          onOpenAttendance={() => setAttendanceModalBlock(activeBlock)}
+                          onOpenGroups={() => setGroupModalBlock(activeBlock)}
+                          onOpenArtifactModal={() => setArtifactModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
+                          onDeleteArtifact={(i) => onDeleteArtifact(activeBlock.convoId, activeBlock.blockIndex, i)}
+                          onOpenLessonNotesModal={() => onOpenLessonNotesModal({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex, initialNotes: activeBlock.lessonNotes || '' })}
+                          onDeleteLessonNotes={() => onDeleteLessonNotes(activeBlock.convoId, activeBlock.blockIndex)}
+                          onGenerateAnalysis={() => onGenerateAnalysis(activeBlock.convoId, activeBlock.blockIndex)}
+                          onUpdateGroups={(groups) => onUpdateGroups(activeBlock.convoId, activeBlock.blockIndex, groups)}
+                          onUpdateGroupNotes={(gi, notes) => onUpdateGroupNotes(activeBlock.convoId, activeBlock.blockIndex, gi, notes)}
+                          onOpenLinkModal={() => setLinkModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
+                          onDeleteLink={(linkId) => onDeleteLink(activeBlock.convoId, activeBlock.blockIndex, linkId)}
+                          onOpenCloudLinkModal={() => setCloudLinkModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex, initialUrl: activeBlock.materialsCloudLink || '' })}
+                          onScollegaCloudLink={() => setUnlinkConfirmInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
+                          showToast={showToast}
+                          masterContext={masterContext}
+                          onUpdateBlockStatus={onUpdateBlockStatus}
+                          onOpenNotebookModal={() => setNotebookModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
+                          notebooks={notebooks}
+                          onUnlinkNotebook={(notebookId) => {
+                            const newLinks = (activeBlock.linkedNotebookIds || []).filter(id => id !== notebookId);
+                            onUpdateLinkedNotebooks(activeBlock.convoId, activeBlock.blockIndex, newLinks);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── ARCHIVIO: vista completa ──────────────────────────────── */}
+                {viewMode === 'archivio' && <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div className="max-w-6xl mx-auto space-y-6">
                         {/* Filters and Actions */}
                         <div className="p-4 bg-gray-800 rounded-lg border border-gray-700/50 flex flex-col md:flex-row items-center gap-4">
@@ -746,8 +833,26 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                                     </summary>
                                     <div className="p-4 space-y-4">
                                         {week.blocks.map(block => (
+                                            <div key={block.uniqueId} className="relative">
+                                              {/* Pulsante Avvia — visibile solo se il blocco non è archiviato */}
+                                              {onAvviaLezione && block.lessonState !== 'archiviata' && (
+                                                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                                                  {block.lessonState === 'in_corso' ? (
+                                                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-900/40 border border-emerald-700/40 text-emerald-400 text-xs font-medium">
+                                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                      In Corso
+                                                    </span>
+                                                  ) : (
+                                                    <button
+                                                      onClick={() => onAvviaLezione(block.convoId, block.blockIndex)}
+                                                      className="px-3 py-1.5 rounded-lg bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-semibold transition-colors shadow-lg"
+                                                    >
+                                                      ▶ Avvia Lezione
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              )}
                                             <InAulaBlockItem
-                                                key={block.uniqueId}
                                                 block={block}
                                                 isSelected={selectedBlockIds.has(block.uniqueId)}
                                                 isGeneratingAnalysis={analysisLoadingBlockId === `${block.convoId}-${block.blockIndex}`}
@@ -777,6 +882,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                                                     onUpdateLinkedNotebooks(block.convoId, block.blockIndex, newLinks);
                                                 }}
                                             />
+                                            </div>
                                         ))}
                                     </div>
                                 </details>
@@ -791,9 +897,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                             </div>
                         )}
                     </div>
-                </div>
+                </div>}
             </main>
-            
+
             {/* --- MODALS --- */}
             {attendanceModalBlock && (
                 <AttendanceModal

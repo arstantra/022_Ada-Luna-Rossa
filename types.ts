@@ -50,6 +50,9 @@ export interface WeekRouteInfo {
 
 export type BlockStatus = 'normale' | 'saltato' | 'formazione scuola-lavoro' | 'da definire' | 'annullato';
 
+/** Ciclo di vita di una lezione: pianificata → in corso → archiviata */
+export type LessonState = 'progettata' | 'in_corso' | 'archiviata';
+
 export interface Pillar {
     name: string;
 }
@@ -128,6 +131,7 @@ export interface BlockDetails {
     lessonMaterials?: string;
     isLocked?: boolean;
     projectDeadline?: string; // ISO String for group project deadlines
+    lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
 }
 
 export type WeekPlanStatus = 'in progettazione' | 'progettazione completata' | 'in corso' | 'completata';
