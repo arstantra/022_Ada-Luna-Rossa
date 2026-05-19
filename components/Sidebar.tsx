@@ -175,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [onSaveInstructions, onShowToast]);
 
   return (
-    <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-600/40 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.55)]">
+    <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-600/55 flex-shrink-0 shadow-[4px_0_32px_rgba(0,0,0,0.75)]">
       <input
         type="file"
         ref={instructionImportRef}

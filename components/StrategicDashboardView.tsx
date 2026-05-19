@@ -328,13 +328,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     return (
         <>
-            <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden print-container strategic-dashboard-print">
-                <div className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm no-print">
-                    <div className="flex items-center gap-3">
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400/80" />
-                        <h2 className="font-display text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
+            <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden print-container strategic-dashboard-print">
+                <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm no-print">
+                    <div className="flex items-center gap-2.5">
                         {progressStats.total > 0 && (
-                            <div className="flex items-center gap-2.5 pl-3 ml-1 border-l border-gray-700/60" title="Stato settimane: completate · in corso · da fare">
+                            <div className="flex items-center gap-2.5" title="Stato settimane: completate · in corso · da fare">
                                 {progressStats.completate > 0 && (
                                     <span className="flex items-center gap-1 text-[11px] text-emerald-400/80">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
@@ -407,15 +405,19 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0 pl-4 no-print">
-                                        <button
-                                            onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }}
-                                            disabled={generatingThemeFor === week.weekNumber}
-                                            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-40 disabled:cursor-wait"
-                                            title="Suggerisci tema con AI"
-                                        >
-                                            <WandIcon className={`h-3.5 w-3.5 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
-                                            {generatingThemeFor === week.weekNumber ? 'Generando…' : 'Suggerisci AI'}
-                                        </button>
+                                        <div className="relative group/ai-tip">
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }}
+                                                disabled={generatingThemeFor === week.weekNumber}
+                                                className="flex items-center justify-center w-8 h-8 text-purple-400/50 hover:text-purple-300 rounded-lg hover:bg-purple-500/10 transition-all disabled:opacity-30 disabled:cursor-wait"
+                                                aria-label="Suggerisci il tema della settimana"
+                                            >
+                                                <SparklesIcon className={`h-4 w-4 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
+                                            </button>
+                                            <div className="absolute bottom-full right-0 mb-2 px-2.5 py-1 text-[11px] font-medium text-purple-200/90 bg-gray-900 border border-purple-500/20 rounded-lg whitespace-nowrap opacity-0 group-hover/ai-tip:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg shadow-black/40">
+                                                {generatingThemeFor === week.weekNumber ? 'Generando…' : 'Suggerisci il tema della settimana'}
+                                            </div>
+                                        </div>
                                         <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600/80 rounded-lg hover:bg-blue-500 transition-all shadow-sm shadow-blue-900/40" title="Apri il laboratorio tattico">
                                             Progetta
                                         </button>
