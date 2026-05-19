@@ -175,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [onSaveInstructions, onShowToast]);
 
   return (
-    <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-800/50 flex-shrink-0">
+    <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-600/40 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.55)]">
       <input
         type="file"
         ref={instructionImportRef}
@@ -185,16 +185,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       />
 
       {/* ── Conversa con Ada ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-800/40">
+      <div className="flex-shrink-0 p-3 border-b border-gray-600/40 bg-gray-900/80 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
         <button
           onClick={onOpenConversaConAda}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
             ${activeView === 'chat'
-              ? 'bg-gradient-to-r from-purple-900/50 to-purple-900/20 text-white border border-purple-700/30 shadow-sm'
-              : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border border-transparent'
+              ? 'bg-gradient-to-r from-purple-900/60 to-purple-900/25 text-white border border-purple-600/40 shadow-sm shadow-purple-900/30'
+              : 'text-gray-300 hover:bg-gray-800/70 hover:text-white border border-gray-700/40 hover:border-gray-600/50'
             }`}
         >
-          <ChatBubbleOvalLeftEllipsisIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${activeView === 'chat' ? 'text-purple-400' : 'text-gray-500'}`} />
+          <ChatBubbleOvalLeftEllipsisIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${activeView === 'chat' ? 'text-purple-400' : 'text-gray-400'}`} />
           <span>Conversa con Ada</span>
         </button>
       </div>

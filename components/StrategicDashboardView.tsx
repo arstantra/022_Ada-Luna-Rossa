@@ -32,6 +32,7 @@ const pillarTypes = ['Pilastri di Sintonizzazione', 'Pilastri Operativi', 'Attiv
 const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
+    const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
     const [teacherProfile, setTeacherProfile] = useState(''); // Assuming it's loaded somehow
 
@@ -159,13 +160,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
         onUpdateBlockModuleAndPillar(weekNumber, blockIndex, moduleName, pillarType, newLessonTitle);
     };
 
-    const handleExpandAll = useCallback(() => {
-        weeksContainerRef.current?.querySelectorAll('details').forEach(d => d.open = true);
-    }, []);
-
-    const handleCollapseAll = useCallback(() => {
-        weeksContainerRef.current?.querySelectorAll('details').forEach(d => d.open = false);
-    }, []);
+    const handleToggleAll = useCallback(() => {
+        const next = !allExpanded;
+        weeksContainerRef.current?.querySelectorAll('details').forEach(d => { d.open = next; });
+        setAllExpanded(next);
+    }, [allExpanded]);
 
     const handleExportHtml = useCallback(() => {
         if (weekData.length === 0) {
@@ -322,11 +321,12 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                         <h2 className="font-display text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
                     </div>
                     <div className="flex items-center gap-1">
-                        <button onClick={handleCollapseAll} className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60">
-                            Comprimi
-                        </button>
-                        <button onClick={handleExpandAll} className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60">
-                            Espandi
+                        <button
+                            onClick={handleToggleAll}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60"
+                        >
+                            <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`} />
+                            {allExpanded ? 'Comprimi tutto' : 'Espandi tutto'}
                         </button>
                         <div className="w-px h-4 bg-gray-700/60 mx-1" />
                         <button onClick={handleExportHtml} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-gray-200 transition-all">
@@ -345,7 +345,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     <div ref={weeksContainerRef} className="max-w-6xl mx-auto space-y-4">
                         {weekData.map(week => {
                             return (
-                            <details key={week.weekNumber} className="group rounded-xl border border-gray-700/40 bg-gray-800/35 overflow-hidden transition-all duration-200 hover:border-gray-600/50">
+                            <details key={week.weekNumber} className="group rounded-xl border border-gray-600/55 bg-gray-800/55 overflow-hidden transition-all duration-200 hover:border-gray-500/70">
                                 <summary className="list-none [&::-webkit-details-marker]:hidden px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/20 transition-colors">
                                     <div className="flex-grow flex items-center gap-5 min-w-0">
                                         {/* Week info box */}
@@ -372,16 +372,22 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0 pl-4 no-print">
-                                        <button onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }} disabled={generatingThemeFor === week.weekNumber} className="p-1.5 rounded-lg text-gray-600 hover:text-purple-400 hover:bg-purple-500/10 disabled:opacity-40 disabled:cursor-wait transition-all" title="Suggerisci tema con AI">
-                                            <WandIcon className={`h-4 w-4 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); handleGenerateTheme(week); }}
+                                            disabled={generatingThemeFor === week.weekNumber}
+                                            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-40 disabled:cursor-wait"
+                                            title="Suggerisci tema con AI"
+                                        >
+                                            <WandIcon className={`h-3.5 w-3.5 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
+                                            {generatingThemeFor === week.weekNumber ? 'Generando…' : 'Suggerisci AI'}
                                         </button>
                                         <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-3.5 py-1.5 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/8 hover:border-blue-400/40 hover:text-blue-300 transition-all" title="Apri il laboratorio tattico">
                                             Progetta
                                         </button>
-                                        <ChevronDownIcon className="h-5 w-5 text-gray-600 transition-transform duration-200 group-open:rotate-180 ml-1" />
+                                        <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-200 group-open:rotate-180 ml-1" />
                                     </div>
                                 </summary>
-                                <div className="border-t border-gray-700/40 bg-gray-800/60 px-5 py-4 space-y-3">
+                                <div className="border-t border-gray-600/50 bg-gray-800/70 px-5 py-4 space-y-3">
                                     {week.blocks.map((block, index) => {
                                         const isSpecialStatus = block.status === 'saltato' || block.status === 'formazione scuola-lavoro';
                                         const blockHasPillars = block.module ? moduleHasPillars.get(block.module) ?? false : false;
@@ -390,7 +396,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const blockState = getBlockProgressState(block);
 
                                         return (
-                                        <details key={block.id} className="group/inner bg-gray-900/30 rounded-lg border border-gray-700/35">
+                                        <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-600/40">
                                             <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/30 transition-colors">
                                                 <div className="flex-grow flex flex-col gap-3">
                                                     <div className="flex items-center gap-2.5">
