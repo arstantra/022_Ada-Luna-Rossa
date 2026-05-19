@@ -69,7 +69,7 @@ const CollapsibleSection: React.FC<{
   <div>
     <button
       onClick={onToggle}
-      className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-800/70 hover:text-white transition-colors"
+      className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-800/60 hover:text-white transition-colors"
       aria-expanded={isOpen}
     >
       <div className="flex items-center gap-3">{icon}<span>{title}</span></div>
@@ -85,7 +85,7 @@ const CollapsibleSection: React.FC<{
 
 // ── Label di sezione ──────────────────────────────────────────────────────────
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="px-2 pt-4 pb-1.5 text-[9px] font-mono tracking-[0.18em] uppercase text-gray-500 select-none">
+  <p className="px-2 pt-4 pb-1.5 text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 select-none">
     {children}
   </p>
 );
@@ -108,8 +108,8 @@ const NavItem: React.FC<{
       ${disabled
         ? 'opacity-30 cursor-not-allowed text-gray-500'
         : isActive
-          ? 'bg-gray-700/60 text-white font-medium'
-          : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+          ? 'bg-gray-700/70 text-white font-semibold'
+          : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
       }`}
   >
     {isActive && !indent && (

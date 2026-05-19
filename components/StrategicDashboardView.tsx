@@ -272,7 +272,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     // ── Dot per la riga compressa ───────────────────────────────────────────────
     const DOT_CONFIG = {
-        da_fare:    { dot: 'bg-red-500',     label: 'text-red-500/80'    },
+        da_fare:    { dot: 'bg-slate-500',   label: 'text-slate-400/80'  },
         in_corso:   { dot: 'bg-amber-400',   label: 'text-amber-400/80'  },
         completato: { dot: 'bg-emerald-500', label: 'text-emerald-500/80'},
         speciale:   { dot: 'bg-gray-500',    label: 'text-gray-500/80'   },
@@ -290,7 +290,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     // ── Badge per il blocco espanso ─────────────────────────────────────────────
     const BADGE_CONFIG = {
-        da_fare:    { label: 'Da fare',    cls: 'text-red-400 bg-red-500/10 border-red-500/25'        },
+        da_fare:    { label: 'Da fare',    cls: 'text-slate-400 bg-slate-500/10 border-slate-500/25'  },
         in_corso:   { label: 'In corso',   cls: 'text-amber-400 bg-amber-400/10 border-amber-400/25'  },
         completato: { label: 'Completato', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25' },
         speciale:   { label: '—',          cls: 'text-gray-500 bg-gray-500/10 border-gray-500/20'     },
@@ -323,7 +323,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     <div className="flex items-center gap-1">
                         <button
                             onClick={handleToggleAll}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors rounded-md hover:bg-gray-800/60"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:text-white transition-colors rounded-md hover:bg-gray-800/60"
                         >
                             <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`} />
                             {allExpanded ? 'Comprimi tutto' : 'Espandi tutto'}
@@ -346,7 +346,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                         {weekData.map(week => {
                             return (
                             <details key={week.weekNumber} className="group rounded-xl border border-gray-600/55 bg-gray-800/55 overflow-hidden transition-all duration-200 hover:border-gray-500/70">
-                                <summary className="list-none [&::-webkit-details-marker]:hidden px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/20 transition-colors">
+                                <summary className="list-none [&::-webkit-details-marker]:hidden px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/30 transition-colors select-none">
                                     <div className="flex-grow flex items-center gap-5 min-w-0">
                                         {/* Week info box */}
                                         <div className="flex-shrink-0 flex flex-col gap-2 bg-gray-800/60 border border-gray-700/35 rounded-xl px-3.5 py-2.5" style={{minWidth: '96px'}}>
@@ -381,10 +381,10 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                             <WandIcon className={`h-3.5 w-3.5 ${generatingThemeFor === week.weekNumber ? 'animate-pulse' : ''}`} />
                                             {generatingThemeFor === week.weekNumber ? 'Generando…' : 'Suggerisci AI'}
                                         </button>
-                                        <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-3.5 py-1.5 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/8 hover:border-blue-400/40 hover:text-blue-300 transition-all" title="Apri il laboratorio tattico">
+                                        <button onClick={(e) => { e.preventDefault(); onStartPlanning(week); }} className="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600/80 rounded-lg hover:bg-blue-500 transition-all shadow-sm shadow-blue-900/40" title="Apri il laboratorio tattico">
                                             Progetta
                                         </button>
-                                        <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-200 group-open:rotate-180 ml-1" />
+                                        <ChevronDownIcon className="h-5 w-5 text-gray-400 transition-transform duration-200 group-open:rotate-180 ml-1 flex-shrink-0" />
                                     </div>
                                 </summary>
                                 <div className="border-t border-gray-600/50 bg-gray-800/70 px-5 py-4 space-y-3">
@@ -397,7 +397,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
                                         return (
                                         <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-600/40">
-                                            <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/30 transition-colors">
+                                            <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/50 transition-colors select-none">
                                                 <div className="flex-grow flex flex-col gap-3">
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
@@ -428,37 +428,37 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <div className="flex items-center gap-1 no-print">
                                                             {(block.status === 'da definire' || block.status === 'normale') ? (
                                                                 <>
-                                                                    <button 
-                                                                        onClick={(e) => { 
-                                                                            e.preventDefault(); 
-                                                                            e.stopPropagation(); 
-                                                                            onUpdateBlockStatus(week.weekNumber, index, 'saltato'); 
-                                                                        }} 
-                                                                        className="px-2 py-1 text-xs text-red-400/80 hover:bg-red-500/20 rounded hover:text-red-400" 
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            onUpdateBlockStatus(week.weekNumber, index, 'saltato');
+                                                                        }}
+                                                                        className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all"
                                                                         title="Imposta blocco come saltato"
                                                                     >
                                                                         Salta
                                                                     </button>
-                                                                    <button 
-                                                                        onClick={(e) => { 
-                                                                            e.preventDefault(); 
-                                                                            e.stopPropagation(); 
-                                                                            onUpdateBlockStatus(week.weekNumber, index, 'formazione scuola-lavoro'); 
-                                                                        }} 
-                                                                        className="px-2 py-1 text-xs text-sky-400/80 hover:bg-sky-500/20 rounded hover:text-sky-400" 
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            onUpdateBlockStatus(week.weekNumber, index, 'formazione scuola-lavoro');
+                                                                        }}
+                                                                        className="px-2 py-1 text-xs font-medium text-sky-400/70 border border-sky-500/20 rounded-md hover:bg-sky-500/15 hover:text-sky-300 hover:border-sky-400/35 transition-all"
                                                                         title="Imposta blocco per Formazione Scuola-Lavoro"
                                                                     >
                                                                         FSL
                                                                     </button>
                                                                 </>
                                                             ) : (
-                                                                <button 
-                                                                    onClick={(e) => { 
-                                                                        e.preventDefault(); 
-                                                                        e.stopPropagation(); 
-                                                                        onUpdateBlockStatus(week.weekNumber, index, 'normale'); 
-                                                                    }} 
-                                                                    className="px-2 py-1 text-xs text-gray-300 hover:bg-gray-500/20 rounded"
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        onUpdateBlockStatus(week.weekNumber, index, 'normale');
+                                                                    }}
+                                                                    className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all"
                                                                 >
                                                                     Ripristina
                                                                 </button>
@@ -509,8 +509,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             Modifica
                                                         </button>
                                                     )}
-                                                    <button onClick={(e) => { e.preventDefault(); handleGenerateObjective(week.weekNumber, index); }} disabled={isSpecialStatus} className="ml-4 p-2 rounded-full text-purple-400 hover:bg-purple-500/20 disabled:opacity-50 disabled:cursor-wait no-print" title="Suggerisci obiettivo con AI">
-                                                        <SparklesIcon className="h-5 w-5" />
+                                                    <button
+                                                        onClick={(e) => { e.preventDefault(); handleGenerateObjective(week.weekNumber, index); }}
+                                                        disabled={isSpecialStatus}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
+                                                        title="Suggerisci obiettivo con AI"
+                                                    >
+                                                        <SparklesIcon className="h-3.5 w-3.5" />
+                                                        AI
                                                     </button>
                                                     <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
                                                 </div>
