@@ -306,6 +306,20 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
         );
     };
 
+    // ── Progresso globale del corso ────────────────────────────────────────────
+    const progressStats = useMemo(() => {
+        let completate = 0, inCorso = 0, daFare = 0;
+        weekData.forEach(week => {
+            const states = week.blocks.map(b => getBlockProgressState(b));
+            const allDone = states.every(s => s === 'completato' || s === 'speciale');
+            const anyInCorso = states.some(s => s === 'in_corso');
+            if (allDone) completate++;
+            else if (anyInCorso) inCorso++;
+            else daFare++;
+        });
+        return { completate, inCorso, daFare, total: weekData.length };
+    }, [weekData]);
+
     const selectKeyDownHandler = (e: React.KeyboardEvent<HTMLSelectElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.stopPropagation();
@@ -319,6 +333,27 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     <div className="flex items-center gap-3">
                         <ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400/80" />
                         <h2 className="font-display text-base font-semibold text-white tracking-tight">Progettazione del Corso</h2>
+                        {progressStats.total > 0 && (
+                            <div className="flex items-center gap-2.5 pl-3 ml-1 border-l border-gray-700/60" title="Stato settimane: completate · in corso · da fare">
+                                {progressStats.completate > 0 && (
+                                    <span className="flex items-center gap-1 text-[11px] text-emerald-400/80">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                                        {progressStats.completate}
+                                    </span>
+                                )}
+                                {progressStats.inCorso > 0 && (
+                                    <span className="flex items-center gap-1 text-[11px] text-amber-400/80">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                                        {progressStats.inCorso}
+                                    </span>
+                                )}
+                                <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0" />
+                                    {progressStats.daFare}
+                                </span>
+                                <span className="text-[10px] text-gray-600 font-mono">/ {progressStats.total}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-1">
                         <button
