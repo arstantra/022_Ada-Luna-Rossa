@@ -58,15 +58,36 @@ App React/TypeScript per insegnanti. Aiuta nella **pianificazione del corso**, n
 - **NavItem attivo**: `bg-gray-700/70 text-white` — **NON** `font-semibold`: l'accent line viola è l'unico indicatore, il grassetto è ridondante
 - **CollapsibleSection** (sotto-sezioni con icona, es. "Laboratori e Strumenti"): stile diverso, ha icona + testo + chevron, usato solo per sotto-livelli
 
-### Stato blocco — colori (DOT_CONFIG / BADGE_CONFIG)
-| Stato | Dot | Badge testo |
-|-------|-----|-------------|
-| `da_fare` | `bg-slate-500` | `text-slate-400` — neutro, non allarmante |
-| `in_corso` | `bg-amber-400` | `text-amber-400` |
-| `completato` | `bg-emerald-500` | `text-emerald-400` |
-| `speciale` | `bg-gray-500` | `text-gray-500` |
+### Stato blocco — due sistemi paralleli, colori allineati
 
-> **IMPORTANTE**: `da_fare` usa **slate/neutro**, NON rosso. Il rosso era ansiogeno per blocchi semplicemente non ancora iniziati.
+Esistono **due funzioni di derivazione stato** con granularità diversa ma colori canonici condivisi:
+
+#### Sistema 1 — `getBlockProgressState` (StrategicDashboardView, 4 macrostati)
+| Stato | Dot | Badge testo | Quando |
+|-------|-----|-------------|--------|
+| `da_fare` | `bg-slate-500` | `text-slate-400/80` | nessun obiettivo né messaggi |
+| `in_corso` | `bg-amber-400` | `text-amber-400/80` | ha obiettivo/messaggi ma non contentBlocks |
+| `completato` | `bg-emerald-500` | `text-emerald-400` | ha contentBlocks |
+| `speciale` | `bg-gray-500` | `text-gray-500/80` | saltato · fsl · annullato |
+
+#### Sistema 2 — `getBlockDotColor` via `getBlockPlanningStatus` (PlanningView, 9 stati)
+| Stato planning | Dot | Mappa a macrostato |
+|----------------|-----|--------------------|
+| `concluso` / `isReviewed` | `bg-emerald-500` | completato |
+| `in_progettazione` | `bg-amber-400` | in_corso |
+| `in_revisione` | `bg-amber-400` | in_corso |
+| `da_progettare` | `bg-slate-500` | da_fare |
+| `da_definire` | `bg-red-500` | da_fare (warning) |
+| `fsl` | `bg-sky-500` | speciale (distinto visivamente) |
+| `saltato` / `annullato` / `sconosciuto` | `bg-gray-500` | speciale |
+
+> **REGOLE COLORE CANONICHE** (non derogare):
+> - verde completato → **`bg-emerald-500`** (MAI `bg-green-500`)
+> - in lavorazione → **`bg-amber-400`**
+> - non iniziato → **`bg-slate-500`**
+> - speciale/neutro → **`bg-gray-500`** (MAI `bg-gray-600`)
+> - `da_fare` usa slate/neutro, NON rosso — il rosso era ansiogeno per blocchi semplicemente non ancora iniziati
+> - `da_definire` usa rosso come **warning** (giorno non ancora assegnato), non come errore
 
 ---
 

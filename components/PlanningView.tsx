@@ -10,18 +10,18 @@ import BlockEditModal from './BlockEditModal';
 import EditableField from './EditableField';
 
 const getBlockDotColor = (block: BlockDetails): string => {
-    if (block.isReviewed) return 'bg-green-500';
+    if (block.isReviewed) return 'bg-emerald-500';
     const status = getBlockPlanningStatus(block);
     switch (status) {
-        case 'concluso':        return 'bg-green-500';
+        case 'concluso':        return 'bg-emerald-500';
         case 'in_progettazione':
         case 'in_revisione':    return 'bg-amber-400';
         case 'da_progettare':   return 'bg-slate-500';
         case 'fsl':             return 'bg-sky-500';
         case 'da_definire':     return 'bg-red-500';
         case 'saltato':
-        case 'annullato':       return 'bg-gray-600';
-        default:                return 'bg-gray-600';
+        case 'annullato':       return 'bg-gray-500';
+        default:                return 'bg-gray-500';
     }
 };
 

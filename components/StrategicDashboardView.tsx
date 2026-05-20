@@ -345,8 +345,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         {progressStats.inCorso}
                                     </span>
                                 )}
-                                <span className="flex items-center gap-1 text-[11px] text-slate-500">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0" />
+                                <span className="flex items-center gap-1 text-[11px] text-slate-400/80">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 flex-shrink-0" />
                                     {progressStats.daFare}
                                 </span>
                                 <span className="text-[10px] text-gray-600 font-mono">/ {progressStats.total}</span>
