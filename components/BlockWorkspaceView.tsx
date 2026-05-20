@@ -3,10 +3,7 @@ import type { BlockDetails, Message, PlanningActionPayload } from '../types';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
-import { 
-    ArrowDownTrayIcon,
-    SparklesIcon, BookOpenIcon, WebIcon
-} from './Icons';
+import { ArrowDownTrayIcon, WebIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 
 // --- MAIN WORKSPACE VIEW ---
@@ -17,14 +14,13 @@ interface BlockWorkspaceViewProps {
     isLoading: boolean;
     highlightQuery?: string;
     currentResultId?: string | null;
-    initialTab?: 'laboratorio' | 'contenutoMaster';
+    activeTab: 'laboratorio' | 'contenutoMaster';
     useGoogleSearch: boolean;
     onGoogleSearchChange: (enabled: boolean) => void;
     onShowConfirmation: (props: any) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, initialTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation }) => {
-    const [activeTab, setActiveTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
@@ -144,24 +140,6 @@ ${htmlContent}
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
-            <div className="flex-shrink-0 px-4 border-b border-gray-700/50">
-                <div className="flex items-center gap-1">
-                    <button 
-                        onClick={() => setActiveTab('laboratorio')}
-                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2  ${activeTab === 'laboratorio' ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-t-lg'}`}
-                    >
-                        <SparklesIcon className="h-4 w-4" />
-                        Laboratorio
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('contenutoMaster')}
-                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'contenutoMaster' ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-t-lg'}`}
-                    >
-                        <BookOpenIcon className="h-4 w-4" />
-                        Contenuto Master
-                    </button>
-                </div>
-            </div>
 
             {activeTab === 'laboratorio' && (
                 <>

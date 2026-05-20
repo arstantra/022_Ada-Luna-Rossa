@@ -9,34 +9,19 @@ import { getBlockPlanningStatus, getExactDateForBlock } from '../utils';
 import BlockEditModal from './BlockEditModal';
 import EditableField from './EditableField';
 
-const getBlockTabStyle = (block: BlockDetails): { bgColor: string; textColor: string; } => {
-    if (block.isReviewed) {
-        return { bgColor: 'bg-green-600', textColor: 'text-white' };
-    }
+const getBlockDotColor = (block: BlockDetails): string => {
+    if (block.isReviewed) return 'bg-green-500';
     const status = getBlockPlanningStatus(block);
-
     switch (status) {
-        case 'concluso':
-            return { bgColor: 'bg-green-700', textColor: 'text-white' };
-        
-        case 'da_progettare':
+        case 'concluso':        return 'bg-green-500';
         case 'in_progettazione':
-        case 'in_revisione': 
-            return { bgColor: 'bg-amber-600', textColor: 'text-white' };
-
+        case 'in_revisione':    return 'bg-amber-400';
+        case 'da_progettare':   return 'bg-slate-500';
+        case 'fsl':             return 'bg-sky-500';
+        case 'da_definire':     return 'bg-red-500';
         case 'saltato':
-        case 'annullato':
-            return { bgColor: 'bg-gray-700', textColor: 'text-gray-300' };
-        
-        case 'fsl':
-            return { bgColor: 'bg-sky-500', textColor: 'text-white' };
-
-        case 'da_definire':
-            return { bgColor: 'bg-red-800', textColor: 'text-red-200' };
-            
-        case 'sconosciuto':
-        default:
-            return { bgColor: 'bg-gray-700', textColor: 'text-gray-300' };
+        case 'annullato':       return 'bg-gray-600';
+        default:                return 'bg-gray-600';
     }
 };
 
@@ -46,38 +31,60 @@ const BlockNavigator: React.FC<{
     onSelect: (index: number) => void;
     weekDates: string;
     teacherProfile: string;
-}> = memo(({ blocks, activeIndex, onSelect, weekDates, teacherProfile }) => {
-    
+    activeTab: 'laboratorio' | 'contenutoMaster';
+    onTabChange: (tab: 'laboratorio' | 'contenutoMaster') => void;
+}> = memo(({ blocks, activeIndex, onSelect, weekDates, teacherProfile, activeTab, onTabChange }) => {
+
     return (
-        <div className="flex items-stretch border-b-2 border-gray-700/50">
-            {blocks.map((block, index) => {
-                const isActive = index === activeIndex;
-                const { bgColor, textColor } = getBlockTabStyle(block);
-                const blockDate = getExactDateForBlock(weekDates, block.day, teacherProfile);
-                const dateString = blockDate ? blockDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }) : block.day;
-                
-                return (
-                     <button
-                        key={block.id}
-                        onClick={() => onSelect(index)}
-                        className={`
-                            relative flex-1 text-center p-3 transition-all duration-200 focus:outline-none focus:z-10
-                            border-r border-gray-900/50 last:border-r-0
-                            ${bgColor} 
-                            ${isActive 
-                                ? 'shadow-lg' 
-                                : 'opacity-75 hover:opacity-100'
-                            }
-                        `}
-                     >
-                        <p className={`font-semibold text-sm ${textColor}`}>Blocco {index + 1}</p>
-                        <p className={`text-xs mt-1 ${textColor} opacity-80`}>{dateString}</p>
-                        {isActive && (
-                            <div className="absolute bottom-[-2px] left-4 right-4 h-0.5 bg-white rounded-t-full"></div>
-                        )}
-                    </button>
-                );
-            })}
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 gap-4">
+            {/* Block pills */}
+            <div className="flex items-center gap-1">
+                {blocks.map((block, index) => {
+                    const isActive = index === activeIndex;
+                    const dotColor = getBlockDotColor(block);
+                    const blockDate = getExactDateForBlock(weekDates, block.day, teacherProfile);
+                    const dateString = blockDate
+                        ? blockDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+                        : block.day;
+
+                    return (
+                        <button
+                            key={block.id}
+                            onClick={() => onSelect(index)}
+                            title={`Blocco ${index + 1} — ${dateString}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-gray-500
+                                ${isActive
+                                    ? 'bg-gray-700 text-white shadow-sm'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                                }`}
+                        >
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+                            <span>B{index + 1}</span>
+                            <span className="text-gray-400 font-normal hidden sm:inline">{dateString}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Workspace tab toggle */}
+            <div className="flex items-center bg-gray-900/60 rounded-md p-0.5 border border-gray-700/30 flex-shrink-0">
+                <button
+                    onClick={() => onTabChange('laboratorio')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
+                        ${activeTab === 'laboratorio' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                >
+                    <SparklesIcon className="h-3 w-3" />
+                    Laboratorio
+                </button>
+                <button
+                    onClick={() => onTabChange('contenutoMaster')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
+                        ${activeTab === 'contenutoMaster' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                >
+                    <BookOpenIcon className="h-3 w-3" />
+                    Contenuto
+                </button>
+            </div>
         </div>
     );
 });
@@ -101,6 +108,7 @@ interface PlanningViewProps {
 const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
     
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -167,6 +175,12 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         }
     }, [weekPlan?.activeBlockIndex, conversation.id]); // Re-run when active block or conversation changes
 
+    useEffect(() => {
+        if (initialTab) {
+            setActiveWorkspaceTab(initialTab);
+            onInitialTabConsumed?.();
+        }
+    }, [initialTab, onInitialTabConsumed]);
 
     if (!weekPlan) return null;
 
@@ -180,12 +194,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             </main>
         );
     }
-
-    useEffect(() => {
-        if (initialTab && onInitialTabConsumed) {
-            onInitialTabConsumed();
-        }
-    }, [initialTab, onInitialTabConsumed]);
 
     const activeBlock = useMemo(() => weekPlan.blocks[weekPlan.activeBlockIndex], [weekPlan.blocks, weekPlan.activeBlockIndex]);
     
@@ -306,48 +314,50 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                         </div>
                     </div>
 
-                    <BlockNavigator 
-                        blocks={weekPlan.blocks} 
-                        activeIndex={weekPlan.activeBlockIndex} 
-                        onSelect={handleBlockSelect} 
+                    <BlockNavigator
+                        blocks={weekPlan.blocks}
+                        activeIndex={weekPlan.activeBlockIndex}
+                        onSelect={handleBlockSelect}
                         weekDates={weekPlan.dates}
                         teacherProfile={masterContext.teacherProfile}
+                        activeTab={activeWorkspaceTab}
+                        onTabChange={setActiveWorkspaceTab}
                     />
                     
                     {activeBlock && (
-                        <div className="p-4 bg-gray-800/60">
+                        <div className="px-4 py-2 bg-gray-800/60">
                             {activeBlock.lessonTitle ? (
-                                <details className="group" open>
-                                    <summary className="list-none flex items-center justify-between cursor-pointer">
-                                        <div className="text-white text-sm flex-grow flex items-start gap-2">
-                                            <BookOpenIcon className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                            <div className="flex-grow">{objectiveContent}</div>
+                                <details className="group">
+                                    <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
+                                        <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
+                                            <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            <div className="flex-grow truncate">{objectiveContent}</div>
                                         </div>
-                                        <ChevronDownIcon className="h-5 w-5 text-gray-400 transition-transform duration-200 group-open:rotate-180" />
+                                        <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
                                     </summary>
-                                    <div className="mt-2 pt-3 border-t border-gray-700/50">
-                                        <div className="max-h-64 overflow-y-auto custom-scrollbar border border-gray-700/50 rounded-lg p-3">
+                                    <div className="mt-2 pt-2 border-t border-gray-700/50">
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
                                             <MarkdownRenderer content={activeBlock.lessonTitle} />
                                         </div>
                                     </div>
                                 </details>
                             ) : (
-                                <div className="text-white text-sm flex items-start gap-2">
-                                    <BookOpenIcon className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                                    <div className="flex-grow">{objectiveContent}</div>
+                                <div className="text-white text-sm flex items-center gap-2">
+                                    <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <div className="flex-grow truncate">{objectiveContent}</div>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
                 
-                <BlockWorkspaceView 
+                <BlockWorkspaceView
                     block={activeBlock}
                     onSendMessage={onSendMessage}
                     isLoading={isLoading}
                     highlightQuery={isSearchOpen && searchQuery.length > 2 ? searchQuery : undefined}
                     currentResultId={currentResultId}
-                    initialTab={initialTab || undefined}
+                    activeTab={activeWorkspaceTab}
                     useGoogleSearch={useGoogleSearch}
                     onGoogleSearchChange={onGoogleSearchChange}
                     onShowConfirmation={onShowConfirmation}

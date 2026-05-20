@@ -53,10 +53,10 @@ App React/TypeScript per insegnanti. Aiuta nella **pianificazione del corso**, n
 
 ### Sidebar
 - **Accent line attivo**: `absolute left-0 w-0.5 h-5 rounded-r-full bg-purple-400/80`
-- **Label sezione**: `text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80`
+- **CollapsibleSectionLabel**: `text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80` + chevron micro a destra — tutte le sezioni principali usano questo pattern
 - **NavItem non-attivo**: `text-gray-300 hover:bg-gray-800/60 hover:text-white`
-- **NavItem attivo**: `bg-gray-700/70 text-white font-semibold`
-- **Label sezione contenuto**: `text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80`
+- **NavItem attivo**: `bg-gray-700/70 text-white` — **NON** `font-semibold`: l'accent line viola è l'unico indicatore, il grassetto è ridondante
+- **CollapsibleSection** (sotto-sezioni con icona, es. "Laboratori e Strumenti"): stile diverso, ha icona + testo + chevron, usato solo per sotto-livelli
 
 ### Stato blocco — colori (DOT_CONFIG / BADGE_CONFIG)
 | Stato | Dot | Badge testo |
@@ -75,7 +75,7 @@ App React/TypeScript per insegnanti. Aiuta nella **pianificazione del corso**, n
 ```
 components/
   MainApp.tsx                — orchestratore centrale, routing, tutti gli handler
-  Sidebar.tsx                — navigazione, NavItem + CollapsibleSection + accent line
+  Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
   StrategicDashboardView.tsx — "Progettazione del Corso": settimane, blocchi, progressStats
   InAulaView.tsx             — vista lezione (archivio + in_corso)
   ChatView.tsx               — chat con Ada
@@ -188,22 +188,28 @@ Entrambi hanno stato `justSaved`: bordo verde `border-emerald-500/60` per 1.5s d
 
 ## Sidebar — Struttura Navigazione Attuale
 
+Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron, stile monospace) + `CollapsibleContent`. Stato default: CONTENUTI, IN AULA, MONITORAGGIO aperte; GESTIONE chiusa.
+
 ```
 [Conversa con Ada]  — button gradient viola, mostra disciplina come sottotitolo font-mono
-─ CONTENUTI DEL CORSO
+
+▾ CONTENUTI DEL CORSO          (CollapsibleSectionLabel, default: aperta)
   • Progettazione del Corso        (→ strategic_dashboard)
-  • Laboratori e Strumenti ▾       (CollapsibleSection)
+  • Laboratori e Strumenti ▾       (CollapsibleSection con icona, sotto-livello)
       ↳ Toolkit                    (→ toolkit)
       ↳ Atelier Visivo             (DISABILITATO — badge "API")
-─ IN AULA
+
+▾ IN AULA                      (CollapsibleSectionLabel, default: aperta)
   • Lezione in Corso               (→ lezione_in_corso, badge verde se attiva)
   • Archivio Lezioni               (→ archivio_lezioni)
   • I Miei Notebook                (→ notebooklm)
-─ MONITORAGGIO
+
+▾ MONITORAGGIO                 (CollapsibleSectionLabel, default: aperta)
   • Andamento Aula                 (→ classroom_trend)
   • Gruppi                         (→ groups_archive)
   • Studentesse                    (→ students / student_profile)
-─ Gestione del Corso ▾             (CollapsibleSection, in fondo)
+
+▾ GESTIONE DEL CORSO           (CollapsibleSectionLabel, default: chiusa)
     ↳ Disciplina, Documenti Fondanti, Profilo Docente,
       Personalità di Ada, Etichette, Backup, API Key
 ```
@@ -234,3 +240,5 @@ progettata → in_corso → archiviata
 - Non usare **rosso** per lo stato `da_fare` — usare slate. Il rosso è riservato ad azioni distruttive (Salta) e messaggi di errore.
 - Non aggiungere `rounded-full` ai pulsanti AI — il pattern stabilito è `rounded-lg` outline rettangolare.
 - Non togliere il feedback `justSaved` da `EditableField`/`EditableTextarea` — è parte del contratto UX con l'utente (conferma che IndexedDB ha ricevuto il dato).
+- Non aggiungere `font-semibold` al `NavItem` attivo — l'accent line viola è l'unico indicatore visivo; il grassetto era ridondante e visivamente più pesante.
+- Non creare un secondo `CLAUDE.md` nella sottocartella `ADA - Luna rossa/` — fonte di verità unica: `022_Ada Luna Rossa/CLAUDE.md`.

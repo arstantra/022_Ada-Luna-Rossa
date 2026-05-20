@@ -58,7 +58,37 @@ interface SidebarProps {
   onShowToast: (message: string, type: 'success' | 'info' | 'error') => void;
 }
 
-// ── Componente sezione collassabile ───────────────────────────────────────────
+// ── Label di sezione collassabile ─────────────────────────────────────────────
+// Stessa estetica di SectionLabel ma cliccabile con chevron
+const CollapsibleSectionLabel: React.FC<{
+  children: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+}> = ({ children, isOpen, onToggle }) => (
+  <button
+    onClick={onToggle}
+    className="w-full flex items-center justify-between px-2 pt-4 pb-1.5 group select-none"
+    aria-expanded={isOpen}
+  >
+    <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 group-hover:text-gray-300/80 transition-colors">
+      {children}
+    </span>
+    <ChevronDownIcon
+      className={`h-3 w-3 text-gray-600 group-hover:text-gray-400 transition-all duration-200 ${isOpen ? 'rotate-180' : ''}`}
+    />
+  </button>
+);
+
+// ── Contenuto collassabile ────────────────────────────────────────────────────
+const CollapsibleContent: React.FC<{ isOpen: boolean; children: React.ReactNode }> = ({ isOpen, children }) => (
+  <div className={`grid transition-all duration-200 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+    <div className="overflow-hidden">
+      {children}
+    </div>
+  </div>
+);
+
+// ── Sezione collassabile con icona (per sotto-sezioni tipo "Laboratori") ──────
 const CollapsibleSection: React.FC<{
   title: string;
   icon: React.ReactNode;
@@ -83,13 +113,6 @@ const CollapsibleSection: React.FC<{
   </div>
 );
 
-// ── Label di sezione ──────────────────────────────────────────────────────────
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="px-2 pt-4 pb-1.5 text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 select-none">
-    {children}
-  </p>
-);
-
 // ── Voce di navigazione ───────────────────────────────────────────────────────
 const NavItem: React.FC<{
   icon: React.ReactNode;
@@ -108,7 +131,7 @@ const NavItem: React.FC<{
       ${disabled
         ? 'opacity-30 cursor-not-allowed text-gray-500'
         : isActive
-          ? 'bg-gray-700/70 text-white font-semibold'
+          ? 'bg-gray-700/70 text-white'
           : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
       }`}
   >
@@ -139,6 +162,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   disciplina, onSaveDisciplina,
   onShowToast,
 }) => {
+  const [contenutoOpen, setContenutoOpen] = useState(true);
+  const [inAulaOpen, setInAulaOpen] = useState(true);
+  const [monitoraggioOpen, setMonitoraggioOpen] = useState(true);
   const [gestioneOpen, setGestioneOpen] = useState(false);
   const [strumentiOpen, setStrumentiOpen] = useState(false);
   const [isDisciplinaEditing, setIsDisciplinaEditing] = useState(false);
@@ -210,97 +236,109 @@ const Sidebar: React.FC<SidebarProps> = ({
       <nav className="flex-1 overflow-y-auto no-scrollbar px-3 pb-4">
 
         {/* CONTENUTI DEL CORSO */}
-        <SectionLabel>Contenuti del Corso</SectionLabel>
-
-        <NavItem
-          icon={<ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />}
-          label="Progettazione del Corso"
-          isActive={activeView === 'strategic_dashboard'}
-          onClick={onOpenStrategicDashboard}
-        />
-
-        <CollapsibleSection
-          title="Laboratori e Strumenti"
-          icon={<CalendarIcon className="h-5 w-5 text-blue-400 flex-shrink-0" />}
-          isOpen={strumentiOpen}
-          onToggle={() => setStrumentiOpen(o => !o)}
-        >
-          <NavItem
-            icon={<ToolboxIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
-            label="Toolkit"
-            isActive={activeView === 'toolkit'}
-            onClick={onOpenToolkit}
-            indent
-          />
-          <NavItem
-            icon={<ImageIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
-            label="Atelier Visivo"
-            isActive={false}
-            onClick={onOpenImageGenerator}
-            indent
-            disabled
-          />
-        </CollapsibleSection>
+        <CollapsibleSectionLabel isOpen={contenutoOpen} onToggle={() => setContenutoOpen(o => !o)}>
+          Contenuti del Corso
+        </CollapsibleSectionLabel>
+        <CollapsibleContent isOpen={contenutoOpen}>
+          <div className="space-y-0.5">
+            <NavItem
+              icon={<ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />}
+              label="Progettazione del Corso"
+              isActive={activeView === 'strategic_dashboard'}
+              onClick={onOpenStrategicDashboard}
+            />
+            <CollapsibleSection
+              title="Laboratori e Strumenti"
+              icon={<CalendarIcon className="h-5 w-5 text-blue-400 flex-shrink-0" />}
+              isOpen={strumentiOpen}
+              onToggle={() => setStrumentiOpen(o => !o)}
+            >
+              <NavItem
+                icon={<ToolboxIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                label="Toolkit"
+                isActive={activeView === 'toolkit'}
+                onClick={onOpenToolkit}
+                indent
+              />
+              <NavItem
+                icon={<ImageIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                label="Atelier Visivo"
+                isActive={false}
+                onClick={onOpenImageGenerator}
+                indent
+                disabled
+              />
+            </CollapsibleSection>
+          </div>
+        </CollapsibleContent>
 
         {/* IN AULA */}
-        <SectionLabel>In Aula</SectionLabel>
-
-        <NavItem
-          icon={<BriefcaseIcon className="h-5 w-5 text-emerald-400 flex-shrink-0" />}
-          label="Lezione in Corso"
-          isActive={activeView === 'lezione_in_corso'}
-          onClick={onOpenLezioneinCorso}
-          badge={
-            hasActiveLessons
-              ? <span className="flex-shrink-0 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-              : undefined
-          }
-        />
-        <NavItem
-          icon={<BookOpenIcon className="h-5 w-5 text-amber-400 flex-shrink-0" />}
-          label="Archivio Lezioni"
-          isActive={activeView === 'archivio_lezioni'}
-          onClick={onOpenArchivioLezioni}
-        />
-        <NavItem
-          icon={<BookOpenIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
-          label="I Miei Notebook"
-          isActive={activeView === 'notebooklm'}
-          onClick={onOpenNotebookLM}
-        />
+        <CollapsibleSectionLabel isOpen={inAulaOpen} onToggle={() => setInAulaOpen(o => !o)}>
+          In Aula
+        </CollapsibleSectionLabel>
+        <CollapsibleContent isOpen={inAulaOpen}>
+          <div className="space-y-0.5">
+            <NavItem
+              icon={<BriefcaseIcon className="h-5 w-5 text-emerald-400 flex-shrink-0" />}
+              label="Lezione in Corso"
+              isActive={activeView === 'lezione_in_corso'}
+              onClick={onOpenLezioneinCorso}
+              badge={
+                hasActiveLessons
+                  ? <span className="flex-shrink-0 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+                  : undefined
+              }
+            />
+            <NavItem
+              icon={<BookOpenIcon className="h-5 w-5 text-amber-400 flex-shrink-0" />}
+              label="Archivio Lezioni"
+              isActive={activeView === 'archivio_lezioni'}
+              onClick={onOpenArchivioLezioni}
+            />
+            <NavItem
+              icon={<BookOpenIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+              label="I Miei Notebook"
+              isActive={activeView === 'notebooklm'}
+              onClick={onOpenNotebookLM}
+            />
+          </div>
+        </CollapsibleContent>
 
         {/* MONITORAGGIO */}
-        <SectionLabel>Monitoraggio</SectionLabel>
-
-        <NavItem
-          icon={<PresentationChartBarIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
-          label="Andamento Aula"
-          isActive={activeView === 'classroom_trend'}
-          onClick={onOpenClassroomTrend}
-        />
-        <NavItem
-          icon={<UsersIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
-          label="Gruppi"
-          isActive={activeView === 'groups_archive'}
-          onClick={onOpenGroupsArchive}
-        />
-        <NavItem
-          icon={<UsersIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
-          label="Studentesse"
-          isActive={activeView === 'roster' || activeView === 'student_profile'}
-          onClick={onOpenStudentRoster}
-        />
+        <CollapsibleSectionLabel isOpen={monitoraggioOpen} onToggle={() => setMonitoraggioOpen(o => !o)}>
+          Monitoraggio
+        </CollapsibleSectionLabel>
+        <CollapsibleContent isOpen={monitoraggioOpen}>
+          <div className="space-y-0.5">
+            <NavItem
+              icon={<PresentationChartBarIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
+              label="Andamento Aula"
+              isActive={activeView === 'classroom_trend'}
+              onClick={onOpenClassroomTrend}
+            />
+            <NavItem
+              icon={<UsersIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
+              label="Gruppi"
+              isActive={activeView === 'groups_archive'}
+              onClick={onOpenGroupsArchive}
+            />
+            <NavItem
+              icon={<UsersIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+              label="Studentesse"
+              isActive={activeView === 'roster' || activeView === 'student_profile'}
+              onClick={onOpenStudentRoster}
+            />
+          </div>
+        </CollapsibleContent>
 
         {/* GESTIONE DEL CORSO */}
-        <div className="mt-2 border-t border-gray-800/40 pt-2">
-          <CollapsibleSection
-            title="Gestione del Corso"
-            icon={<UsersIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
-            isOpen={gestioneOpen}
-            onToggle={() => setGestioneOpen(o => !o)}
-          >
+        <CollapsibleSectionLabel isOpen={gestioneOpen} onToggle={() => setGestioneOpen(o => !o)}>
+          Gestione del Corso
+        </CollapsibleSectionLabel>
+        <CollapsibleContent isOpen={gestioneOpen}>
+          <div className="space-y-0.5 pb-1">
             {/* Campo Disciplina */}
-            <div className="mx-2 mb-2 mt-1 px-2 py-2 rounded-lg bg-gray-800/60 border border-gray-700/40">
+            <div className="mx-1 mb-2 mt-1 px-2 py-2 rounded-lg bg-gray-800/60 border border-gray-700/40">
               <p className="text-[10px] text-gray-600 font-mono uppercase tracking-wider mb-1.5">Disciplina / Corso</p>
               {isDisciplinaEditing ? (
                 <input
@@ -345,8 +383,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             <NavItem icon={<ArrowUpTrayIcon className="h-4 w-4 flex-shrink-0" />} label="Importa Backup" isActive={false} onClick={onImportData} indent />
             <NavItem icon={<BookOpenIcon className="h-4 w-4 flex-shrink-0" />} label="Esporta Libro del Corso" isActive={false} onClick={onExportCourseBook} indent />
             <NavItem icon={<SparklesIcon className="h-4 w-4 flex-shrink-0 text-gray-600" />} label="Chiave API Gemini" isActive={false} onClick={onOpenApiSettings} indent />
-          </CollapsibleSection>
-        </div>
+          </div>
+        </CollapsibleContent>
+
       </nav>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
