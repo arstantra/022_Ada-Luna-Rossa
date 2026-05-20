@@ -214,6 +214,9 @@ export const getBlockPlanningStatus = (block: BlockDetails | undefined): BlockPl
             const messages = block.messages || [];
 
             if (!hasMasterContent) {
+                // Nessun lavoro iniziato: niente obiettivo, modulo, né messaggi → da progettare (slate)
+                const hasAnyWork = block.objective?.trim() || block.module?.trim() || messages.length > 0;
+                if (!hasAnyWork) return 'da_progettare';
                 return 'in_progettazione';
             }
 

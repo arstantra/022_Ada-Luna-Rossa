@@ -76,7 +76,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 | `concluso` / `isReviewed` | `bg-emerald-500` | completato |
 | `in_progettazione` | `bg-amber-400` | in_corso |
 | `in_revisione` | `bg-amber-400` | in_corso |
-| `da_progettare` | `bg-slate-500` | da_fare |
+| `da_progettare` | `bg-slate-500` | da_fare | status=`da definire` con obiettivo/modulo, oppure status=`normale` senza nessun lavoro iniziato |
 | `da_definire` | `bg-red-500` | da_fare (warning) |
 | `fsl` | `bg-sky-500` | speciale (distinto visivamente) |
 | `saltato` / `annullato` / `sconosciuto` | `bg-gray-500` | speciale |
