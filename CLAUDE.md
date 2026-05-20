@@ -74,11 +74,12 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 | Stato planning | Dot | Mappa a macrostato |
 |----------------|-----|--------------------|
 | `concluso` / `isReviewed` | `bg-emerald-500` | completato |
+| `in_revisione` | `bg-emerald-500` | completato (ha contentBlocks, ma teacher ha mandato nuovo msg) |
 | `in_progettazione` | `bg-amber-400` | in_corso |
-| `in_revisione` | `bg-amber-400` | in_corso |
-| `da_progettare` | `bg-slate-500` | da_fare | status=`da definire` con obiettivo/modulo, oppure status=`normale` senza nessun lavoro iniziato |
-| `da_definire` | `bg-red-500` | da_fare (warning) |
-| `fsl` | `bg-sky-500` | speciale (distinto visivamente) |
+| `da_progettare` + `block.status='da definire'` | `bg-amber-400` | in_corso (ha objective ma giorno non fissato) |
+| `da_progettare` + `block.status='normale'` | `bg-slate-500` | da_fare (niente fatto ancora) |
+| `da_definire` | `bg-slate-500` | da_fare (giorno non fissato, nessun contenuto) |
+| `fsl` | `bg-sky-500` | speciale (distinto visivamente; in StrategicDashboard collassa in gray) |
 | `saltato` / `annullato` / `sconosciuto` | `bg-gray-500` | speciale |
 
 > **REGOLE COLORE CANONICHE** (non derogare):
@@ -87,7 +88,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 > - non iniziato → **`bg-slate-500`**
 > - speciale/neutro → **`bg-gray-500`** (MAI `bg-gray-600`)
 > - `da_fare` usa slate/neutro, NON rosso — il rosso era ansiogeno per blocchi semplicemente non ancora iniziati
-> - `da_definire` usa rosso come **warning** (giorno non ancora assegnato), non come errore
+> - `da_definire` è slate (neutro), non rosso: il giorno non fissato è informazione, non errore
 
 ---
 

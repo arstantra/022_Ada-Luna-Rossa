@@ -13,12 +13,18 @@ const getBlockDotColor = (block: BlockDetails): string => {
     if (block.isReviewed) return 'bg-emerald-500';
     const status = getBlockPlanningStatus(block);
     switch (status) {
-        case 'concluso':        return 'bg-emerald-500';
-        case 'in_progettazione':
-        case 'in_revisione':    return 'bg-amber-400';
-        case 'da_progettare':   return 'bg-slate-500';
+        case 'concluso':
+        case 'in_revisione':    // ha contentBlocks: è "completato" a livello corso
+                                return 'bg-emerald-500';
+        case 'in_progettazione':return 'bg-amber-400';
+        case 'da_progettare':
+            // 'da_progettare' copre due casi:
+            // 1. status='da definire' + ha objective/module → amber (lavoro iniziato, giorno non ancora fissato)
+            // 2. status='normale' + niente fatto → slate (non ancora iniziato)
+            return block.status === 'da definire' ? 'bg-amber-400' : 'bg-slate-500';
+        case 'da_definire':     // nessun contenuto, giorno non fissato → neutro come in StrategicDashboard
+                                return 'bg-slate-500';
         case 'fsl':             return 'bg-sky-500';
-        case 'da_definire':     return 'bg-red-500';
         case 'saltato':
         case 'annullato':       return 'bg-gray-500';
         default:                return 'bg-gray-500';
