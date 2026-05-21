@@ -1,5 +1,17 @@
 
 
+/**
+ * Sottoinsieme del contesto docente passato a gemini.ts.
+ * Contiene solo i campi dati letti dal servizio AI (no handler, no isLoading).
+ */
+export interface MasterContextData {
+    systemInstruction: string;
+    constitution: string;
+    crewContext: string;
+    rulesContext: string;
+    teacherProfile: string;
+}
+
 export interface Label {
     id: string;
     name: string;

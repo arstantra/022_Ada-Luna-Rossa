@@ -1,11 +1,21 @@
 // services/gemini.ts
 // @ts-nocheck
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode } from "@google/genai";
-import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo } from '../types';
+import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData } from '../types';
 import { MODES } from '../constants';
 import TurndownService from 'turndown';
 
 export const ADA_API_KEY_STORAGE = 'ada_gemini_api_key';
+
+/**
+ * Estrae i campi tipizzati dai function call args del Gemini SDK.
+ * Il SDK tipizza `FunctionCall.args` come opaco (Record<string, unknown>);
+ * il doppio cast `as unknown as T` è il pattern TypeScript approvato per
+ * attraversare un boundary di tipo non espresso dall'SDK.
+ */
+function extractArgs<T>(args: Record<string, unknown> | undefined): T {
+    return args as unknown as T;
+}
 
 const getAI = () => {
     const key = localStorage.getItem(ADA_API_KEY_STORAGE) || '';
@@ -95,7 +105,7 @@ export const streamChatResponse = async (
     history: Message[],
     content: string,
     attachment: Attachment | undefined,
-    masterContext: any,
+    masterContext: MasterContextData,
     currentModeId: Mode['id'],
     useGoogleSearch: boolean,
     conversations: Conversation[],
@@ -207,8 +217,8 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
     });
 
     const call = response.functionCalls?.[0];
-    if (call?.name === 'create_student_groups' && (call.args as any).groups) {
-        return { groups: (call.args as any).groups as GroupDefinition[] };
+    if (call?.name === 'create_student_groups' && extractArgs<{ groups?: GroupDefinition[] }>(call.args).groups) {
+        return { groups: extractArgs<{ groups: GroupDefinition[] }>(call.args).groups };
     }
     throw new Error("La risposta dell'AI non conteneva una struttura di gruppi valida.");
 };
@@ -244,7 +254,7 @@ export const generateLessonAnalysis = async (notes: string, studentNames: string
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'analyze_lesson_notes' && call.args) {
-        return call.args as any;
+        return extractArgs<AdaAnalysis>(call.args);
     }
     throw new Error("L'AI non ha fornito un'analisi strutturata valida.");
 };
@@ -280,7 +290,7 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'analyze_evaluation_text' && call.args) {
-        return call.args as Partial<Evaluation>;
+        return extractArgs<Partial<Evaluation>>(call.args);
     }
     throw new Error("L'AI non è riuscita a strutturare la valutazione. Prova a riformattare il testo.");
 };
@@ -379,7 +389,7 @@ Estrai i dati in modo rigoroso e strutturato.`;
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'analyze_qualitative_classroom_data' && call.args) {
-        const args = call.args as any;
+        const args = extractArgs<Partial<QualitativeAnalysisData>>(call.args);
         return {
             classEnergy: args.classEnergy || [],
             studentGrowth: args.studentGrowth || [],
@@ -469,7 +479,7 @@ Usa la funzione 'suggest_week_theme' per la tua risposta.`;
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'suggest_week_theme' && call.args) {
-        const { theme, reasoning } = call.args as any;
+        const { theme, reasoning } = extractArgs<{ theme?: string; reasoning?: string }>(call.args);
         return { theme: theme || '', reasoning: reasoning || '' };
     }
     throw new Error("L'AI non ha fornito un tema in un formato valido.");
@@ -517,7 +527,7 @@ Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti. As
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'generate_objective_suggestions' && call.args) {
-        const { concise, balanced, creative } = call.args as any;
+        const { concise, balanced, creative } = extractArgs<{ concise?: string; balanced?: string; creative?: string }>(call.args);
         return { concise: concise || '', balanced: balanced || '', creative: creative || '' };
     }
     throw new Error("L'AI non ha fornito gli obiettivi nel formato richiesto.");
@@ -559,7 +569,7 @@ Usa la funzione 'generate_strategic_suggestions' per la tua risposta. Fornisci u
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'generate_strategic_suggestions' && call.args) {
-        const { theme, objectives, reasoning } = call.args as any;
+        const { theme, objectives, reasoning } = extractArgs<{ theme?: string; objectives?: string[]; reasoning?: string }>(call.args);
         return { theme: theme || '', objectives: objectives || [], reasoning: reasoning || '' };
     }
     throw new Error("L'AI non ha fornito suggerimenti strategici in un formato valido.");
@@ -599,7 +609,7 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'generate_block_details' && call.args) {
-        const { lessonTitle, lessonSyllabus, lessonMaterials } = call.args as any;
+        const { lessonTitle, lessonSyllabus, lessonMaterials } = extractArgs<{ lessonTitle?: string; lessonSyllabus?: string[]; lessonMaterials?: string[] }>(call.args);
         return {
             lessonTitle: lessonTitle || '',
             lessonSyllabus: (lessonSyllabus || []).map((s: string) => `- ${s}`).join('\n'),

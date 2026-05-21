@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { Message, Action, PlanningActionPayload } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { CopyIcon, CheckIcon, WebIcon } from './Icons';
@@ -31,12 +31,21 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup timer "copied" al unmount per evitare setState su componente smontato
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    };
+  }, []);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(message.content).then(() => {
         setCopied(true);
         onShowToast('Risposta copiata!', 'success');
-        setTimeout(() => setCopied(false), 2000);
+        if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+        copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000);
     });
   }, [message.content, onShowToast]);
 

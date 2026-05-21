@@ -28,6 +28,7 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
     const internalRef = useRef<HTMLDivElement>(null);
     const editorRef = (ref || internalRef) as React.RefObject<HTMLDivElement>;
     const autosaveTimeoutRef = useRef<number | null>(null);
+    const savedStatusTimeoutRef = useRef<number | null>(null);
     const lastSavedContent = useRef(initialContent);
 
     // State
@@ -36,6 +37,14 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     
+    // Cleanup entrambi i timer al unmount del componente
+    useEffect(() => {
+        return () => {
+            if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+            if (savedStatusTimeoutRef.current) clearTimeout(savedStatusTimeoutRef.current);
+        };
+    }, []);
+
     // Sync markdown content with prop
     useEffect(() => {
         if (mode === 'markdown') {
@@ -65,7 +74,8 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
                 setSaveStatus('saving');
                 onSave(content);
                 lastSavedContent.current = content;
-                setTimeout(() => setSaveStatus('saved'), 500);
+                if (savedStatusTimeoutRef.current) clearTimeout(savedStatusTimeoutRef.current);
+                savedStatusTimeoutRef.current = window.setTimeout(() => setSaveStatus('saved'), 500);
             } else {
                 setSaveStatus('saved');
             }

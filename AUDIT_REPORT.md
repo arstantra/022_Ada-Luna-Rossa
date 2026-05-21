@@ -170,14 +170,14 @@ Font Google Fonts e config Tailwind:
 
 ---
 
-## 8. Problemi segnalati senza correzione automatica
+## 8. Problemi aperti — TUTTI RISOLTI (2026-05-21)
 
-| # | File | Problema | Azione richiesta |
-|---|------|---------|-----------------|
-| 1 | `services/gemini.ts:98` | `masterContext: any` — il servizio riceve il masterContext come `any` per evitare un import hook-in-service | Estrarre un'interfaccia `MasterContextData` in `types.ts` e usarla come tipo esplicito |
-| 2 | `services/gemini.ts:210,211,247,382,472,520,562,602` | `call.args as any` × 7 — Gemini SDK non espone tipi precisi per i function call args | Accettabile as-is o creare response type per ogni tool function call |
-| 3 | `components/DocumentEditor.tsx:68` | `setTimeout(() => setSaveStatus('saved'), 500)` dentro il callback autosave (non in `useEffect`): mancante di cleanup | Basso rischio (500ms, set-state innocuo in React 18+). Fix possibile: aggiungere ref per tracciare e cancellare il timer |
-| 4 | `components/MessageView.tsx:38` | `setTimeout(() => setCopied(false), 2000)` dentro `handleCopy` (useCallback, non useEffect): set-state potenzialmente su componente smontato entro 2s | Basso rischio in React 18+. Fix: aggiungere `isMountedRef` o spostare in un useEffect con dipendenza |
+| # | File | Problema | Fix applicato |
+|---|------|---------|--------------|
+| 1 | `services/gemini.ts` | `masterContext: any` | Aggiunta interfaccia `MasterContextData` in `types.ts`; importata e usata in `streamChatResponse` |
+| 2 | `services/gemini.ts` | `call.args as any` × 7 | Aggiunto helper `extractArgs<T>()` con doppio cast `as unknown as T`; ogni call usa ora il tipo specifico del suo schema |
+| 3 | `components/DocumentEditor.tsx` | `setTimeout` interno senza cleanup | Aggiunto `savedStatusTimeoutRef`; timer cancellato prima di ogni re-scheduling e al unmount via `useEffect` |
+| 4 | `components/MessageView.tsx` | `setTimeout` in `handleCopy` senza cleanup | Aggiunto `copiedTimeoutRef`; timer cancellato al unmount via `useEffect` e prima di ogni re-avvio |
 
 ---
 
