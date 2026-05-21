@@ -6,9 +6,10 @@ import { SparklesIcon, ChevronDownIcon, CheckIcon } from './Icons';
 interface ModeSelectorProps {
   currentModeId: Mode['id'];
   onModeChange: (modeId: Mode['id']) => void;
+  compact?: boolean;
 }
 
-const ModeSelector: React.FC<ModeSelectorProps> = ({ currentModeId, onModeChange }) => {
+const ModeSelector: React.FC<ModeSelectorProps> = ({ currentModeId, onModeChange, compact = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const currentMode = MODES.find(m => m.id === currentModeId) || MODES[0];
@@ -23,14 +24,26 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ currentModeId, onModeChange
 
   return (
     <div ref={wrapperRef} className="relative">
-      <button onClick={() => setIsOpen(!isOpen)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${currentMode.colorClasses.badge} hover:ring-2`}>
-        <SparklesIcon className={`h-4 w-4 ${currentMode.colorClasses.text}`} />
-        <span className={currentMode.colorClasses.text}>{currentMode.label}</span>
-        <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${currentMode.colorClasses.text}`} />
-      </button>
+      {compact ? (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-700/40 transition-colors"
+          title={`Modalità: ${currentMode.label}`}
+        >
+          <SparklesIcon className={`h-3 w-3 ${currentMode.colorClasses.text} opacity-80`} />
+          <span className="font-mono tracking-wide">{currentMode.label}</span>
+          <ChevronDownIcon className={`h-3 w-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <button onClick={() => setIsOpen(!isOpen)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${currentMode.colorClasses.badge} hover:ring-2`}>
+          <SparklesIcon className={`h-4 w-4 ${currentMode.colorClasses.text}`} />
+          <span className={currentMode.colorClasses.text}>{currentMode.label}</span>
+          <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${currentMode.colorClasses.text}`} />
+        </button>
+      )}
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-gray-800 border border-gray-700/50 rounded-lg shadow-2xl z-10 p-2 animate-fade-in-down">
+        <div className={`absolute ${compact ? 'bottom-full left-0 mb-1' : 'right-0 top-full mt-2'} w-64 bg-gray-800 border border-gray-700/50 rounded-lg shadow-2xl z-10 p-2 animate-fade-in-down`}>
           <p className="px-2 py-1 text-xs font-semibold text-gray-400">Seleziona Modalità</p>
           <div className="mt-1 space-y-1">
             {MODES.map(mode => (

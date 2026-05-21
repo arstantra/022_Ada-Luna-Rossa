@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import type { Conversation, WeekPlan, Student, Message, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
-import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, CalendarIcon } from './Icons';
+import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, CalendarIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
-import ModeSelector from './ModeSelector';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -40,7 +39,8 @@ const BlockNavigator: React.FC<{
     teacherProfile: string;
     activeTab: 'laboratorio' | 'contenutoMaster';
     onTabChange: (tab: 'laboratorio' | 'contenutoMaster') => void;
-}> = memo(({ blocks, activeIndex, onSelect, weekDates, teacherProfile, activeTab, onTabChange }) => {
+    extraRight?: React.ReactNode;
+}> = memo(({ blocks, activeIndex, onSelect, weekDates, teacherProfile, activeTab, onTabChange, extraRight }) => {
 
     return (
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 gap-4">
@@ -73,24 +73,27 @@ const BlockNavigator: React.FC<{
                 })}
             </div>
 
-            {/* Workspace tab toggle */}
-            <div className="flex items-center bg-gray-900/60 rounded-md p-0.5 border border-gray-700/30 flex-shrink-0">
-                <button
-                    onClick={() => onTabChange('laboratorio')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
-                        ${activeTab === 'laboratorio' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                >
-                    <SparklesIcon className="h-3 w-3" />
-                    Laboratorio
-                </button>
-                <button
-                    onClick={() => onTabChange('contenutoMaster')}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
-                        ${activeTab === 'contenutoMaster' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-                >
-                    <BookOpenIcon className="h-3 w-3" />
-                    Contenuto
-                </button>
+            {/* Workspace tab toggle + optional extra actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center bg-gray-900/60 rounded-md p-0.5 border border-gray-700/30">
+                    <button
+                        onClick={() => onTabChange('laboratorio')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
+                            ${activeTab === 'laboratorio' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    >
+                        <SparklesIcon className="h-3 w-3" />
+                        Laboratorio
+                    </button>
+                    <button
+                        onClick={() => onTabChange('contenutoMaster')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors
+                            ${activeTab === 'contenutoMaster' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+                    >
+                        <BookOpenIcon className="h-3 w-3" />
+                        Contenuto
+                    </button>
+                </div>
+                {extraRight}
             </div>
         </div>
     );
@@ -303,86 +306,110 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         <>
             <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
                 <div className="flex-shrink-0 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700/50">
-                    <div className="p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-lg font-bold text-white truncate" title={weekPlan.theme}>{`Settimana ${weekPlan.weekNumber}: ${weekPlan.theme}`}</h2>
-                        </div>
-                        <div className="flex items-center gap-3 pl-4">
-                             {isSearchOpen ? (
-                                <div className="flex items-center gap-1 p-1 bg-gray-900/50 border border-gray-600 rounded-lg animate-fade-in-down">
-                                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cerca..." className="w-36 bg-transparent focus:outline-none px-2 text-sm text-white" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (e.shiftKey) handlePrevResult(); else handleNextResult(); } else if (e.key === 'Escape') { handleCloseSearch(); } }}/>
-                                    <span className="text-xs text-gray-400 select-none">{searchQuery.length > 2 ? (searchResults.length > 0 ? `${currentResultIndex + 1}/${searchResults.length}` : '0/0') : '-/-'}</span>
-                                    <button onClick={handlePrevResult} disabled={searchResults.length < 2} className="p-1 rounded text-gray-400 hover:bg-gray-700 disabled:opacity-50"><ChevronUpIcon className="h-4 w-4" /></button>
-                                    <button onClick={handleNextResult} disabled={searchResults.length < 2} className="p-1 rounded text-gray-400 hover:bg-gray-700 disabled:opacity-50"><ChevronDownIcon className="h-4 w-4" /></button>
-                                    <button onClick={handleCloseSearch} className="p-1 rounded text-gray-400 hover:bg-gray-700"><XIcon className="h-4 w-4" /></button>
+                    {activeWorkspaceTab === 'contenutoMaster' ? (
+                        /* ── Contenuto Master: barra compatta con sole pillole + toggle + X ── */
+                        <BlockNavigator
+                            blocks={weekPlan.blocks}
+                            activeIndex={weekPlan.activeBlockIndex}
+                            onSelect={handleBlockSelect}
+                            weekDates={weekPlan.dates}
+                            teacherProfile={masterContext.teacherProfile}
+                            activeTab={activeWorkspaceTab}
+                            onTabChange={setActiveWorkspaceTab}
+                            extraRight={
+                                <button
+                                    onClick={onClose}
+                                    className="p-1.5 rounded text-gray-500 hover:bg-gray-700 hover:text-white transition-colors"
+                                    aria-label="Torna alla panoramica"
+                                >
+                                    <XIcon className="h-4 w-4" />
+                                </button>
+                            }
+                        />
+                    ) : (
+                        /* ── Laboratorio: header completo ── */
+                        <>
+                            <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <ClipboardDocumentCheckIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                    <h2 className="text-base font-display font-semibold text-white truncate" title={weekPlan.theme}>
+                                        {`Settimana ${weekPlan.weekNumber}: ${weekPlan.theme}`}
+                                    </h2>
                                 </div>
-                            ) : (
-                                <button onClick={() => setIsSearchOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Cerca"><SearchIcon className="h-5 w-5" /></button>
-                            )}
-                            {/* Selettore modalità (Bilanciata, Formale, ecc.) */}
-                            {currentModeId && onModeChange && (
-                                <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
-                            )}
-                            <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Modifica Blocco">
-                                <CogIcon className="h-5 w-5" />
-                            </button>
-                            <div className="w-px h-4 bg-gray-700/60 mx-1" />
-                            <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors" aria-label="Torna alla panoramica">
-                                <XIcon className="h-5 w-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <BlockNavigator
-                        blocks={weekPlan.blocks}
-                        activeIndex={weekPlan.activeBlockIndex}
-                        onSelect={handleBlockSelect}
-                        weekDates={weekPlan.dates}
-                        teacherProfile={masterContext.teacherProfile}
-                        activeTab={activeWorkspaceTab}
-                        onTabChange={setActiveWorkspaceTab}
-                    />
-                    
-                    {activeBlock && (() => {
-                        const isSpecial = ['saltato', 'formazione scuola-lavoro', 'annullato'].includes(activeBlock.status);
-                        const hasObjective = activeBlock.objective?.trim();
-                        const isEmpty = !hasObjective && !isSpecial && !activeBlock.lessonTitle;
-
-                        if (isEmpty) {
-                            return (
-                                <div className="px-4 py-1 bg-gray-800/30 flex items-center gap-2">
-                                    <BookOpenIcon className="h-3 w-3 text-gray-700 flex-shrink-0" />
-                                    <span className="text-[11px] text-gray-700 italic">Obiettivo non ancora definito</span>
+                                <div className="flex items-center gap-1 pl-4 flex-shrink-0">
+                                    {isSearchOpen ? (
+                                        <div className="flex items-center gap-1 p-1 bg-gray-900/50 border border-gray-600 rounded-lg animate-fade-in-down">
+                                            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cerca..." className="w-36 bg-transparent focus:outline-none px-2 text-sm text-white" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (e.shiftKey) handlePrevResult(); else handleNextResult(); } else if (e.key === 'Escape') { handleCloseSearch(); } }}/>
+                                            <span className="text-xs text-gray-400 select-none">{searchQuery.length > 2 ? (searchResults.length > 0 ? `${currentResultIndex + 1}/${searchResults.length}` : '0/0') : '-/-'}</span>
+                                            <button onClick={handlePrevResult} disabled={searchResults.length < 2} className="p-1 rounded text-gray-400 hover:bg-gray-700 disabled:opacity-50"><ChevronUpIcon className="h-4 w-4" /></button>
+                                            <button onClick={handleNextResult} disabled={searchResults.length < 2} className="p-1 rounded text-gray-400 hover:bg-gray-700 disabled:opacity-50"><ChevronDownIcon className="h-4 w-4" /></button>
+                                            <button onClick={handleCloseSearch} className="p-1 rounded text-gray-400 hover:bg-gray-700"><XIcon className="h-4 w-4" /></button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => setIsSearchOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Cerca"><SearchIcon className="h-5 w-5" /></button>
+                                    )}
+                                    <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Modifica Blocco">
+                                        <CogIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="w-px h-4 bg-gray-700/60 mx-1" />
+                                    <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors" aria-label="Torna alla panoramica">
+                                        <XIcon className="h-5 w-5" />
+                                    </button>
                                 </div>
-                            );
-                        }
+                            </div>
 
-                        return (
-                            <div className="px-4 py-2 bg-gray-800/60">
-                                {activeBlock.lessonTitle ? (
-                                    <details className="group">
-                                        <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
-                                            <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
+                            <BlockNavigator
+                                blocks={weekPlan.blocks}
+                                activeIndex={weekPlan.activeBlockIndex}
+                                onSelect={handleBlockSelect}
+                                weekDates={weekPlan.dates}
+                                teacherProfile={masterContext.teacherProfile}
+                                activeTab={activeWorkspaceTab}
+                                onTabChange={setActiveWorkspaceTab}
+                            />
+
+                            {activeBlock && (() => {
+                                const isSpecial = ['saltato', 'formazione scuola-lavoro', 'annullato'].includes(activeBlock.status);
+                                const hasObjective = activeBlock.objective?.trim();
+                                const isEmpty = !hasObjective && !isSpecial && !activeBlock.lessonTitle;
+
+                                if (isEmpty) {
+                                    return (
+                                        <div className="px-4 py-1 bg-gray-800/30 flex items-center gap-2">
+                                            <BookOpenIcon className="h-3 w-3 text-gray-700 flex-shrink-0" />
+                                            <span className="text-[11px] text-gray-700 italic">Obiettivo non ancora definito</span>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="px-4 py-2 bg-gray-800/60">
+                                        {activeBlock.lessonTitle ? (
+                                            <details className="group">
+                                                <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
+                                                    <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
+                                                        <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                                        <div className="flex-grow truncate">{objectiveContent}</div>
+                                                    </div>
+                                                    <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
+                                                </summary>
+                                                <div className="mt-2 pt-2 border-t border-gray-700/50">
+                                                    <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
+                                                        <MarkdownRenderer content={activeBlock.lessonTitle} />
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        ) : (
+                                            <div className="text-white text-sm flex items-center gap-2">
                                                 <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                                 <div className="flex-grow truncate">{objectiveContent}</div>
                                             </div>
-                                            <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
-                                        </summary>
-                                        <div className="mt-2 pt-2 border-t border-gray-700/50">
-                                            <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
-                                                <MarkdownRenderer content={activeBlock.lessonTitle} />
-                                            </div>
-                                        </div>
-                                    </details>
-                                ) : (
-                                    <div className="text-white text-sm flex items-center gap-2">
-                                        <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                        <div className="flex-grow truncate">{objectiveContent}</div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+                                );
+                            })()}
+                        </>
+                    )}
                 </div>
                 
                 <BlockWorkspaceView
