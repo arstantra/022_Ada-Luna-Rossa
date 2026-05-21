@@ -68,7 +68,8 @@ const ChatView: React.FC<ChatViewProps> = ({
     if (!el) return;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     if (isNearBottom) {
-      setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 100);
+      const timer = setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 100);
+      return () => clearTimeout(timer);
     }
   }, [conversation?.messages, isLoading]);
 

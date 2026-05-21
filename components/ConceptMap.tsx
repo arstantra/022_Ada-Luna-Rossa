@@ -67,7 +67,7 @@ const ConceptMap: React.FC<ConceptMapProps> = ({ data, allPillars }) => {
             <div className="absolute top-0 left-0 -translate-x-full pr-2 text-right text-xs text-gray-400" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg) translateX(100%)' }}>Pilastri Operativi</div>
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pt-2 text-xs text-gray-400">Pilastri di Sintonizzazione</div>
              <div className="absolute top-0 right-0 flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div><span className="text-gray-400">Compreso</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div><span className="text-gray-400">Compreso</span></div>
                 <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span className="text-gray-400">In Difficoltà</span></div>
             </div>
         </div>

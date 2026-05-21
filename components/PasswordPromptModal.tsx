@@ -18,9 +18,8 @@ const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({ isOpen, onClo
     useEffect(() => {
         if (isOpen) {
             setPassword('');
-            setTimeout(() => {
-                inputRef.current?.focus();
-            }, 100); // Small delay to ensure modal is rendered
+            const timer = setTimeout(() => inputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 

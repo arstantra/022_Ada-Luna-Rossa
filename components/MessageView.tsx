@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import type { Message, Action } from '../types';
+import type { Message, Action, PlanningActionPayload } from '../types';
+import type { ConfirmationModalProps } from './ConfirmationModal';
 import { CopyIcon, CheckIcon, WebIcon } from './Icons';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -22,8 +23,8 @@ interface MessageViewProps {
   highlightQuery?: string;
   isCurrentResult?: boolean;
   isLastMessage?: boolean;
-  onSendMessage?: (content: string, file?: File, actionPayload?: any) => void;
-  onShowConfirmation?: (props: any) => void;
+  onSendMessage?: (content: string, file?: File, actionPayload?: PlanningActionPayload) => void;
+  onShowConfirmation?: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
 }
 
 const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlightQuery, isCurrentResult, isLastMessage, onSendMessage, onShowConfirmation }) => {

@@ -16,7 +16,8 @@ const LessonNotesModal: React.FC<LessonNotesModalProps> = ({ isOpen, onClose, on
     useEffect(() => {
         if (isOpen) {
             setNotes(initialNotes);
-            setTimeout(() => textareaRef.current?.focus(), 100);
+            const timer = setTimeout(() => textareaRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
         }
     }, [isOpen, initialNotes]);
 

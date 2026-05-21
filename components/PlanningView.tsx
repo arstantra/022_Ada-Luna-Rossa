@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, Student, Message, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
-import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, CalendarIcon, ClipboardDocumentCheckIcon } from './Icons';
+import type { Conversation, WeekPlan, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
+import type { ConfirmationModalProps } from './ConfirmationModal';
+import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
@@ -104,16 +105,15 @@ interface PlanningViewProps {
   conversation: Conversation;
   onUpdateWeekPlan: (updater: (plan: WeekPlan) => WeekPlan) => void;
   isLoading: boolean;
-  onSendMessage: (content: string, file?: File, actionPayload?: any) => void;
+  onSendMessage: (content: string, file?: File, actionPayload?: PlanningActionPayload) => void;
   onReEditBlock: (conversationId: string, blockIndex: number) => void;
   onClose: () => void;
-  students: Student[];
   masterContext: ReturnType<typeof useMasterContext>;
   initialTab?: 'laboratorio' | 'contenutoMaster';
   onInitialTabConsumed?: () => void;
   useGoogleSearch: boolean;
   onGoogleSearchChange: (enabled: boolean) => void;
-  onShowConfirmation: (props: any) => void;
+  onShowConfirmation: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
   weekConversations?: Conversation[];
@@ -197,21 +197,13 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         }
     }, [initialTab, onInitialTabConsumed]);
 
-    if (!weekPlan) return null;
+    // --- Hooks moved above conditional returns (React Rules of Hooks) ---
 
-    if (!Array.isArray(weekPlan.blocks) || weekPlan.activeBlockIndex >= weekPlan.blocks.length) {
-        return (
-            <main className="flex-1 flex flex-col bg-gray-800 items-center justify-center text-center p-4">
-                <div className="bg-gray-900/50 p-8 rounded-lg border border-red-500/30">
-                    <h2 className="text-xl font-semibold text-red-400">Errore di Caricamento</h2>
-                    <p className="text-gray-300 mt-2">I dati di questa pianificazione sembrano essere corrotti.</p>
-                </div>
-            </main>
-        );
-    }
+    const activeBlock = useMemo(
+        () => weekPlan?.blocks[weekPlan.activeBlockIndex],
+        [weekPlan?.blocks, weekPlan?.activeBlockIndex]
+    );
 
-    const activeBlock = useMemo(() => weekPlan.blocks[weekPlan.activeBlockIndex], [weekPlan.blocks, weekPlan.activeBlockIndex]);
-    
     const handleUpdateBlockDetails = useCallback((updates: Partial<BlockDetails>) => {
         onUpdateWeekPlan(plan => {
             const newBlocks = [...plan.blocks];
@@ -219,7 +211,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             return { ...plan, blocks: newBlocks };
         });
     }, [onUpdateWeekPlan]);
-    
+
     const objectiveContent = useMemo(() => {
         if (!activeBlock) return null;
         switch (activeBlock.status) {
@@ -229,7 +221,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                 return (
                     <div className="flex-grow flex items-center gap-2">
                         <span className="font-semibold text-sky-400 flex-shrink-0">Attività FSL: </span>
-                        <EditableField 
+                        <EditableField
                             value={activeBlock.objective || ''}
                             onSave={(newObjective) => handleUpdateBlockDetails({ objective: newObjective })}
                             placeholder="Descrivi l'attività FSL..."
@@ -253,7 +245,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         }
     }, [activeBlock, handleUpdateBlockDetails]);
 
-
     // Search Logic
     const handleCloseSearch = useCallback(() => {
         setIsSearchOpen(false);
@@ -274,22 +265,37 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
     }, [searchQuery, activeBlock]);
 
     useEffect(() => {
-        if (currentResultIndex !== -1 && searchResults[currentResultIndex]) {
+        if (currentResultIndex !== -1 && searchResults[currentResultIndex] && activeBlock?.id) {
             const { messageId } = searchResults[currentResultIndex];
             const element = document.getElementById(`message-block-${activeBlock.id}-${messageId}`);
             element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    }, [currentResultIndex, searchResults, activeBlock.id]);
+    }, [currentResultIndex, searchResults, activeBlock?.id]);
 
     const handleNextResult = useCallback(() => { if (searchResults.length > 0) setCurrentResultIndex(prev => (prev + 1) % searchResults.length); }, [searchResults.length]);
     const handlePrevResult = useCallback(() => { if (searchResults.length > 0) setCurrentResultIndex(prev => (prev - 1 + searchResults.length) % searchResults.length); }, [searchResults.length]);
-    
+
     const handleBlockSelect = useCallback((index: number) => {
-        if (index !== weekPlan.activeBlockIndex) {
+        if (weekPlan && index !== weekPlan.activeBlockIndex) {
             onUpdateWeekPlan(plan => ({ ...plan, activeBlockIndex: index }));
             handleCloseSearch();
         }
     }, [weekPlan, onUpdateWeekPlan, handleCloseSearch]);
+
+    // --- Conditional returns after all hooks ---
+
+    if (!weekPlan) return null;
+
+    if (!Array.isArray(weekPlan.blocks) || weekPlan.activeBlockIndex >= weekPlan.blocks.length) {
+        return (
+            <main className="flex-1 flex flex-col bg-gray-800 items-center justify-center text-center p-4">
+                <div className="bg-gray-900/50 p-8 rounded-lg border border-red-500/30">
+                    <h2 className="text-xl font-semibold text-red-400">Errore di Caricamento</h2>
+                    <p className="text-gray-300 mt-2">I dati di questa pianificazione sembrano essere corrotti.</p>
+                </div>
+            </main>
+        );
+    }
 
     const handleUpdateBlockStatus = (status: BlockStatus, reason?: string) => {
         const newReason = status === 'saltato' ? reason : undefined;

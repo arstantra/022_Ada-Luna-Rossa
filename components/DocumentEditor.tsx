@@ -89,7 +89,7 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
         e.preventDefault();
         e.stopPropagation();
         if (isEditable && e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-            const isImage = Array.from(e.dataTransfer.items).some((item: any) => typeof item.type === 'string' && item.type.startsWith('image/'));
+            const isImage = Array.from(e.dataTransfer.items).some((item: DataTransferItem) => item.type.startsWith('image/'));
             if (isImage) {
                 setIsDraggingOver(true);
             }

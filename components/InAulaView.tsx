@@ -172,7 +172,8 @@ const ArtifactModal: React.FC<{
     React.useEffect(() => {
         if (isOpen) {
             setText('');
-            setTimeout(() => inputRef.current?.focus(), 100);
+            const timer = setTimeout(() => inputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 

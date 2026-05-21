@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-// Fix: Corrected a typo in the type import from 'ValidateAndValidatePayload' to 'ValidateAndArchivePayload'.
-import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState } from '../types';
+import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource } from '../types';
+import type { ActiveView } from './Sidebar';
+import type { ConfirmationModalProps } from './ConfirmationModal';
 import TurndownService from 'turndown';
 import { GoogleGenAI } from '@google/genai';
 import CryptoJS from 'crypto-js';
@@ -109,7 +110,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   const [fileToImport, setFileToImport] = useState<File | null>(null);
   const [dataToRestore, setDataToRestore] = useState<db.BackupData | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
-  const [confirmationProps, setConfirmationProps] = useState<any | null>(null);
+  const [confirmationProps, setConfirmationProps] = useState<Omit<ConfirmationModalProps, 'isOpen' | 'onClose'> | null>(null);
 
   const { modules } = useConstitutionCache();
 
@@ -607,7 +608,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
         activeConvo.messages, content, attachmentForMessage, masterContext, masterContext.currentModeId, useGoogleSearch, conversations, availableWeeks, undefined, students
       );
 
-      let accumulatedResponse = "", finalSources: any[] = [];
+      let accumulatedResponse = "", finalSources: GroundingSource[] = [];
       for await (const chunk of responseStream) {
           if (latestRequestRef.current !== currentRequestId) return; 
           accumulatedResponse += (chunk.text ?? '');
@@ -1348,7 +1349,7 @@ ${htmlBody}
   const openBlockDayDefaultsModal = useCallback(() => setModalState(s => ({ ...s, blockDayDefaults: true })), []);
   // --- End of stabilized callbacks ---
 
-  const currentView = useMemo(() => {
+  const currentView = useMemo((): ActiveView => {
     if (view === 'strategic_dashboard') return 'strategic_dashboard';
     if (view === 'founding_documents') return 'founding_documents';
     if (view === 'toolkit') return 'toolkit';
@@ -1371,7 +1372,7 @@ ${htmlBody}
       <div className="flex h-full w-full bg-gray-900 text-gray-100 font-sans">
         <input type="file" ref={importFileRef} onChange={handleFileSelectedForImport} accept=".ada_encrypted" className="hidden" />
         <Sidebar
-          activeView={currentView as any}
+          activeView={currentView}
           onOpenConversaConAda={handleOpenConversaConAda}
           onOpenStrategicDashboard={openStrategicDashboard}
           onOpenToolkit={openToolkit}
@@ -1411,7 +1412,7 @@ ${htmlBody}
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
-            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} students={students} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} weekConversations={conversations.filter(c => !!c.weekPlan)} onSelectWeekConversation={handleSelectConversation} />,
+            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} weekConversations={conversations.filter(c => !!c.weekPlan)} onSelectWeekConversation={handleSelectConversation} />,
             'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} />
           }[currentView]
         }

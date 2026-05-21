@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, Message, PlanningActionPayload } from '../types';
+import type { BlockDetails, PlanningActionPayload } from '../types';
+import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
@@ -18,7 +19,7 @@ interface BlockWorkspaceViewProps {
     activeTab: 'laboratorio' | 'contenutoMaster';
     useGoogleSearch: boolean;
     onGoogleSearchChange: (enabled: boolean) => void;
-    onShowConfirmation: (props: any) => void;
+    onShowConfirmation: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
     currentModeId?: string;
     onModeChange?: (modeId: string) => void;
 }
@@ -33,10 +34,10 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         if (scrollContainer && !highlightQuery) {
             const isNearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
             if (isNearBottom) {
-                // A small delay can help ensure the DOM has fully updated.
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
                 }, 100);
+                return () => clearTimeout(timer);
             }
         }
     }, [block.messages, isLoading, highlightQuery]);

@@ -16,7 +16,8 @@ const ImportEvaluationModal: React.FC<ImportEvaluationModalProps> = ({ isOpen, o
     useEffect(() => {
         if (isOpen) {
             setText('');
-            setTimeout(() => textareaRef.current?.focus(), 100);
+            const timer = setTimeout(() => textareaRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 

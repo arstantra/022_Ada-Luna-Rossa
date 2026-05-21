@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, Evaluation, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
+import type { useMasterContext } from './useMasterContext';
 import { fileToAttachment } from '../utils';
 import * as GeminiService from '../services/gemini';
 import { marked } from 'marked';
@@ -16,7 +17,7 @@ interface PlanningMessageParams {
     file?: File;
     actionPayload?: PlanningActionPayload;
     activeConversation: Conversation;
-    masterContext: any; // Using any to avoid circular dependency, master context is passed through
+    masterContext: ReturnType<typeof useMasterContext>;
     currentModeId: Mode['id'];
     students: Student[];
     useGoogleSearch: boolean;

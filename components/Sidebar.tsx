@@ -10,7 +10,7 @@ import {
 import ConfirmationModal from './ConfirmationModal';
 
 // ── tipi ──────────────────────────────────────────────────────────────────────
-type ActiveView =
+export type ActiveView =
   | 'lobby' | 'chat' | 'planning' | 'roster' | 'notebooklm'
   | 'lezione_in_corso' | 'archivio_lezioni'
   | 'student_profile' | 'classroom_trend' | 'founding_documents'
