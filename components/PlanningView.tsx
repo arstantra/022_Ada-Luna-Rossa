@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect, useCallback, memo, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import type { Conversation, WeekPlan, Student, Message, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, CalendarIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
+import ModeSelector from './ModeSelector';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -120,8 +121,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
-    const [isWeekDropdownOpen, setIsWeekDropdownOpen] = useState(false);
-    const weekDropdownRef = useRef<HTMLDivElement>(null);
     
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -194,17 +193,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             onInitialTabConsumed?.();
         }
     }, [initialTab, onInitialTabConsumed]);
-
-    useEffect(() => {
-        if (!isWeekDropdownOpen) return;
-        const handleClickOutside = (e: MouseEvent) => {
-            if (weekDropdownRef.current && !weekDropdownRef.current.contains(e.target as Node)) {
-                setIsWeekDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isWeekDropdownOpen]);
 
     if (!weekPlan) return null;
 
@@ -317,7 +305,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                 <div className="flex-shrink-0 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700/50">
                     <div className="p-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <CalendarIcon className="h-6 w-6 text-blue-400" />
                             <h2 className="text-lg font-bold text-white truncate" title={weekPlan.theme}>{`Settimana ${weekPlan.weekNumber}: ${weekPlan.theme}`}</h2>
                         </div>
                         <div className="flex items-center gap-3 pl-4">
@@ -332,34 +319,9 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                             ) : (
                                 <button onClick={() => setIsSearchOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Cerca"><SearchIcon className="h-5 w-5" /></button>
                             )}
-                            {/* Selettore settimana discreto */}
-                            {weekConversations && weekConversations.length > 1 && onSelectWeekConversation && (
-                                <div className="relative" ref={weekDropdownRef}>
-                                    <button
-                                        onClick={() => setIsWeekDropdownOpen(o => !o)}
-                                        className="flex items-center gap-1 px-2 py-1.5 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors"
-                                        title="Cambia settimana"
-                                    >
-                                        <span className="text-[11px] font-mono">S{weekPlan.weekNumber}</span>
-                                        <ChevronDownIcon className={`h-3 w-3 transition-transform duration-150 ${isWeekDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    {isWeekDropdownOpen && (
-                                        <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl z-50 py-1 min-w-[200px] max-h-64 overflow-y-auto custom-scrollbar">
-                                            {weekConversations.map(wc => (
-                                                <button
-                                                    key={wc.id}
-                                                    onClick={() => { onSelectWeekConversation(wc.id); setIsWeekDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-700/60 transition-colors flex items-center gap-2
-                                                        ${wc.id === conversation.id ? 'text-white font-medium' : 'text-gray-400'}`}
-                                                >
-                                                    <span className="font-mono text-[10px] text-gray-600 flex-shrink-0">S{wc.weekPlan?.weekNumber}</span>
-                                                    <span className="truncate">{wc.weekPlan?.theme || wc.title}</span>
-                                                    {wc.id === conversation.id && <span className="ml-auto text-purple-400 text-[9px] font-mono">•</span>}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                            {/* Selettore modalità (Bilanciata, Formale, ecc.) */}
+                            {currentModeId && onModeChange && (
+                                <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
                             )}
                             <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Modifica Blocco">
                                 <CogIcon className="h-5 w-5" />

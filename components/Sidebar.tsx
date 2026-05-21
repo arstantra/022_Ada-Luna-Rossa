@@ -221,14 +221,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}
         >
           <ChatBubbleOvalLeftEllipsisIcon className={`h-5 w-5 flex-shrink-0 transition-colors ${activeView === 'chat' ? 'text-purple-400' : 'text-gray-400'}`} />
-          <div className="flex flex-col items-start min-w-0">
-            <span className="leading-tight">Conversa con Ada</span>
-            {disciplina && (
-              <span className={`text-[10px] font-mono leading-tight mt-0.5 truncate max-w-full font-normal ${activeView === 'chat' ? 'text-purple-400/60' : 'text-gray-500'}`}>
-                {disciplina}
-              </span>
-            )}
-          </div>
+          <span className="leading-tight">Conversa con Ada</span>
         </button>
       </div>
 

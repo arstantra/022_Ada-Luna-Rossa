@@ -3,7 +3,6 @@ import type { BlockDetails, Message, PlanningActionPayload } from '../types';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
-import ModeSelector from './ModeSelector';
 import { ArrowDownTrayIcon, WebIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 
@@ -165,11 +164,6 @@ ${htmlContent}
                     </div>
                     <footer className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
                         <div className="max-w-3xl mx-auto">
-                            {currentModeId && onModeChange && (
-                                <div className="flex items-center justify-between mb-2.5">
-                                    <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
-                                </div>
-                            )}
                             <ChatInput
                                 onSendMessage={onSendMessage}
                                 isLoading={isLoading}
