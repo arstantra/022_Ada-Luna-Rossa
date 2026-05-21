@@ -4,7 +4,7 @@ import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
 import { ArrowDownTrayIcon, WebIcon } from './Icons';
-import ModeSelector from './ModeSelector';
+import ModePills from './ModePills';
 import * as GeminiService from '../services/gemini';
 
 // --- MAIN WORKSPACE VIEW ---
@@ -166,8 +166,8 @@ ${htmlContent}
                     <footer className="flex-shrink-0 px-6 pb-5 pt-3 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
                         <div className="max-w-3xl mx-auto">
                             {currentModeId && onModeChange && (
-                                <div className="flex items-center mb-2">
-                                    <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} compact />
+                                <div className="mb-2">
+                                    <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
                                 </div>
                             )}
                             <ChatInput

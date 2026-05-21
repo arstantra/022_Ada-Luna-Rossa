@@ -3,7 +3,7 @@ import type { Conversation, Student, Mode } from '../types';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import StudentSheetHeader from './StudentSheetHeader';
-import ModeSelector from './ModeSelector';
+import ModePills from './ModePills';
 import { ChatBubbleOvalLeftEllipsisIcon, SearchIcon, XIcon } from './Icons';
 import { ADA_QUICK_CHAT_ID } from '../constants';
 
@@ -129,9 +129,8 @@ const ChatView: React.FC<ChatViewProps> = ({
           </h1>
         )}
 
-        {/* Controlli destra: Search + ModeSelector */}
+        {/* Controlli destra: Search */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Ricerca nella chat */}
           {isSearchOpen ? (
             <>
               {searchHighlight && (
@@ -155,11 +154,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             >
               <SearchIcon className="h-4 w-4" />
             </button>
-          )}
-
-          {/* Selettore modalità — solo se i prop sono disponibili */}
-          {currentModeId && onModeChange && (
-            <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
           )}
         </div>
       </div>
@@ -200,6 +194,11 @@ const ChatView: React.FC<ChatViewProps> = ({
       {/* ── Input ──────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto">
+          {currentModeId && onModeChange && (
+            <div className="mb-2">
+              <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
+            </div>
+          )}
           <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
         </div>
       </div>
