@@ -495,6 +495,15 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     }
     showToast(`Modalità cambiata in: ${newMode.label}`, 'info');
   }, [activeConversationId, masterContext.currentModeId, masterContext.handleSaveMode, showToast, addMessageToConversation]);
+
+  // Versione senza messaggio di intro: usata nel Laboratorio di pianificazione,
+  // dove i messaggi vivono per-blocco e un messaggio di sistema sarebbe fuori posto.
+  const handlePlanningModeChange = useCallback((newModeId: Mode['id']) => {
+    const newMode = MODES.find(m => m.id === newModeId);
+    if (!newMode || newMode.id === masterContext.currentModeId) return;
+    masterContext.handleSaveMode(newModeId);
+    showToast(`Modalità: ${newMode.label}`, 'info');
+  }, [masterContext.currentModeId, masterContext.handleSaveMode, showToast]);
   
   const handleSelectConversation = useCallback((id: string) => {
     selectConversationHook(id);
@@ -1402,7 +1411,7 @@ ${htmlBody}
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
-            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} students={students} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} />,
+            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} students={students} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} />,
             'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} />
           }[currentView]
         }

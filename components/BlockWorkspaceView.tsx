@@ -3,6 +3,7 @@ import type { BlockDetails, Message, PlanningActionPayload } from '../types';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
+import ModeSelector from './ModeSelector';
 import { ArrowDownTrayIcon, WebIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 
@@ -18,9 +19,11 @@ interface BlockWorkspaceViewProps {
     useGoogleSearch: boolean;
     onGoogleSearchChange: (enabled: boolean) => void;
     onShowConfirmation: (props: any) => void;
+    currentModeId?: string;
+    onModeChange?: (modeId: string) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
@@ -143,27 +146,36 @@ ${htmlContent}
 
             {activeTab === 'laboratorio' && (
                 <>
-                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                        {(block.messages || []).filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
-                            <div key={msg.id} id={`message-block-${block.id}-${msg.id}`}>
-                                <MessageView 
-                                    message={msg} 
-                                    onShowToast={() => {}}
-                                    isLastMessage={index === (block.messages?.length || 0) - 1}
-                                    onSendMessage={onSendMessage}
-                                    highlightQuery={highlightQuery}
-                                    isCurrentResult={msg.id === currentResultId}
-                                    onShowConfirmation={onShowConfirmation}
-                                />
-                            </div>
-                        ))}
+                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+                            {(block.messages || []).filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
+                                <div key={msg.id} id={`message-block-${block.id}-${msg.id}`}>
+                                    <MessageView
+                                        message={msg}
+                                        onShowToast={() => {}}
+                                        isLastMessage={index === (block.messages?.length || 0) - 1}
+                                        onSendMessage={onSendMessage}
+                                        highlightQuery={highlightQuery}
+                                        isCurrentResult={msg.id === currentResultId}
+                                        onShowConfirmation={onShowConfirmation}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <footer className="flex-shrink-0 p-4 bg-[#1F2937]">
-                        <ChatInput 
-                            onSendMessage={onSendMessage} 
-                            isLoading={isLoading} 
-                            onShowToast={() => {}} 
-                        />
+                    <footer className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
+                        <div className="max-w-3xl mx-auto">
+                            {currentModeId && onModeChange && (
+                                <div className="flex items-center justify-between mb-2.5">
+                                    <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
+                                </div>
+                            )}
+                            <ChatInput
+                                onSendMessage={onSendMessage}
+                                isLoading={isLoading}
+                                onShowToast={() => {}}
+                            />
+                        </div>
                     </footer>
                 </>
             )}

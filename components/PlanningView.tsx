@@ -102,6 +102,7 @@ interface PlanningViewProps {
   isLoading: boolean;
   onSendMessage: (content: string, file?: File, actionPayload?: any) => void;
   onReEditBlock: (conversationId: string, blockIndex: number) => void;
+  onClose: () => void;
   students: Student[];
   masterContext: ReturnType<typeof useMasterContext>;
   initialTab?: 'laboratorio' | 'contenutoMaster';
@@ -109,9 +110,11 @@ interface PlanningViewProps {
   useGoogleSearch: boolean;
   onGoogleSearchChange: (enabled: boolean) => void;
   onShowConfirmation: (props: any) => void;
+  currentModeId?: string;
+  onModeChange?: (modeId: string) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
@@ -317,6 +320,10 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                             <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Modifica Blocco">
                                 <CogIcon className="h-5 w-5" />
                             </button>
+                            <div className="w-px h-4 bg-gray-700/60 mx-1" />
+                            <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors" aria-label="Torna alla panoramica">
+                                <XIcon className="h-5 w-5" />
+                            </button>
                         </div>
                     </div>
 
@@ -367,6 +374,8 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     useGoogleSearch={useGoogleSearch}
                     onGoogleSearchChange={onGoogleSearchChange}
                     onShowConfirmation={onShowConfirmation}
+                    currentModeId={currentModeId}
+                    onModeChange={onModeChange}
                 />
             </main>
             {activeBlock && (
