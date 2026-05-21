@@ -114,6 +114,26 @@ export interface AdaAnalysis {
     suggestion: string;
 }
 
+export type BlockSourceType = 'url' | 'note' | 'pdf';
+
+export interface BlockSource {
+    id: string;                     // generato con crypto.randomUUID()
+    type: BlockSourceType;
+    title: string;                  // nome editabile dall'insegnante
+    addedAt: number;                // timestamp ms (Date.now())
+    origin: 'manual' | 'promoted'; // 'promoted' = promossa dalla Webliografia automatica
+    // type === 'url'
+    url?: string;
+    // type === 'note'
+    content?: string;
+    // type === 'pdf'
+    fileName?: string;
+    fileSize?: number;
+    geminiFileId?: string;          // ID restituito da Gemini File API
+    geminiFileExpiry?: number;      // timestamp ms scadenza (48h da upload)
+    dbFileKey?: string;             // chiave nello store IndexedDB 'blockFiles'
+}
+
 export interface BlockDetails {
     id: string;
     day: string;
@@ -144,6 +164,7 @@ export interface BlockDetails {
     isLocked?: boolean;
     projectDeadline?: string; // ISO String for group project deadlines
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
+    fonti?: BlockSource[];
 }
 
 export type WeekPlanStatus = 'in progettazione' | 'progettazione completata' | 'in corso' | 'completata';
