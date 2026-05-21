@@ -89,6 +89,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 > - speciale/neutro → **`bg-gray-500`** (MAI `bg-gray-600`)
 > - `da_fare` usa slate/neutro, NON rosso — il rosso era ansiogeno per blocchi semplicemente non ancora iniziati
 > - `da_definire` è slate (neutro), non rosso: il giorno non fissato è informazione, non errore
+> - `in_revisione` è **emerald** (non amber): il blocco ha contentBlocks quindi a livello corso è "completato"
 
 ---
 
@@ -101,13 +102,15 @@ components/
   StrategicDashboardView.tsx — "Progettazione del Corso": settimane, blocchi, progressStats
   InAulaView.tsx             — vista lezione (archivio + in_corso)
   ChatView.tsx               — chat con Ada
-  PlanningView.tsx           — laboratorio tattico settimanale
+  PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
+  BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
+  ModeSelector.tsx           — selettore modalità (bilanciata/formale/creativa…)
   EditableField.tsx          — input inline con feedback salvataggio (bordo verde 1.5s)
   EditableTextarea.tsx       — textarea inline con feedback salvataggio (bordo verde 1.5s)
 
 hooks/
   useConversations.ts        — stato conversazioni + updateConversation
-  useMasterContext.ts        — contesto docente (disciplina, profilo, API key)
+  useMasterContext.ts        — contesto docente (disciplina, profilo, API key, currentModeId)
   usePlanning.ts             — logica pianificazione blocchi
 
 services/
@@ -115,8 +118,83 @@ services/
   gemini.ts                  — wrapper Gemini API
 
 types.ts                     — tutti i tipi (fonte della verità)
-constants.ts                 — ADA_QUICK_CHAT_ID, chiavi localStorage, ecc.
+constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, ecc.
+utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, ecc.
 ```
+
+---
+
+## PlanningView — Architettura Interna
+
+### BlockNavigator (componente interno)
+Riga compatta in cima alla workspace con due zone affiancate:
+- **Pillole blocco** (sinistra): una per blocco, mostrano `B1 · lunedì 5 mag`, dot colorato per stato, pill attiva evidenziata `bg-gray-700`.
+- **Toggle tab workspace** (destra): segmented control `Laboratorio | Contenuto Master` in `bg-gray-900/60 rounded-md`.
+
+### Stato `activeWorkspaceTab`
+Gestito in `PlanningView` (non in `BlockWorkspaceView`) e passato come prop `activeTab`. Questo permette al `BlockNavigator` di condividere il toggle tab con il workspace sottostante senza prop drilling aggiuntivo.
+
+```tsx
+// In PlanningView
+const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>('laboratorio');
+// Passato a BlockNavigator.onTabChange e a BlockWorkspaceView.activeTab
+```
+
+### Pulsante X (chiudi scheda settimana)
+Nell'header di PlanningView, accanto al CogIcon, c'è un `XIcon` che chiama `onClose`. In MainApp: `onClose={() => setView('strategic_dashboard')}`. Permette di tornare alla vista globale senza usare la sidebar.
+
+### Props di PlanningView
+```ts
+interface PlanningViewProps {
+  conversation: Conversation;
+  onUpdateWeekPlan: ...;
+  isLoading: boolean;
+  onSendMessage: ...;
+  onReEditBlock: ...;
+  onClose: () => void;           // X per tornare a strategic_dashboard
+  students: Student[];
+  masterContext: ReturnType<typeof useMasterContext>;
+  initialTab?: ...;
+  onInitialTabConsumed?: ...;
+  useGoogleSearch: boolean;
+  onGoogleSearchChange: ...;
+  onShowConfirmation: ...;
+  currentModeId?: string;        // passato a BlockWorkspaceView
+  onModeChange?: (modeId: string) => void; // usa handlePlanningModeChange
+}
+```
+
+---
+
+## BlockWorkspaceView — Architettura Interna
+
+- **Nessun tab bar interno**: il controllo tab è nel `BlockNavigator` di `PlanningView`. `activeTab` è una prop.
+- **Larghezza chat**: messaggi e footer input centrati a `max-w-3xl mx-auto`, coerente con `ChatView`.
+- **ModeSelector nel footer** (solo tab Laboratorio): renderizzato sopra `ChatInput` quando `currentModeId` e `onModeChange` sono presenti.
+
+```tsx
+<footer className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
+    <div className="max-w-3xl mx-auto">
+        {currentModeId && onModeChange && (
+            <div className="flex items-center justify-between mb-2.5">
+                <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
+            </div>
+        )}
+        <ChatInput ... />
+    </div>
+</footer>
+```
+
+---
+
+## ModeSelector — Due handler distinti in MainApp
+
+| Handler | Dove usato | Comportamento |
+|---------|-----------|---------------|
+| `handleModeChange` | `ChatView` | Salva modalità + inietta messaggio di intro nell'array messaggi della conversazione |
+| `handlePlanningModeChange` | `PlanningView` → `BlockWorkspaceView` | Salva modalità + mostra toast — **NON** inietta messaggi nei thread per-blocco |
+
+Usare sempre `handlePlanningModeChange` per il Laboratorio. L'iniezione del messaggio di intro in un thread per-blocco sarebbe fuori posto e contaminerebbe il contesto AI del blocco.
 
 ---
 
@@ -143,6 +221,7 @@ constants.ts                 — ADA_QUICK_CHAT_ID, chiavi localStorage, ecc.
   contentBlocks?: ContentBlock[],   // popolato dopo validazione → stato "completato"
   messages?: Message[],
   isLocked?: boolean,
+  isReviewed?: boolean,             // override: forza dot emerald indipendentemente dallo stato
   reason?: string                   // motivo per blocchi 'saltato'
 }
 ```
@@ -185,6 +264,9 @@ const ADA_QUICK_CHAT_ID = 'ada-quick-chat'; // ID fisso, non cambia mai
 
 ### EditableField / EditableTextarea — feedback salvataggio
 Entrambi hanno stato `justSaved`: bordo verde `border-emerald-500/60` per 1.5s dopo ogni save, poi torna al normale. Il timer è pulito sull'unmount. Non toccare questo pattern.
+
+### React rules — useEffect prima dei return condizionali
+Tutti gli `useEffect` devono stare **prima** di qualsiasi `return` condizionale nel componente. Violare questa regola causa errori runtime "rendered more hooks than previous render".
 
 ---
 
@@ -262,5 +344,10 @@ progettata → in_corso → archiviata
 - Non usare **rosso** per lo stato `da_fare` — usare slate. Il rosso è riservato ad azioni distruttive (Salta) e messaggi di errore.
 - Non aggiungere `rounded-full` ai pulsanti AI — il pattern stabilito è `rounded-lg` outline rettangolare.
 - Non togliere il feedback `justSaved` da `EditableField`/`EditableTextarea` — è parte del contratto UX con l'utente (conferma che IndexedDB ha ricevuto il dato).
-- Non aggiungere `font-semibold` al `NavItem` attivo — l'accent line viola è l'unico indicatore visivo; il grassetto era ridondante e visivamente più pesante.
-- Non creare un secondo `CLAUDE.md` nella sottocartella `ADA - Luna rossa/` — fonte di verità unica: `022_Ada Luna Rossa/CLAUDE.md`.
+- Non aggiungere `font-semibold` al `NavItem` attivo — l'accent line viola è l'unico indicatore visivo.
+- Non creare un secondo `CLAUDE.md` nella sottocartella — fonte di verità unica: `022_Ada Luna Rossa/CLAUDE.md`.
+- Non usare `bg-green-500` nei dot stato — sempre `bg-emerald-500`.
+- Non usare `bg-gray-600` nei dot stato speciale — sempre `bg-gray-500`.
+- Non mettere `activeWorkspaceTab` dentro `BlockWorkspaceView` — lo stato è in `PlanningView` e passa come prop `activeTab`.
+- Non usare `handleModeChange` nel Laboratorio — usare `handlePlanningModeChange` che non inietta messaggi di intro nei thread per-blocco.
+- Non aggiungere un tab bar dentro `BlockWorkspaceView` — il toggle `Laboratorio | Contenuto Master` vive nel `BlockNavigator` di `PlanningView`.
