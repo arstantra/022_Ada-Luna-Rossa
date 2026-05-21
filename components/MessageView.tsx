@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import type { Message, Action } from '../types';
-import { PencilIcon, SparklesIcon, CopyIcon, CheckIcon, WebIcon } from './Icons';
+import { CopyIcon, CheckIcon, WebIcon } from './Icons';
 import MarkdownRenderer from './MarkdownRenderer';
 
 // Indicatore di digitazione animato
@@ -94,17 +94,20 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
 
   return (
     <div className={`-m-2 p-2 rounded-lg transition-colors ${isCurrentResult ? 'bg-yellow-500/10' : ''}`}>
-        <div className={`group flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
-            <div className={`relative flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white ${isUser ? 'bg-gray-600' : 'bg-blue-700'}`}>
-                {isUser ? <PencilIcon className="h-5 w-5" /> : <SparklesIcon className="h-5 w-5" />}
-                {!isUser && message.sources && message.sources.length > 0 && (
-                    <div className="absolute -bottom-1 -right-1 bg-gray-700 rounded-full p-0.5 border-2 border-gray-800" title="Questo messaggio contiene fonti web">
-                        <WebIcon className="h-2.5 w-2.5 text-sky-400" />
-                    </div>
-                )}
-            </div>
+        <div className={`group flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}>
+            {/* Avatar Ada: piccolo glifo, nessun cerchio pieno */}
+            {!isUser && (
+                <span className="flex-shrink-0 w-5 text-center mt-1 relative">
+                    <span className="text-purple-400/70 text-sm leading-none select-none">✦</span>
+                    {message.sources && message.sources.length > 0 && (
+                        <span className="absolute -bottom-0.5 -right-0.5" title="Contiene fonti web">
+                            <WebIcon className="h-2.5 w-2.5 text-sky-400" />
+                        </span>
+                    )}
+                </span>
+            )}
             <div className={`relative max-w-2xl ${isUser ? 'ml-auto' : 'mr-auto'}`}>
-                <div className={`max-w-none px-4 py-3 rounded-lg text-white ${isUser ? 'bg-gray-700' : 'bg-[#1F2937]'}`}>
+                <div className={`max-w-none px-4 py-3 rounded-lg text-white ${isUser ? 'bg-gray-700/80' : 'bg-[#1F2937]'}`}>
                     {renderContent()}
                 </div>
                 {!isUser && message.content && message.content !== '...' && (
@@ -118,7 +121,7 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
         </div>
 
         {!isUser && message.actions && message.actions.length > 0 && (
-            <div className="mt-3 ml-12 max-w-2xl flex flex-wrap gap-2">
+            <div className="mt-3 ml-8 max-w-2xl flex flex-wrap gap-2">
                 {(() => {
                     if (message.actionUsed) {
                         if (message.actions.length === 1) { // Was "Valida"
@@ -145,7 +148,7 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
         )}
 
         {!isUser && message.sources && message.sources.length > 0 && (
-            <div className="mt-3 ml-12 max-w-2xl">
+            <div className="mt-3 ml-8 max-w-2xl">
                 <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2 mb-2"><WebIcon className="h-4 w-4"/>Fonti</h4>
                 <ul className="space-y-1.5">
                     {message.sources.map((source, index) => (

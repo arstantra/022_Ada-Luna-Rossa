@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, memo, useRef } from 'react';
 import type { Conversation, WeekPlan, Student, Message, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, CalendarIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -112,12 +112,16 @@ interface PlanningViewProps {
   onShowConfirmation: (props: any) => void;
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
+  weekConversations?: Conversation[];
+  onSelectWeekConversation?: (id: string) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, weekConversations, onSelectWeekConversation }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
+    const [isWeekDropdownOpen, setIsWeekDropdownOpen] = useState(false);
+    const weekDropdownRef = useRef<HTMLDivElement>(null);
     
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -190,6 +194,17 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             onInitialTabConsumed?.();
         }
     }, [initialTab, onInitialTabConsumed]);
+
+    useEffect(() => {
+        if (!isWeekDropdownOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (weekDropdownRef.current && !weekDropdownRef.current.contains(e.target as Node)) {
+                setIsWeekDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isWeekDropdownOpen]);
 
     if (!weekPlan) return null;
 
@@ -317,6 +332,35 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                             ) : (
                                 <button onClick={() => setIsSearchOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Cerca"><SearchIcon className="h-5 w-5" /></button>
                             )}
+                            {/* Selettore settimana discreto */}
+                            {weekConversations && weekConversations.length > 1 && onSelectWeekConversation && (
+                                <div className="relative" ref={weekDropdownRef}>
+                                    <button
+                                        onClick={() => setIsWeekDropdownOpen(o => !o)}
+                                        className="flex items-center gap-1 px-2 py-1.5 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors"
+                                        title="Cambia settimana"
+                                    >
+                                        <span className="text-[11px] font-mono">S{weekPlan.weekNumber}</span>
+                                        <ChevronDownIcon className={`h-3 w-3 transition-transform duration-150 ${isWeekDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {isWeekDropdownOpen && (
+                                        <div className="absolute top-full right-0 mt-1 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl z-50 py-1 min-w-[200px] max-h-64 overflow-y-auto custom-scrollbar">
+                                            {weekConversations.map(wc => (
+                                                <button
+                                                    key={wc.id}
+                                                    onClick={() => { onSelectWeekConversation(wc.id); setIsWeekDropdownOpen(false); }}
+                                                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-700/60 transition-colors flex items-center gap-2
+                                                        ${wc.id === conversation.id ? 'text-white font-medium' : 'text-gray-400'}`}
+                                                >
+                                                    <span className="font-mono text-[10px] text-gray-600 flex-shrink-0">S{wc.weekPlan?.weekNumber}</span>
+                                                    <span className="truncate">{wc.weekPlan?.theme || wc.title}</span>
+                                                    {wc.id === conversation.id && <span className="ml-auto text-purple-400 text-[9px] font-mono">•</span>}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-full text-gray-400 hover:bg-gray-700" aria-label="Modifica Blocco">
                                 <CogIcon className="h-5 w-5" />
                             </button>
@@ -337,31 +381,46 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                         onTabChange={setActiveWorkspaceTab}
                     />
                     
-                    {activeBlock && (
-                        <div className="px-4 py-2 bg-gray-800/60">
-                            {activeBlock.lessonTitle ? (
-                                <details className="group">
-                                    <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
-                                        <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
-                                            <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                            <div className="flex-grow truncate">{objectiveContent}</div>
-                                        </div>
-                                        <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
-                                    </summary>
-                                    <div className="mt-2 pt-2 border-t border-gray-700/50">
-                                        <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
-                                            <MarkdownRenderer content={activeBlock.lessonTitle} />
-                                        </div>
-                                    </div>
-                                </details>
-                            ) : (
-                                <div className="text-white text-sm flex items-center gap-2">
-                                    <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                    <div className="flex-grow truncate">{objectiveContent}</div>
+                    {activeBlock && (() => {
+                        const isSpecial = ['saltato', 'formazione scuola-lavoro', 'annullato'].includes(activeBlock.status);
+                        const hasObjective = activeBlock.objective?.trim();
+                        const isEmpty = !hasObjective && !isSpecial && !activeBlock.lessonTitle;
+
+                        if (isEmpty) {
+                            return (
+                                <div className="px-4 py-1 bg-gray-800/30 flex items-center gap-2">
+                                    <BookOpenIcon className="h-3 w-3 text-gray-700 flex-shrink-0" />
+                                    <span className="text-[11px] text-gray-700 italic">Obiettivo non ancora definito</span>
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            );
+                        }
+
+                        return (
+                            <div className="px-4 py-2 bg-gray-800/60">
+                                {activeBlock.lessonTitle ? (
+                                    <details className="group">
+                                        <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
+                                            <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
+                                                <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                                <div className="flex-grow truncate">{objectiveContent}</div>
+                                            </div>
+                                            <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
+                                        </summary>
+                                        <div className="mt-2 pt-2 border-t border-gray-700/50">
+                                            <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
+                                                <MarkdownRenderer content={activeBlock.lessonTitle} />
+                                            </div>
+                                        </div>
+                                    </details>
+                                ) : (
+                                    <div className="text-white text-sm flex items-center gap-2">
+                                        <BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        <div className="flex-grow truncate">{objectiveContent}</div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
                 
                 <BlockWorkspaceView

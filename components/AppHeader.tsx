@@ -43,22 +43,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({ disciplina }) => {
           alt="NuovaDidattica.eu"
           className="h-6 w-auto opacity-80"
         />
-        <span className="hidden sm:block w-px h-4 bg-gray-700/70" />
-        <span className="hidden sm:flex items-center gap-1.5">
-          <AdaSparkles className="w-4 h-4 text-purple-400" />
-          <span
-            className="font-display text-white text-sm font-semibold tracking-tight"
-            style={{ fontFamily: 'Syne, system-ui' }}
-          >
-            Ada
+        <span className="hidden sm:block w-px h-5 bg-gray-600/80" />
+        <span className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+          <span className="flex items-center gap-1.5">
+            <AdaSparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span
+              className="font-display text-white text-sm font-semibold tracking-tight"
+              style={{ fontFamily: 'Syne, system-ui' }}
+            >
+              Ada
+            </span>
+            <span className="text-gray-600 text-xs select-none">·</span>
+            <span
+              className="font-display text-gray-300 text-sm font-medium tracking-tight"
+              style={{ fontFamily: 'Syne, system-ui' }}
+            >
+              Luna Rossa
+            </span>
           </span>
           {disciplina && (
-            <>
-              <span className="text-gray-600 text-xs select-none">·</span>
-              <span className="text-xs font-mono tracking-widest uppercase text-gray-500">
-                {disciplina}
-              </span>
-            </>
+            <span className="text-[10px] font-mono tracking-[0.12em] text-gray-500 leading-none pl-5">
+              {disciplina}
+            </span>
           )}
         </span>
       </a>

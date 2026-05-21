@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   ChatBubbleOvalLeftEllipsisIcon, ClipboardDocumentCheckIcon,
-  CalendarIcon, BookOpenIcon, ClipboardListIcon, UsersIcon,
+  BookOpenIcon, ClipboardListIcon, UsersIcon,
   BriefcaseIcon, PresentationChartBarIcon, ToolboxIcon,
   ImageIcon, DocumentTextIcon, PencilIcon, SparklesIcon,
   TagIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, CalendarDaysIcon,
-  ChevronDownIcon,
+  ChevronDownIcon, FolderOpenIcon, WandIcon,
 } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -67,14 +67,14 @@ const CollapsibleSectionLabel: React.FC<{
 }> = ({ children, isOpen, onToggle }) => (
   <button
     onClick={onToggle}
-    className="w-full flex items-center justify-between px-2 pt-4 pb-1.5 group select-none"
+    className="w-full flex items-center justify-between px-2 pt-5 pb-1.5 group select-none"
     aria-expanded={isOpen}
   >
-    <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 group-hover:text-gray-300/80 transition-colors">
+    <span className="text-[10px] font-mono tracking-[0.14em] uppercase text-gray-500 group-hover:text-gray-400 transition-colors">
       {children}
     </span>
     <ChevronDownIcon
-      className={`h-3 w-3 text-gray-600 group-hover:text-gray-400 transition-all duration-200 ${isOpen ? 'rotate-180' : ''}`}
+      className={`h-3 w-3 text-gray-600 group-hover:text-gray-500 transition-all duration-200 ${isOpen ? 'rotate-180' : ''}`}
     />
   </button>
 );
@@ -242,26 +242,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         <CollapsibleContent isOpen={contenutoOpen}>
           <div className="space-y-0.5">
             <NavItem
-              icon={<ClipboardDocumentCheckIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />}
+              icon={<ClipboardDocumentCheckIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Progettazione del Corso"
               isActive={activeView === 'strategic_dashboard'}
               onClick={onOpenStrategicDashboard}
             />
             <CollapsibleSection
               title="Laboratori e Strumenti"
-              icon={<CalendarIcon className="h-5 w-5 text-blue-400 flex-shrink-0" />}
+              icon={<ToolboxIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               isOpen={strumentiOpen}
               onToggle={() => setStrumentiOpen(o => !o)}
             >
               <NavItem
-                icon={<ToolboxIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                icon={<WandIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
                 label="Toolkit"
                 isActive={activeView === 'toolkit'}
                 onClick={onOpenToolkit}
                 indent
               />
               <NavItem
-                icon={<ImageIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+                icon={<ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
                 label="Atelier Visivo"
                 isActive={false}
                 onClick={onOpenImageGenerator}
@@ -279,7 +279,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <CollapsibleContent isOpen={inAulaOpen}>
           <div className="space-y-0.5">
             <NavItem
-              icon={<BriefcaseIcon className="h-5 w-5 text-emerald-400 flex-shrink-0" />}
+              icon={<BriefcaseIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Lezione in Corso"
               isActive={activeView === 'lezione_in_corso'}
               onClick={onOpenLezioneinCorso}
@@ -290,13 +290,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               }
             />
             <NavItem
-              icon={<BookOpenIcon className="h-5 w-5 text-amber-400 flex-shrink-0" />}
+              icon={<FolderOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Archivio Lezioni"
               isActive={activeView === 'archivio_lezioni'}
               onClick={onOpenArchivioLezioni}
             />
             <NavItem
-              icon={<BookOpenIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+              icon={<BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="I Miei Notebook"
               isActive={activeView === 'notebooklm'}
               onClick={onOpenNotebookLM}
@@ -311,19 +311,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         <CollapsibleContent isOpen={monitoraggioOpen}>
           <div className="space-y-0.5">
             <NavItem
-              icon={<PresentationChartBarIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
+              icon={<PresentationChartBarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Andamento Aula"
               isActive={activeView === 'classroom_trend'}
               onClick={onOpenClassroomTrend}
             />
             <NavItem
-              icon={<UsersIcon className="h-5 w-5 text-teal-400 flex-shrink-0" />}
+              icon={<UsersIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Gruppi"
               isActive={activeView === 'groups_archive'}
               onClick={onOpenGroupsArchive}
             />
             <NavItem
-              icon={<UsersIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
+              icon={<ClipboardListIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
               label="Studentesse"
               isActive={activeView === 'roster' || activeView === 'student_profile'}
               onClick={onOpenStudentRoster}
