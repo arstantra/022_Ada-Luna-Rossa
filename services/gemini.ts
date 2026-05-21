@@ -1,7 +1,8 @@
 // services/gemini.ts
 // @ts-nocheck
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode } from "@google/genai";
-import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData } from '../types';
+import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData, BlockSource } from '../types';
+import { getBlockFile } from './db';
 import { MODES } from '../constants';
 import TurndownService from 'turndown';
 
@@ -35,6 +36,80 @@ const buildHistory = (messages: Message[]): Content[] => {
             role: m.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: turndownService.turndown(m.content || '') }],
         }));
+};
+
+// --- FONTI DEL BLOCCO: contesto per il Laboratorio ---
+// Costruisce la sezione testuale e le Part PDF da iniettare nel prompt del Laboratorio.
+// Con fonti vuoto/undefined restituisce valori neutri → zero impatto sul comportamento attuale.
+const buildFontiContext = async (
+    fonti: BlockSource[]
+): Promise<{ textSection: string; fileParts: any[] }> => {
+    if (!fonti || fonti.length === 0) {
+        return { textSection: '', fileParts: [] };
+    }
+
+    let textSection = '';
+    const fileParts: any[] = [];
+
+    // 1. URL ----------------------------------------------------------------
+    const urlFonti = fonti.filter(f => f.type === 'url');
+    if (urlFonti.length > 0) {
+        textSection += '--- Fonti di riferimento per questo blocco ---\n';
+        urlFonti.forEach(f => {
+            textSection += `[${f.title}] → ${f.url}\n`;
+        });
+        textSection += '---\n';
+    }
+
+    // 2. Note ---------------------------------------------------------------
+    const noteFonti = fonti.filter(f => f.type === 'note');
+    noteFonti.forEach(f => {
+        textSection += `--- Nota: ${f.title} ---\n${f.content || ''}\n---\n`;
+    });
+
+    // 3. PDF ----------------------------------------------------------------
+    const pdfFonti = fonti.filter(f => f.type === 'pdf');
+    for (const fonte of pdfFonti) {
+        try {
+            const now = Date.now();
+            if (fonte.geminiFileId && fonte.geminiFileExpiry && fonte.geminiFileExpiry > now) {
+                // File ancora valido su Gemini — riutilizza l'URI
+                fileParts.push({
+                    fileData: {
+                        mimeType: 'application/pdf',
+                        fileUri: fonte.geminiFileId,
+                    },
+                });
+            } else {
+                // File scaduto o mai caricato — recupera il blob da IndexedDB e ri-carica
+                if (!fonte.dbFileKey) continue;
+                const blob = await getBlockFile(fonte.dbFileKey);
+                if (!blob) continue; // DB resettato: skip silenzioso
+
+                const ai = getAI();
+                const uploadResult = await ai.files.upload({
+                    file: blob,
+                    config: { mimeType: 'application/pdf', displayName: fonte.title },
+                });
+
+                // Aggiornamento in memoria (il caller persisterà via updateConversation)
+                fonte.geminiFileId = uploadResult.uri;
+                fonte.geminiFileExpiry = Date.now() + 48 * 60 * 60 * 1000; // 48h
+
+                fileParts.push({
+                    fileData: {
+                        mimeType: 'application/pdf',
+                        fileUri: uploadResult.uri,
+                    },
+                });
+            }
+        } catch (err) {
+            // Un PDF che non si carica non blocca l'invio del messaggio
+            console.error(`[buildFontiContext] Errore elaborazione PDF "${fonte.title}":`, err);
+        }
+    }
+
+    return { textSection, fileParts };
 };
 
 // HELPER FUNCTION TO GENERATE DYNAMIC MAP
@@ -111,10 +186,11 @@ export const streamChatResponse = async (
     conversations: Conversation[],
     availableWeeks: WeekRouteInfo[],
     planningContext?: string,
-    students?: Student[]
+    students?: Student[],
+    fonti?: BlockSource[]   // Fonti del blocco (Laboratorio only) — undefined → nessun effetto
 ): Promise<AsyncGenerator<GenerateContentResponse>> => {
     
-    const teacherContext = masterContext.teacherProfile && masterContext.teacherProfile.trim() 
+    const teacherContext = masterContext.teacherProfile && masterContext.teacherProfile.trim()
         ? `\n\nStai collaborando con il docente descritto nel seguente profilo:\n${masterContext.teacherProfile}`
         : '';
     const systemInstruction = `${masterContext.systemInstruction}${teacherContext}\n\n${getModePrompt(currentModeId)}`;
@@ -122,18 +198,25 @@ export const streamChatResponse = async (
     const studentContext = students ? `Contesto studentesse in classe: ${students.map(s => s.name).join(', ')}.` : '';
 
     const dynamicStrategicMap = renderStrategicDashboardToMarkdown(conversations, availableWeeks);
-    
+
     const fullContext = [masterContext.constitution, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, planningContext, studentContext].filter(Boolean).join('\n\n');
 
-    const attachmentPart = attachment 
+    // Fonti del blocco (Laboratorio): stringa testo + Part PDF.
+    // Con fonti undefined/[] entrambi sono vuoti → nessuna differenza per ChatView.
+    const { textSection: fontiText, fileParts: fontiFileParts } =
+        await buildFontiContext(fonti ?? []);
+
+    const attachmentPart = attachment
         ? { inlineData: { mimeType: attachment.type, data: attachment.data.split(',')[1] } }
         : null;
 
-    const userParts = [{ text: content }];
+    // I fileParts PDF vengono preposti al testo utente per rispettare l'ordine
+    // consigliato dall'API Gemini (media prima del testo che vi si riferisce).
+    const userParts: any[] = [...fontiFileParts, { text: content }];
     if (attachmentPart) {
-        userParts.push(attachmentPart as any);
+        userParts.push(attachmentPart);
     }
-    
+
     const contents: Content[] = [
         ...buildHistory(history),
         {
@@ -142,10 +225,14 @@ export const streamChatResponse = async (
         }
     ];
 
+    // Il textSection delle fonti (URL + note) viene aggiunto in coda al system prompt,
+    // dopo il contesto globale, per restare contestualmente vicino al task del blocco.
+    const systemText = `${systemInstruction}\n\n# CONTESTO GLOBALE:\n${fullContext}${fontiText ? `\n\n${fontiText}` : ''}`;
+
     const config: GenerateContentParameters['config'] = {
         systemInstruction: {
             role: 'system',
-            parts: [{ text: `${systemInstruction}\n\n# CONTESTO GLOBALE:\n${fullContext}` }]
+            parts: [{ text: systemText }]
         },
         thinkingConfig: { thinkingBudget: 8192 }
     };

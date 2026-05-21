@@ -3,7 +3,7 @@ import { openDB, IDBPDatabase } from 'idb';
 import type { Conversation, Label, Student, Notebook, ToolkitShortcut, ToolkitCategory } from '../types';
 
 const DB_NAME = 'AdaGeminiDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // Store names
 const CONVERSATIONS_STORE = 'conversations';
@@ -52,6 +52,10 @@ const initDB = () => {
             }
             if (!db.objectStoreNames.contains(TOOLKIT_CATEGORIES_STORE)) {
                 db.createObjectStore(TOOLKIT_CATEGORIES_STORE, { keyPath: 'id' });
+            }
+            // v4: blob PDF per l'Archivio Fonti — chiavi manuali (dbFileKey di BlockSource)
+            if (!db.objectStoreNames.contains('blockFiles')) {
+                db.createObjectStore('blockFiles');
             }
         },
     });
@@ -185,3 +189,19 @@ export const saveSetting = async (key: string, value: string): Promise<void> => 
     const db = await initDB();
     await db.put(SETTINGS_STORE, value, key);
 };
+
+// --- Block Files (PDF blob per Archivio Fonti) ---
+export async function saveBlockFile(key: string, blob: Blob): Promise<void> {
+    const db = await initDB();
+    await db.put('blockFiles', blob, key);
+}
+
+export async function getBlockFile(key: string): Promise<Blob | undefined> {
+    const db = await initDB();
+    return db.get('blockFiles', key);
+}
+
+export async function deleteBlockFile(key: string): Promise<void> {
+    const db = await initDB();
+    await db.delete('blockFiles', key);
+}
