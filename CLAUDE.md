@@ -104,7 +104,8 @@ components/
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
   BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
-  ModeSelector.tsx           — selettore modalità (bilanciata/formale/creativa…)
+  ModePills.tsx              — pill inline selezione modalità (sostituisce il vecchio ModeSelector a dropdown)
+  ModeSelector.tsx           — alias vuoto → re-exporta ModePills per retrocompatibilità
   EditableField.tsx          — input inline con feedback salvataggio (bordo verde 1.5s)
   EditableTextarea.tsx       — textarea inline con feedback salvataggio (bordo verde 1.5s)
 
@@ -126,10 +127,22 @@ utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, e
 
 ## PlanningView — Architettura Interna
 
+### Header condizionale (Laboratorio vs Contenuto Master)
+
+L'header di PlanningView ha **due modalità** a seconda del tab attivo:
+
+**Tab Laboratorio** — header completo su tre righe:
+1. Titolo: `ClipboardDocumentCheckIcon` + `"Settimana N: Tema"` in `font-display font-semibold` + controlli destra (search, CogIcon, X)
+2. `BlockNavigator` (pillole blocco + toggle tab)
+3. Riga obiettivo (collassabile se c'è `lessonTitle`, ghost se vuoto)
+
+**Tab Contenuto Master** — unica barra compatta:
+- Solo `BlockNavigator` con `extraRight={<XIcon />}` — niente titolo, niente obiettivo
+
 ### BlockNavigator (componente interno)
-Riga compatta in cima alla workspace con due zone affiancate:
+Riga compatta con due zone affiancate:
 - **Pillole blocco** (sinistra): una per blocco, mostrano `B1 · lunedì 5 mag`, dot colorato per stato, pill attiva evidenziata `bg-gray-700`.
-- **Toggle tab workspace** (destra): segmented control `Laboratorio | Contenuto Master` in `bg-gray-900/60 rounded-md`.
+- **Toggle tab + extraRight** (destra): segmented control `Laboratorio | Contenuto Master` in `bg-gray-900/60 rounded-md`. La prop `extraRight?: React.ReactNode` permette di aggiungere elementi a destra del toggle (usata per il tasto X in Contenuto Master).
 
 ### Stato `activeWorkspaceTab`
 Gestito in `PlanningView` (non in `BlockWorkspaceView`) e passato come prop `activeTab`. Questo permette al `BlockNavigator` di condividere il toggle tab con il workspace sottostante senza prop drilling aggiuntivo.
@@ -141,7 +154,9 @@ const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'co
 ```
 
 ### Pulsante X (chiudi scheda settimana)
-Nell'header di PlanningView, accanto al CogIcon, c'è un `XIcon` che chiama `onClose`. In MainApp: `onClose={() => setView('strategic_dashboard')}`. Permette di tornare alla vista globale senza usare la sidebar.
+- **Laboratorio**: nell'header principale accanto a CogIcon.
+- **Contenuto Master**: dentro `BlockNavigator` come `extraRight`, unico elemento visibile oltre alle pillole.
+- In MainApp: `onClose={() => setView('strategic_dashboard')}`.
 
 ### Props di PlanningView
 ```ts
@@ -170,14 +185,14 @@ interface PlanningViewProps {
 
 - **Nessun tab bar interno**: il controllo tab è nel `BlockNavigator` di `PlanningView`. `activeTab` è una prop.
 - **Larghezza chat**: messaggi e footer input centrati a `max-w-3xl mx-auto`, coerente con `ChatView`.
-- **ModeSelector nel footer** (solo tab Laboratorio): renderizzato sopra `ChatInput` quando `currentModeId` e `onModeChange` sono presenti.
+- **ModePills nel footer** (solo tab Laboratorio): riga di pill sopra `ChatInput` quando `currentModeId` e `onModeChange` sono presenti.
 
 ```tsx
-<footer className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
+<footer className="flex-shrink-0 px-6 pb-5 pt-3 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
     <div className="max-w-3xl mx-auto">
         {currentModeId && onModeChange && (
-            <div className="flex items-center justify-between mb-2.5">
-                <ModeSelector currentModeId={currentModeId} onModeChange={onModeChange} />
+            <div className="mb-2">
+                <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
             </div>
         )}
         <ChatInput ... />
@@ -187,14 +202,23 @@ interface PlanningViewProps {
 
 ---
 
-## ModeSelector — Due handler distinti in MainApp
+## ModePills — Selettore modalità
+
+`ModePills.tsx` è il selettore di modalità. **Nessun dropdown, nessun menu**: è una riga di pill cliccabili inline, senza posizionamento assoluto né z-index.
+
+- **Pill attiva**: `mode.colorClasses.badge` (sfondo colorato + ring inset) + `cursor-default`
+- **Pill inattiva**: solo testo `text-gray-600 hover:text-gray-400`, nessun bordo né sfondo
+- **Dimensione**: `text-[10px] font-mono rounded-full px-2 py-0.5` — ultra-compatto
+- **Posizione**: sopra `ChatInput` nel footer, sia in `ChatView` che in `BlockWorkspaceView` (Laboratorio)
+
+### Due handler distinti in MainApp
 
 | Handler | Dove usato | Comportamento |
 |---------|-----------|---------------|
 | `handleModeChange` | `ChatView` | Salva modalità + inietta messaggio di intro nell'array messaggi della conversazione |
 | `handlePlanningModeChange` | `PlanningView` → `BlockWorkspaceView` | Salva modalità + mostra toast — **NON** inietta messaggi nei thread per-blocco |
 
-Usare sempre `handlePlanningModeChange` per il Laboratorio. L'iniezione del messaggio di intro in un thread per-blocco sarebbe fuori posto e contaminerebbe il contesto AI del blocco.
+Usare sempre `handlePlanningModeChange` per il Laboratorio. L'iniezione del messaggio di intro in un thread per-blocco contaminerebbe il contesto AI del blocco.
 
 ---
 
@@ -351,3 +375,5 @@ progettata → in_corso → archiviata
 - Non mettere `activeWorkspaceTab` dentro `BlockWorkspaceView` — lo stato è in `PlanningView` e passa come prop `activeTab`.
 - Non usare `handleModeChange` nel Laboratorio — usare `handlePlanningModeChange` che non inietta messaggi di intro nei thread per-blocco.
 - Non aggiungere un tab bar dentro `BlockWorkspaceView` — il toggle `Laboratorio | Contenuto Master` vive nel `BlockNavigator` di `PlanningView`.
+- Non ricreare un componente `ModeSelector` a dropdown — il pattern approvato è `ModePills` (pill inline). Il dropdown ha causato problemi cronici di z-index e overflow che non sono stati mai risolti definitivamente.
+- Non aggiungere il selettore modalità nell'header — le `ModePills` vivono **solo** nel footer sopra `ChatInput`, sia in `ChatView` che in `BlockWorkspaceView`.
