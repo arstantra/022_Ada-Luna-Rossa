@@ -3,7 +3,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  // Dominio personalizzato ada.nuovadidattica.eu — base è '/'
   base: '/',
   server: {
     port: 3000,
@@ -13,6 +12,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      '@google/genai': path.resolve(__dirname, 'node_modules/@google/genai/dist/index.js'),
     }
-  }
+  },
+  optimizeDeps: {
+    include: ['@google/genai'],
+  },
 });
