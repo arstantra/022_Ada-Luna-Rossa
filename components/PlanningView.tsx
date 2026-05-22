@@ -49,11 +49,9 @@ interface PlanningViewProps {
   onShowConfirmation: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
-  weekConversations?: Conversation[];
-  onSelectWeekConversation?: (id: string) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, weekConversations, onSelectWeekConversation }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
@@ -174,16 +172,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         };
         handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), promoted] });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
-
-    // URL estratti dalle fonti di grounding dei messaggi del blocco attivo
-    const webliografiaRilevata = useMemo(() => {
-        if (!activeBlock?.messages) return [];
-        const uris = new Set<string>();
-        activeBlock.messages.forEach(msg => {
-            msg.sources?.forEach(s => { if (s.uri) uris.add(s.uri); });
-        });
-        return Array.from(uris);
-    }, [activeBlock?.messages]);
 
     const objectiveContent = useMemo(() => {
         if (!activeBlock) return null;

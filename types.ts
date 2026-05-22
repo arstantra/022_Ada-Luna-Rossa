@@ -145,8 +145,6 @@ export interface BlockDetails {
     constitutionSummary?: string; // For export headers
     moduleDetails?: ModuleDetails;
     contentBlocks?: ContentBlock[];
-    pendingValidationContent?: string;
-    isReplacingContent?: boolean;
     messages?: Message[]; // Each block has its own chat history
     allocations?: BlockAllocation; // For group/individual work
     presentStudentIds?: string[];

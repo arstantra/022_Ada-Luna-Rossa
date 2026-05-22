@@ -160,8 +160,8 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     const allAutoLabelIdsInState = allAutoLabelsInState.map(l => l.id);
 
     // Find the CANONICAL auto-labels (the first one of each name) to be used for adding.
-    const canonicalAutoLabels = autoLabelNames.map(name => 
-        labels.find(l => l.name.toLowerCase() === l.name.toLowerCase())
+    const canonicalAutoLabels = autoLabelNames.map(name =>
+        labels.find(l => l.name.toLowerCase() === name.toLowerCase())
     ).filter((l): l is Label => !!l);
     
     // Defensive check: if canonical labels aren't found yet, wait for next render.
@@ -832,12 +832,6 @@ ${htmlBody}
      handleSelectConversation(convoId); // Ensure the correct conversation is active
   }, [reEditBlockHandler, handleSelectConversation]);
   
-  const handleStartReview = useCallback((conversationId: string) => {
-      handleSelectConversation(conversationId);
-      handleSendPlanningMessage("Avvia consuntivo", undefined, { action: 'start_review' });
-      showToast("Flusso di consuntivo avviato.", "info");
-  }, [handleSelectConversation, handleSendPlanningMessage, showToast]);
-
   const handleSelectStudent = useCallback((student: Student) => {
     setSelectedStudent(student);
     setView('student_profile');
@@ -1418,7 +1412,7 @@ ${htmlBody}
             'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} />,
             'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
-            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModuleAndPillar={handleUpdateBlockModuleAndPillar} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
+            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModuleAndPillar={handleUpdateBlockModuleAndPillar} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
             'lezione_in_corso': <InAulaView viewMode="in_corso" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
             'archivio_lezioni': <InAulaView viewMode="archivio" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
@@ -1427,7 +1421,7 @@ ${htmlBody}
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
-            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} weekConversations={conversations.filter(c => !!c.weekPlan)} onSelectWeekConversation={handleSelectConversation} />,
+            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} />,
             'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} />
           }[currentView]
         }

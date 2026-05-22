@@ -105,7 +105,6 @@ components/
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
   BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
   ModePills.tsx              — pill inline selezione modalità (sostituisce il vecchio ModeSelector a dropdown)
-  ModeSelector.tsx           — alias vuoto → re-exporta ModePills per retrocompatibilità
   EditableField.tsx          — input inline con feedback salvataggio (bordo verde 1.5s)
   EditableTextarea.tsx       — textarea inline con feedback salvataggio (bordo verde 1.5s)
 
@@ -167,7 +166,6 @@ interface PlanningViewProps {
   onSendMessage: ...;
   onReEditBlock: ...;
   onClose: () => void;           // X per tornare a strategic_dashboard
-  students: Student[];
   masterContext: ReturnType<typeof useMasterContext>;
   initialTab?: ...;
   onInitialTabConsumed?: ...;

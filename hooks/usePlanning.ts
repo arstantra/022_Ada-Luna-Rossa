@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, Evaluation, ValidateAndArchivePayload, WeekRouteInfo, BlockSource } from '../types';
+import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, Evaluation, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
 import type { useMasterContext } from './useMasterContext';
 import { fileToAttachment } from '../utils';
 import * as GeminiService from '../services/gemini';
@@ -394,7 +394,7 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                 let finalActions: Action[];
                 if (hasExistingContent) {
                     finalActions = [
-                        { label: "Aggiungi al Master", payload: { action: 'add_validated_content_as_new_block', messageId: assistantPlaceholder.id } },
+                        { label: "Aggiungi in Coda", payload: { action: 'add_validated_content_as_new_block', messageId: assistantPlaceholder.id } },
                         { label: "Sostituisci Master", payload: { action: 'replace_entire_master_content', messageId: assistantPlaceholder.id } }
                     ];
                 } else {
@@ -447,11 +447,9 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
 
             newBlocks[blockIndex] = {
                 ...blockToEdit,
-                status: 'normale', // Revert status to 'in progettazione'
-                isReviewed: false, // Reset review status
-                messages: [systemMessage], // Reset messages
-                pendingValidationContent: undefined,
-                isReplacingContent: false,
+                status: 'normale',
+                isReviewed: false,
+                messages: [systemMessage],
             };
 
             return {
@@ -466,106 +464,5 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
         });
     }, [updateConversation]);
 
-    const addFonte = useCallback((
-        conversationId: string,
-        weekNumber: number,
-        blockId: string,
-        fonte: Omit<BlockSource, 'id' | 'addedAt'>
-    ): void => {
-        const newFonte: BlockSource = {
-            ...fonte,
-            id: crypto.randomUUID(),
-            addedAt: Date.now(),
-        };
-        updateConversation(conversationId, conv => ({
-            ...conv,
-            weekPlan: {
-                ...conv.weekPlan!,
-                blocks: conv.weekPlan!.blocks.map(block =>
-                    block.id === blockId
-                        ? { ...block, fonti: [...(block.fonti ?? []), newFonte] }
-                        : block
-                ),
-            },
-        }));
-    }, [updateConversation]);
-
-    const removeFonte = useCallback((
-        conversationId: string,
-        weekNumber: number,
-        blockId: string,
-        fonteId: string
-    ): void => {
-        updateConversation(conversationId, conv => {
-            const block = conv.weekPlan!.blocks.find(b => b.id === blockId);
-            const fonteToRemove = (block?.fonti ?? []).find(f => f.id === fonteId);
-
-            if (fonteToRemove?.dbFileKey) {
-                import('../services/db').then(({ deleteBlockFile }) => {
-                    deleteBlockFile(fonteToRemove.dbFileKey!).catch(console.error);
-                });
-            }
-
-            return {
-                ...conv,
-                weekPlan: {
-                    ...conv.weekPlan!,
-                    blocks: conv.weekPlan!.blocks.map(block =>
-                        block.id === blockId
-                            ? { ...block, fonti: (block.fonti ?? []).filter(f => f.id !== fonteId) }
-                            : block
-                    ),
-                },
-            };
-        });
-    }, [updateConversation]);
-
-    const updateFonte = useCallback((
-        conversationId: string,
-        weekNumber: number,
-        blockId: string,
-        fonteId: string,
-        patch: Partial<BlockSource>
-    ): void => {
-        updateConversation(conversationId, conv => ({
-            ...conv,
-            weekPlan: {
-                ...conv.weekPlan!,
-                blocks: conv.weekPlan!.blocks.map(block =>
-                    block.id === blockId
-                        ? {
-                            ...block,
-                            fonti: (block.fonti ?? []).map(f =>
-                                f.id === fonteId ? { ...f, ...patch } : f
-                            ),
-                          }
-                        : block
-                ),
-            },
-        }));
-    }, [updateConversation]);
-
-    const promoteFonteFromWebliografia = useCallback((
-        conversationId: string,
-        weekNumber: number,
-        blockId: string,
-        url: string,
-        title?: string
-    ): void => {
-        let hostname = url;
-        try {
-            hostname = new URL(url).hostname;
-        } catch {
-            hostname = url;
-        }
-
-        addFonte(conversationId, weekNumber, blockId, {
-            type: 'url',
-            title: title ?? hostname,
-            origin: 'promoted',
-            url,
-        });
-    }, [addFonte]);
-
-    return { processPlanningMessage, handleReEditBlock, addFonte, removeFonte, updateFonte, promoteFonteFromWebliografia };
+    return { processPlanningMessage, handleReEditBlock };
 };

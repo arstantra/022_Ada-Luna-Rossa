@@ -25,22 +25,16 @@ interface StrategicDashboardViewProps {
     onUpdateBlockModuleAndPillar: (weekNumber: number, blockIndex: number, module: string, pillar: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
+    teacherProfile: string;
 }
 
 const pillarTypes = ['Pilastri di Sintonizzazione', 'Pilastri Operativi', 'Attività Chiave'];
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
-    const [teacherProfile, setTeacherProfile] = useState(''); // Assuming it's loaded somehow
-
-    // This is a simplified way to get the profile. In a real app this would come from the context.
-    useEffect(() => {
-        const profile = localStorage.getItem('ada-teacher-profile');
-        if (profile) setTeacherProfile(profile);
-    }, []);
 
     const moduleHasPillars = useMemo(() => {
         const map = new Map<string, boolean>();
