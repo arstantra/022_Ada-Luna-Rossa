@@ -694,19 +694,33 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     latestRequestRef.current = currentRequestId;
     setIsLoading(true);
 
+    // Timeout di sicurezza: se il flusso di streaming si blocca senza errori
+    // (comportamento osservato con Gemini 2.5 Flash + thinkingConfig su contesti lunghi),
+    // garantisce che isLoading venga sempre resettato entro 120 secondi.
+    let planningTimeoutId: ReturnType<typeof setTimeout>;
+    const planningTimeoutPromise = new Promise<never>((_, reject) => {
+      planningTimeoutId = setTimeout(
+        () => reject(new Error("Ada non ha risposto in tempo. Controlla la connessione e riprova.")),
+        120_000
+      );
+    });
+
     try {
-      await processPlanningMessage({
-        content,
-        file,
-        actionPayload,
-        activeConversation,
-        masterContext,
-        currentModeId: masterContext.currentModeId,
-        students,
-        useGoogleSearch,
-        conversations,
-        availableWeeks,
-      });
+      await Promise.race([
+        processPlanningMessage({
+          content,
+          file,
+          actionPayload,
+          activeConversation,
+          masterContext,
+          currentModeId: masterContext.currentModeId,
+          students,
+          useGoogleSearch,
+          conversations,
+          availableWeeks,
+        }),
+        planningTimeoutPromise,
+      ]);
     } catch(e) {
       if (latestRequestRef.current === currentRequestId) {
         console.error("Error in planning flow:", e);
@@ -714,7 +728,8 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
         showToast(errorMessage, 'error');
       }
     } finally {
-       if (latestRequestRef.current === currentRequestId) setIsLoading(false);
+      clearTimeout(planningTimeoutId!);
+      if (latestRequestRef.current === currentRequestId) setIsLoading(false);
     }
   }, [activeConversation, masterContext, students, processPlanningMessage, showToast, useGoogleSearch, conversations, availableWeeks]);
 

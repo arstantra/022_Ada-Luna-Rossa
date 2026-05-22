@@ -409,7 +409,24 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                 return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks }};
             });
         } catch(e) {
-          console.error("Error calling", e);
+          console.error("Error in planning stream:", e);
+          const errorMsg = e instanceof Error ? e.message : GEMINI_API_ERROR_MESSAGE;
+          // Aggiorna il placeholder con un messaggio di errore invece di lasciare "..."
+          updateConversation(activeConversation.id, convo => {
+              const newBlocks = [...convo.weekPlan!.blocks];
+              const targetBlock = newBlocks[blockIndex];
+              const newMessages = (targetBlock.messages || []).map(m =>
+                  m.id === assistantPlaceholder.id
+                      ? { ...m, content: `<p style="color: #f87171; font-style: italic;">⚠️ ${errorMsg}</p>` }
+                      : m
+              );
+              newBlocks[blockIndex] = { ...targetBlock, messages: newMessages };
+              return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks } };
+          });
+          // Mostra toast direttamente qui (showToast è in scope).
+          // NON re-throw: se il timeout in handleSendPlanningMessage è già scattato,
+          // un re-throw diventerebbe una unhandled rejection.
+          showToast(errorMsg, 'error');
         }
     }, [moduleMap, showToast, updateConversation, addEvaluationToStudent, recordAttendanceForBlock]);
 
