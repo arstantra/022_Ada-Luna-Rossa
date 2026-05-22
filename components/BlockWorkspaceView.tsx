@@ -241,10 +241,71 @@ ${htmlContent}
                         toolbarChildren={editorToolbarActions}
                         includeAlignmentInToolbar={true}
                     />
-                    {/* TODO (Task 7): qui andrà la sezione Webliografia/Fonti aggiornata,
-                        integrata con il nuovo sistema BlockSource da block.fonti.
-                        La vecchia sezione "Webliografia Rilevata" (basata su allSources/grounding)
-                        è stata rimossa per far posto al pannello FontiDrawer unificato. */}
+                    {/* Sezione Fonti — visibile solo se block.fonti contiene almeno una voce */}
+                    {(block.fonti?.length ?? 0) > 0 && (
+                        <div className="flex-shrink-0 px-8 py-5 border-t border-gray-700/50">
+                            <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 mb-3">
+                                Fonti
+                            </p>
+                            <div className="flex flex-col gap-y-2">
+                                {block.fonti!.map(fonte => (
+                                    <div key={fonte.id} className="flex items-start gap-2">
+                                        {/* Icona tipo */}
+                                        <span className="mt-0.5 flex-shrink-0 text-gray-500">
+                                            {fonte.type === 'url' && (
+                                                <WebIcon className="h-3.5 w-3.5" />
+                                            )}
+                                            {fonte.type === 'pdf' && (
+                                                <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                                            )}
+                                            {fonte.type === 'note' && (
+                                                <BookOpenIcon className="h-3.5 w-3.5" />
+                                            )}
+                                        </span>
+                                        {/* Contenuto */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-sm text-gray-300 truncate">
+                                                    {fonte.title}
+                                                </span>
+                                                {fonte.origin === 'promoted' && (
+                                                    <span className="text-[9px] font-mono bg-gray-800 text-gray-500 rounded px-1 flex-shrink-0">
+                                                        rilevata
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {/* Dettaglio secondario per tipo */}
+                                            {fonte.type === 'url' && fonte.url && (
+                                                <a
+                                                    href={fonte.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-sky-400/70 hover:text-sky-300 underline-offset-2 underline break-all"
+                                                >
+                                                    {fonte.url}
+                                                </a>
+                                            )}
+                                            {fonte.type === 'note' && fonte.content && (
+                                                <p className="text-xs text-gray-500 italic">
+                                                    {fonte.content.slice(0, 80)}{fonte.content.length > 80 ? '…' : ''}
+                                                </p>
+                                            )}
+                                            {fonte.type === 'pdf' && (
+                                                <p className="text-xs text-gray-500">
+                                                    {fonte.fileName ?? ''}
+                                                    {fonte.fileSize != null && (
+                                                        <span className="ml-1">
+                                                            ({(fonte.fileSize / 1024).toFixed(0)} KB)
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

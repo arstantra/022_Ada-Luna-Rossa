@@ -122,6 +122,7 @@ const FontiDrawer: React.FC<FontiDrawerProps> = ({
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [pdfTitle, setPdfTitle] = useState('');
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // --- Webliografia filtrata (rimuove URL già presenti come fonti) ---
@@ -155,6 +156,7 @@ const FontiDrawer: React.FC<FontiDrawerProps> = ({
     const resetPdfForm = () => {
         setPdfFile(null);
         setPdfTitle('');
+        setPdfUploadError(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -196,6 +198,7 @@ const FontiDrawer: React.FC<FontiDrawerProps> = ({
     const handleAddPdf = useCallback(async () => {
         if (!pdfFile) return;
         setIsUploadingPdf(true);
+        setPdfUploadError(null);
         try {
             const dbFileKey = crypto.randomUUID();
             await saveBlockFile(dbFileKey, pdfFile);
@@ -211,6 +214,7 @@ const FontiDrawer: React.FC<FontiDrawerProps> = ({
             setActiveForm(null);
         } catch (err) {
             console.error('FontiDrawer: errore salvataggio PDF', err);
+            setPdfUploadError('Salvataggio non riuscito. Verifica lo spazio disponibile e riprova.');
         } finally {
             setIsUploadingPdf(false);
         }
@@ -368,6 +372,11 @@ const FontiDrawer: React.FC<FontiDrawerProps> = ({
                                 placeholder="Titolo documento"
                                 className="w-full px-3 py-1.5 text-sm bg-gray-800/80 border border-gray-700/60 rounded-md text-gray-100 placeholder-gray-500 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-colors"
                             />
+                            {pdfUploadError && (
+                                <p className="text-xs text-red-400/90 px-0.5">
+                                    {pdfUploadError}
+                                </p>
+                            )}
                             <button
                                 onClick={handleAddPdf}
                                 disabled={isUploadingPdf}

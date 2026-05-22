@@ -367,7 +367,8 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
 
         try {
             const responseStream = await GeminiService.streamChatResponse(
-                blockBeforeUpdate.messages || [], content, attachmentForMessage, masterContext, currentModeId, useGoogleSearch, conversations, availableWeeks, blockContextPrompt, students
+                blockBeforeUpdate.messages || [], content, attachmentForMessage, masterContext, currentModeId, useGoogleSearch, conversations, availableWeeks, blockContextPrompt, students,
+                blockBeforeUpdate.fonti
             );
 
             let accumulatedResponse = "";
