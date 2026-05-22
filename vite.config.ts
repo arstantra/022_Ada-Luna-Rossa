@@ -12,7 +12,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-      '@google/genai': path.resolve(__dirname, 'node_modules/@google/genai/dist/index.js'),
     }
   },
   optimizeDeps: {
