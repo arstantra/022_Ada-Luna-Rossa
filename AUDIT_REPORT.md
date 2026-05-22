@@ -196,7 +196,38 @@ Font Google Fonts e config Tailwind:
 
 ---
 
-## 8. Problemi aperti — TUTTI RISOLTI (ultimo aggiornamento: 2026-05-22)
+## 8. Fix post-audit — sessione 2026-05-22 (persistenza + UX)
+
+### 8a. Bug critico: perdita dati "Aggiungi in Coda" / "Sostituisci Master" dopo refresh
+**File:** `hooks/useConversations.ts`
+
+**Causa root:** React 18 automatic batching salta la valutazione eager del functional updater di `useState` quando ci sono pending state updates (es. durante o subito dopo lo streaming AI). In questi casi, la variabile `updatedConvo` catturata dentro il setter resta `null`, e `db.saveConversation` non veniva mai chiamato.
+
+"Trasferisci al Master" (ex "Valida Contenuto") non era affetto dal bug perché ha un `await createMasterContentHeader()` prima della chiamata, che svuota le pending lanes prima che `updateConversation` venga invocato.
+
+**Fix:** Pattern a due vie in `updateConversation`:
+1. Via rapida: se `updatedConvo` è non-null (React ha valutato eagerly), `db.saveConversation` viene chiamato immediatamente come prima.
+2. Via fallback: se `updatedConvo` è null, il `convoId` viene aggiunto a `pendingSavesRef` (un `useRef<Set<string>>`); un `useEffect([conversations])` svuota il set dopo ogni commit React, leggendo la conversazione corretta dallo stato committed.
+
+### 8b. UX: "Valida Contenuto" → "Trasferisci al Master"
+**File:** `hooks/usePlanning.ts` (riga ~402), `components/MessageView.tsx`
+
+**Motivazione:** "Valida" suggeriva un passaggio definitivo e irreversibile. Il flusso effettivo è iterativo: si sviluppa nel Laboratorio, si edita direttamente nel Contenuto Master, si trasferisce quando pronti. Il nuovo nome riflette questo senza implicare finalità.
+
+- Label pulsante: `'Trasferisci al Master'`
+- Badge post-uso: `'Trasferito'` (era `'Validato'`)
+- Commento interno in `MessageView.tsx`: `// Was "Trasferisci al Master"`
+
+### 8c. DocumentEditor: perdita contenuto al cambio tab rapido
+**File:** `components/DocumentEditor.tsx`
+
+**Causa:** L'autosave è debounced a 1.5s. Se l'utente usciva dal tab Contenuto Master entro 1.5s dall'ultima modifica, il timer veniva cancellato senza flush.
+
+**Fix:** `pendingContentRef` cattura ogni keystroke. Un `useEffect` cleanup (eseguito all'unmount del componente) controlla se c'è contenuto pendente e chiama `onSaveRef.current(pending)` immediatamente. `onSaveRef` mantiene l'ultimo `onSave` aggiornato senza essere una dependency del cleanup effect (che ha `[]`).
+
+---
+
+## 10. Problemi aperti — TUTTI RISOLTI (ultimo aggiornamento: 2026-05-22)
 
 | # | File | Problema | Fix applicato |
 |---|------|---------|--------------|
@@ -209,7 +240,7 @@ Font Google Fonts e config Tailwind:
 
 ## 9. Stato finale
 
-**Riepilogo interventi:**
+**Riepilogo interventi (aggiornato al 2026-05-22):**
 - **2 file eliminati** (ModeSelector.tsx, desktop.ini)
 - **6 icone rimosse** da Icons.tsx (BotIcon, CodeIcon, ArrowRightIcon, CommandLineIcon, FileTextIcon, CalendarIcon)
 - **1 prop inutilizzata rimossa** (PlanningView `students`)
@@ -222,4 +253,8 @@ Font Google Fonts e config Tailwind:
 - **2 tipi esportati** per consentire il typing cross-file (ConfirmationModalProps, ActiveView)
 - **4 problemi aperti** che richiedono decisione umana (tutti a basso rischio runtime)
 
-**Salute del codebase:** buona. La violazione critica React hooks in PlanningView era il problema più grave (potenziale "rendered more hooks than previous render" se weekPlan diventava undefined dopo un render con dati validi). Tutti i `any` eliminabili senza refactoring architetturale sono stati tipizzati. Il codebase è ora pulito da file morti, import inutilizzati e zavorra di debug.
+- **1 bug persistenza critico risolto** (useConversations.ts: `pendingSavesRef` fallback per React 18 batching — 2026-05-22)
+- **1 UX rename** ("Valida Contenuto" → "Trasferisci al Master" — usePlanning.ts + MessageView.tsx — 2026-05-22)
+- **1 bug DocumentEditor risolto** (flush-on-unmount per autosave debounced — 2026-05-22)
+
+**Salute del codebase:** buona. La violazione critica React hooks in PlanningView era il problema più grave (potenziale "rendered more hooks than previous render" se weekPlan diventava undefined dopo un render con dati validi). Il bug di persistenza post-streaming era silenzioso e difficile da individuare senza conoscere il funzionamento di React 18 eager evaluation. Tutti i `any` eliminabili senza refactoring architetturale sono stati tipizzati. Il codebase è ora pulito da file morti, import inutilizzati e zavorra di debug.

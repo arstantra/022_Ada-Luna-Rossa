@@ -242,7 +242,7 @@ Usare sempre `handlePlanningModeChange` per il Laboratorio. L'iniezione del mess
   lessonState?: LessonState,        // 'progettata'|'in_corso'|'archiviata'
   objective?, module?, pillar?,
   lessonTitle?, lessonSyllabus?,    // pianificazione dettagliata
-  contentBlocks?: ContentBlock[],   // popolato dopo validazione → stato "completato"
+  contentBlocks?: ContentBlock[],   // popolato dopo "Trasferisci al Master" → stato "completato"
   messages?: Message[],
   isLocked?: boolean,
   isReviewed?: boolean,             // override: forza dot emerald indipendentemente dallo stato
@@ -288,6 +288,62 @@ const ADA_QUICK_CHAT_ID = 'ada-quick-chat'; // ID fisso, non cambia mai
 
 ### EditableField / EditableTextarea — feedback salvataggio
 Entrambi hanno stato `justSaved`: bordo verde `border-emerald-500/60` per 1.5s dopo ogni save, poi torna al normale. Il timer è pulito sull'unmount. Non toccare questo pattern.
+
+### DocumentEditor — flush autosave all'unmount
+`DocumentEditor.tsx` ha un autosave debounced (1.5s). Se l'utente cambia tab prima che il timer scada il contenuto va perso. Fix: `pendingContentRef` cattura ogni modifica; un `useEffect` cleanup chiama `onSaveRef.current(pending)` al momento dell'unmount. **Non rimuovere questo pattern** — era un bug reale: uscire dal tab Contenuto Master in meno di 1.5s perdeva l'ultima modifica.
+
+```ts
+// DocumentEditor.tsx — pattern flush-on-unmount
+const pendingContentRef = useRef<string | null>(null);
+const onSaveRef = useRef(onSave);
+useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+useEffect(() => {
+    return () => {
+        if (autosaveTimeoutRef.current) {
+            clearTimeout(autosaveTimeoutRef.current);
+            const pending = pendingContentRef.current;
+            if (pending !== null && pending.trim() !== lastSavedContent.current.trim()) {
+                onSaveRef.current(pending);
+            }
+        }
+    };
+}, []);
+```
+
+### Persistenza `updateConversation` — pattern a due vie (CRITICO)
+React 18 con automatic batching **può saltare la valutazione eager del functional updater** di `useState` quando ci sono pending state updates (succede durante lo streaming AI). In questi casi la variabile catturata dentro il setter rimane `null` e `db.saveConversation` non viene mai chiamato.
+
+**Non rimuovere o semplificare il pattern `pendingSavesRef` in `useConversations.ts`.**
+
+Il pattern a due vie:
+- **Via rapida**: React valuta l'updater eagerly → `updatedConvo` catturato → `db.saveConversation` chiamato subito
+- **Via fallback**: React rimanda (pending lanes) → `updatedConvo` è `null` → `convoId` aggiunto a `pendingSavesRef` → `useEffect([conversations])` lo salva dopo il prossimo commit React
+
+```ts
+// useConversations.ts — due vie di salvataggio
+const pendingSavesRef = useRef<Set<string>>(new Set());
+
+useEffect(() => {
+    if (pendingSavesRef.current.size === 0) return;
+    const toSave = [...pendingSavesRef.current];
+    pendingSavesRef.current.clear();
+    toSave.forEach(convoId => {
+        const convo = conversations.find(c => c.id === convoId);
+        if (convo) db.saveConversation(convo).catch(err => console.error(err));
+    });
+}, [conversations]);
+```
+
+Questo bug causava la perdita silenziosa di tutto il contenuto aggiunto con "Aggiungi in Coda" e "Sostituisci Master" dopo refresh. "Trasferisci al Master" non ne risentiva perché ha un `await` prima della chiamata che svuota le pending lanes.
+
+### Azioni pulsante Laboratorio — etichette correnti
+| Label pulsante | `action` payload | Comportamento |
+|----------------|-----------------|---------------|
+| **Trasferisci al Master** | `validate_and_archive` | Crea header HTML + salva come primo `contentBlock` |
+| **Aggiungi in Coda** | `add_validated_content_as_new_block` | Appende un nuovo `ContentBlock` ai precedenti |
+| **Sostituisci Master** | `replace_entire_master_content` | Richiede conferma, poi sostituisce tutti i `contentBlocks` |
+
+Il badge "Trasferito" in `MessageView.tsx` compare dopo l'uso di qualsiasi azione singola (es. "Trasferisci al Master"). Era "Validato" — aggiornato per coerenza con il nuovo label.
 
 ### React rules — tutti gli hook prima dei return condizionali
 **Tutti** gli hook (`useState`, `useRef`, `useEffect`, `useMemo`, `useCallback`) devono stare **prima** di qualsiasi `return` condizionale nel componente. Violare questa regola causa errori runtime "rendered more hooks than previous render" / "rendered fewer hooks than during the previous render".
@@ -379,3 +435,6 @@ progettata → in_corso → archiviata
 - Non aggiungere un tab bar dentro `BlockWorkspaceView` — il toggle `Laboratorio | Contenuto Master` vive nel `BlockNavigator` di `PlanningView`.
 - Non ricreare un componente `ModeSelector` a dropdown — il pattern approvato è `ModePills` (pill inline). Il dropdown ha causato problemi cronici di z-index e overflow che non sono stati mai risolti definitivamente.
 - Non aggiungere il selettore modalità nell'header — le `ModePills` vivono **solo** nel footer sopra `ChatInput`, sia in `ChatView` che in `BlockWorkspaceView`.
+- Non rimuovere `pendingSavesRef` e il relativo `useEffect` in `useConversations.ts` — il "codice ridondante" è il fallback per React 18 che salta eager eval durante lo streaming. Senza, le azioni "Aggiungi in Coda" e "Sostituisci Master" perdono il dato al refresh.
+- Non togliere il flush-on-unmount (`pendingContentRef` + `useEffect` cleanup) da `DocumentEditor.tsx` — è l'unica garanzia che l'ultima modifica venga salvata quando l'utente cambia tab prima dei 1.5s di debounce.
+- Non rinominare "Trasferisci al Master" in altro — era "Valida Contenuto" fino al 2026-05-22. Il nuovo nome riflette il flusso iterativo: si lavora nel Laboratorio, si trasferisce al Master quando si è pronti, non si "valida" definitivamente.
