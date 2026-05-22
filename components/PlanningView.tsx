@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, PlanningActionPayload, BlockStatus } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -124,7 +124,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
-    
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -211,6 +210,47 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             return { ...plan, blocks: newBlocks };
         });
     }, [onUpdateWeekPlan]);
+
+    // --- Fonti handlers ---
+
+    const handleAddFonte = useCallback((fonte: Omit<BlockSource, 'id' | 'addedAt'>) => {
+        const newFonte: BlockSource = { ...fonte, id: crypto.randomUUID(), addedAt: Date.now() };
+        handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), newFonte] });
+    }, [activeBlock?.fonti, handleUpdateBlockDetails]);
+
+    const handleRemoveFonte = useCallback((fonteId: string) => {
+        handleUpdateBlockDetails({ fonti: (activeBlock?.fonti ?? []).filter(f => f.id !== fonteId) });
+    }, [activeBlock?.fonti, handleUpdateBlockDetails]);
+
+    const handleUpdateFonte = useCallback((fonteId: string, patch: Partial<BlockSource>) => {
+        handleUpdateBlockDetails({
+            fonti: (activeBlock?.fonti ?? []).map(f => f.id === fonteId ? { ...f, ...patch } : f),
+        });
+    }, [activeBlock?.fonti, handleUpdateBlockDetails]);
+
+    const handlePromote = useCallback((url: string) => {
+        let title = url;
+        try { title = new URL(url).hostname.replace('www.', ''); } catch { /* noop */ }
+        const promoted: BlockSource = {
+            id: crypto.randomUUID(),
+            type: 'url',
+            title,
+            addedAt: Date.now(),
+            origin: 'promoted',
+            url,
+        };
+        handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), promoted] });
+    }, [activeBlock?.fonti, handleUpdateBlockDetails]);
+
+    // URL estratti dalle fonti di grounding dei messaggi del blocco attivo
+    const webliografiaRilevata = useMemo(() => {
+        if (!activeBlock?.messages) return [];
+        const uris = new Set<string>();
+        activeBlock.messages.forEach(msg => {
+            msg.sources?.forEach(s => { if (s.uri) uris.add(s.uri); });
+        });
+        return Array.from(uris);
+    }, [activeBlock?.messages]);
 
     const objectiveContent = useMemo(() => {
         if (!activeBlock) return null;
@@ -310,7 +350,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
 
     return (
         <>
-            <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
+            <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden relative">
                 <div className="flex-shrink-0 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700/50">
                     {activeWorkspaceTab === 'contenutoMaster' ? (
                         /* ── Contenuto Master: barra compatta con sole pillole + toggle + X ── */
@@ -430,6 +470,10 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onShowConfirmation={onShowConfirmation}
                     currentModeId={currentModeId}
                     onModeChange={onModeChange}
+                    onAddFonte={handleAddFonte}
+                    onRemoveFonte={handleRemoveFonte}
+                    onUpdateFonte={handleUpdateFonte}
+                    onPromoteFonte={handlePromote}
                 />
             </main>
             {activeBlock && (

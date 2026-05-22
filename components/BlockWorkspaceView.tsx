@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
-import { ArrowDownTrayIcon, WebIcon } from './Icons';
+import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import * as GeminiService from '../services/gemini';
+import FontiDrawer from './FontiDrawer';
 
 // --- MAIN WORKSPACE VIEW ---
 
@@ -22,11 +23,17 @@ interface BlockWorkspaceViewProps {
     onShowConfirmation: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
     currentModeId?: string;
     onModeChange?: (modeId: string) => void;
+    // Handlers per le fonti del blocco (passati da PlanningView)
+    onAddFonte?: (fonte: Omit<BlockSource, 'id' | 'addedAt'>) => void;
+    onRemoveFonte?: (fonteId: string) => void;
+    onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
+    onPromoteFonte?: (url: string) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
     
     useEffect(() => {
@@ -41,7 +48,17 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
             }
         }
     }, [block.messages, isLoading, highlightQuery]);
-    
+
+    // URL estratti dalle fonti di grounding dei messaggi del blocco (prima del return condizionale)
+    const webliografiaRilevata = useMemo(() => {
+        if (!block?.messages) return [];
+        const uris = new Set<string>();
+        block.messages.forEach(msg => {
+            msg.sources?.forEach(s => { if (s.uri) uris.add(s.uri); });
+        });
+        return Array.from(uris);
+    }, [block?.messages]);
+
     if (!block) {
          return (
             <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -143,10 +160,28 @@ ${htmlContent}
     ), [handleExportHtml, isExportingHtml]);
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
+        <div className="relative flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
 
             {activeTab === 'laboratorio' && (
                 <>
+                    {/* Mini-toolbar Laboratorio: pulsante Fonti */}
+                    {onAddFonte && (
+                        <div className="flex-shrink-0 flex items-center justify-end px-4 py-1.5 border-b border-gray-800/40 bg-[#0D1117]">
+                            <button
+                                onClick={() => setIsDrawerOpen(true)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 text-gray-300 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors"
+                                title="Fonti del blocco"
+                            >
+                                <BookOpenIcon className="h-4 w-4" />
+                                <span className="text-sm">Fonti</span>
+                                {(block.fonti?.length ?? 0) > 0 && (
+                                    <span className="bg-purple-500/30 text-purple-300 text-[10px] font-mono rounded-full px-1.5">
+                                        {block.fonti!.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    )}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
                             {(block.messages || []).filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
@@ -178,6 +213,19 @@ ${htmlContent}
                             />
                         </div>
                     </footer>
+                    {/* FontiDrawer — pannello slide-in assoluto, si sovrappone all'area Laboratorio */}
+                    {onAddFonte && (
+                        <FontiDrawer
+                            isOpen={isDrawerOpen}
+                            onClose={() => setIsDrawerOpen(false)}
+                            fonti={block.fonti ?? []}
+                            webliografiaRilevata={webliografiaRilevata}
+                            onAddFonte={onAddFonte}
+                            onRemoveFonte={onRemoveFonte ?? (() => {})}
+                            onUpdateFonte={onUpdateFonte ?? (() => {})}
+                            onPromote={onPromoteFonte ?? (() => {})}
+                        />
+                    )}
                 </>
             )}
 
@@ -193,31 +241,10 @@ ${htmlContent}
                         toolbarChildren={editorToolbarActions}
                         includeAlignmentInToolbar={true}
                     />
-                    {allSources.length > 0 && (
-                        <div className="flex-shrink-0 p-6 bg-gray-800 border-t-2 border-gray-700/50">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                    <WebIcon className="h-5 w-5 text-sky-400" />
-                                    Webliografia Rilevata
-                                </h3>
-                                <button
-                                    onClick={handleAppendSources}
-                                    className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                                >
-                                    Includi nel Contenuto Master
-                                </button>
-                            </div>
-                            <ul className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-                                {allSources.map((source, index) => (
-                                    <li key={source.uri} className="text-sm">
-                                        <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline break-all">
-                                            {index + 1}. {source.title || source.uri}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+                    {/* TODO (Task 7): qui andrà la sezione Webliografia/Fonti aggiornata,
+                        integrata con il nuovo sistema BlockSource da block.fonti.
+                        La vecchia sezione "Webliografia Rilevata" (basata su allSources/grounding)
+                        è stata rimossa per far posto al pannello FontiDrawer unificato. */}
                 </div>
             )}
         </div>
