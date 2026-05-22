@@ -59,20 +59,12 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         return Array.from(uris);
     }, [block?.messages]);
 
-    if (!block) {
-         return (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-                Seleziona un blocco per iniziare.
-            </div>
-        );
-    }
-
     const mergedContentHtml = useMemo(() => {
         return (block.contentBlocks || [])
             .map(cb => cb.content)
             .join('<hr class="page-break">');
     }, [block.contentBlocks]);
-    
+
     const allSources = useMemo(() => {
         if (!block.messages) return [];
         const sourcesMap = new Map<string, { title: string; uri: string }>();
@@ -91,7 +83,7 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     const handleSaveDocument = useCallback((newContent: string) => {
         onSendMessage('', undefined, { action: 'consolidate_and_update_content', newContent });
     }, [onSendMessage]);
-    
+
     const handleAppendSources = useCallback(() => {
         if (!editorRef.current) return;
         if (editorRef.current.querySelector('#webliografia-master')) return;
@@ -134,11 +126,11 @@ ${htmlContent}
             link.href = URL.createObjectURL(blob);
             const filename = `blocco_lezione_${block.day.toLowerCase().replace(/[^a-z0-9]/g, '_')}.html`;
             link.download = filename;
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             URL.revokeObjectURL(link.href);
         } catch (error) {
             console.error("HTML export failed", error);
@@ -148,16 +140,24 @@ ${htmlContent}
     }, [block.day, block.objective]);
 
     const editorToolbarActions = useMemo(() => (
-        <button 
-            onClick={handleExportHtml} 
+        <button
+            onClick={handleExportHtml}
             disabled={isExportingHtml}
-            className="editor-toolbar-button flex items-center gap-2 !px-3 !bg-green-600/20 !text-green-300 hover:!bg-green-600/40 disabled:opacity-50 disabled:cursor-wait" 
+            className="editor-toolbar-button flex items-center gap-2 !px-3 !bg-green-600/20 !text-green-300 hover:!bg-green-600/40 disabled:opacity-50 disabled:cursor-wait"
             title="Esporta in HTML"
         >
             <ArrowDownTrayIcon className="h-5 w-5" />
             {isExportingHtml ? 'Esportazione...' : 'Esporta HTML'}
         </button>
     ), [handleExportHtml, isExportingHtml]);
+
+    if (!block) {
+         return (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+                Seleziona un blocco per iniziare.
+            </div>
+        );
+    }
 
     return (
         <div className="relative flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
