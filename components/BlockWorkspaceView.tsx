@@ -36,16 +36,23 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
     
+    const prevMsgCountRef = useRef(0);
+
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
-        if (scrollContainer && !highlightQuery) {
-            const isNearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
-            if (isNearBottom) {
-                const timer = setTimeout(() => {
-                    scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
-                }, 100);
-                return () => clearTimeout(timer);
-            }
+        if (!scrollContainer || highlightQuery) return;
+        const msgCount = block.messages?.length ?? 0;
+        const newMessageAdded = msgCount > prevMsgCountRef.current;
+        prevMsgCountRef.current = msgCount;
+
+        const isNearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
+        const shouldScroll = newMessageAdded || (isLoading && isNearBottom);
+
+        if (shouldScroll) {
+            const timer = setTimeout(() => {
+                scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+            }, 80);
+            return () => clearTimeout(timer);
         }
     }, [block.messages, isLoading, highlightQuery]);
 

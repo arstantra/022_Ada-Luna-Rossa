@@ -62,13 +62,23 @@ const ChatView: React.FC<ChatViewProps> = ({
     return null;
   }, [conversation, students]);
 
-  // Auto-scroll verso il fondo quando arrivano nuovi messaggi
+  const prevMsgCountRef = useRef(0);
+
+  // Auto-scroll verso il fondo:
+  // - sempre quando viene aggiunto un nuovo messaggio (invio utente o risposta AI)
+  // - durante lo streaming (isLoading) se già vicini al fondo
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
+    const msgCount = conversation?.messages?.length ?? 0;
+    const newMessageAdded = msgCount > prevMsgCountRef.current;
+    prevMsgCountRef.current = msgCount;
+
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (isNearBottom) {
-      const timer = setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 100);
+    const shouldScroll = newMessageAdded || (isLoading && isNearBottom);
+
+    if (shouldScroll) {
+      const timer = setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 80);
       return () => clearTimeout(timer);
     }
   }, [conversation?.messages, isLoading]);
