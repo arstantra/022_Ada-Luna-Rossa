@@ -247,7 +247,7 @@ export interface Message {
   attachment?: Attachment;
   generatedImages?: string[]; // Array of base64 data URLs
   actions?: Action[];
-  actionUsed?: boolean;
+  actionUsed?: boolean | string; // true (legacy) o la label dell'azione usata es. 'Trasferito' | 'Aggiunto' | 'Sostituito'
 }
 
 export interface Conversation {

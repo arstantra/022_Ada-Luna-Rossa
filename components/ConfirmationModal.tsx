@@ -24,7 +24,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                 Annulla
             </button>
             <button
-                onClick={onConfirm}
+                onClick={() => { onConfirm(); onClose(); }}
                 className={confirmButtonClass || "px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 transition-colors"}
             >
                 {confirmText || "Conferma"}

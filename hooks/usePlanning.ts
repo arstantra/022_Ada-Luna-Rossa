@@ -206,10 +206,10 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                         const htmlContent = messageToValidate.content;
                         const finalContent = headerHtml + htmlContent;
 
-                        const newMessages = (blockToUpdate.messages || []).map(m => 
-                            m.id === messageId ? { ...m, actionUsed: true } : m
+                        const newMessages = (blockToUpdate.messages || []).map(m =>
+                            m.id === messageId ? { ...m, actionUsed: 'Trasferito' } : m
                         );
-                        
+
                         newBlocks[blockIndex] = {
                             ...blockToUpdate,
                             status: 'normale',
@@ -242,8 +242,8 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                         const htmlContent = messageToAdd.content;
                         const newBlock: ContentBlock = { id: `cb-${Date.now()}`, content: htmlContent };
 
-                        const newMessages = (blockToUpdate.messages || []).map(m => 
-                            m.id === messageId ? { ...m, actionUsed: true } : m
+                        const newMessages = (blockToUpdate.messages || []).map(m =>
+                            m.id === messageId ? { ...m, actionUsed: 'Aggiunto' } : m
                         );
                         newBlocks[blockIndex] = {
                             ...blockToUpdate,
@@ -272,8 +272,8 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                         const finalContent = headerHtml + newHtmlContent;
                         const newContentBlock: ContentBlock = { id: `cb-replaced-${Date.now()}`, content: finalContent };
 
-                        const newMessages = (blockToUpdate.messages || []).map(m => 
-                            m.id === messageId ? { ...m, actionUsed: true } : m
+                        const newMessages = (blockToUpdate.messages || []).map(m =>
+                            m.id === messageId ? { ...m, actionUsed: 'Sostituito' } : m
                         );
                         newBlocks[blockIndex] = {
                             ...blockToUpdate,

@@ -131,18 +131,21 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
         </div>
 
         {!isUser && message.actions && message.actions.length > 0 && (
-            <div className="mt-3 ml-8 max-w-2xl flex flex-wrap gap-2">
+            <div className="mt-3 ml-8 max-w-2xl flex flex-wrap gap-2 items-center">
                 {(() => {
                     if (message.actionUsed) {
-                        if (message.actions.length === 1) { // Was "Trasferisci al Master"
-                            return (
-                                <button disabled className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 text-green-400 text-sm font-medium rounded-lg border border-gray-600 disabled:opacity-70 disabled:cursor-not-allowed">
-                                    <CheckIcon className="h-4 w-4" />
-                                    Trasferito
-                                </button>
-                            );
-                        }
-                        return null; // For multi-actions, hide after use
+                        // Determina label e colore in base all'azione usata
+                        const label = typeof message.actionUsed === 'string' ? message.actionUsed : 'Trasferito';
+                        const colorClass =
+                            label === 'Aggiunto'   ? 'text-sky-400 border-sky-500/30 bg-sky-500/8' :
+                            label === 'Sostituito' ? 'text-amber-400 border-amber-500/30 bg-amber-500/8' :
+                                                     'text-emerald-400 border-emerald-500/30 bg-emerald-500/8';
+                        return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-mono tracking-wide ${colorClass}`}>
+                                <CheckIcon className="h-3 w-3 flex-shrink-0" />
+                                {label}
+                            </span>
+                        );
                     }
                     return message.actions.map((action, index) => (
                         <button
