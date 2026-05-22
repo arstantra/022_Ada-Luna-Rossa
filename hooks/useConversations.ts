@@ -8,9 +8,30 @@ export const useConversations = (showToast: (message: string, type?: 'success' |
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const conversationsRef = useRef(conversations);
+    // IDs di conversazioni da salvare dopo il prossimo commit React
+    // (fallback per quando React non esegue il functional updater in modo eager)
+    const pendingSavesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         conversationsRef.current = conversations;
+    }, [conversations]);
+
+    // Flush dei salvataggi pendenti dopo ogni commit React.
+    // Garantisce che db.saveConversation venga sempre chiamato con lo stato corretto,
+    // anche quando React 18 con batching automatico non esegue il functional updater
+    // in modo eager (es. aggiornamenti sincroni dentro event handler con pending lanes).
+    useEffect(() => {
+        if (pendingSavesRef.current.size === 0) return;
+        const toSave = [...pendingSavesRef.current];
+        pendingSavesRef.current.clear();
+        toSave.forEach(convoId => {
+            const convo = conversations.find(c => c.id === convoId);
+            if (convo) {
+                db.saveConversation(convo).catch(err =>
+                    console.error("Pending save failed for", convoId, err)
+                );
+            }
+        });
     }, [conversations]);
 
     useEffect(() => {
@@ -128,12 +149,20 @@ export const useConversations = (showToast: (message: string, type?: 'success' |
             })
         );
         if (updatedConvo) {
+            // Percorso rapido: React ha eseguito il functional updater in modo eager
+            // (ottimizzazione standard quando non ci sono pending lanes).
             try {
                 await db.saveConversation(updatedConvo);
             } catch (error) {
                 console.error("Failed to update conversation:", error);
                 showToast("Errore nell'aggiornare la conversazione.", "error");
             }
+        } else {
+            // Percorso di fallback: React ha rimandato l'esecuzione del functional updater
+            // (accade quando ci sono pending state updates, es. durante lo streaming).
+            // Aggiungiamo l'ID alla lista dei salvataggi pendenti: il useEffect li salverà
+            // dopo il prossimo commit React, quando lo stato è già corretto.
+            pendingSavesRef.current.add(convoId);
         }
     }, [showToast]);
     

@@ -399,7 +399,7 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                     ];
                 } else {
                     finalActions = [{
-                        label: 'Valida Contenuto',
+                        label: 'Trasferisci al Master',
                         payload: { action: 'validate_and_archive', messageId: assistantPlaceholder.id }
                     }];
                 }

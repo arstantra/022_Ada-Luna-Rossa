@@ -134,11 +134,11 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
             <div className="mt-3 ml-8 max-w-2xl flex flex-wrap gap-2">
                 {(() => {
                     if (message.actionUsed) {
-                        if (message.actions.length === 1) { // Was "Valida"
+                        if (message.actions.length === 1) { // Was "Trasferisci al Master"
                             return (
                                 <button disabled className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 text-green-400 text-sm font-medium rounded-lg border border-gray-600 disabled:opacity-70 disabled:cursor-not-allowed">
                                     <CheckIcon className="h-4 w-4" />
-                                    Validato
+                                    Trasferito
                                 </button>
                             );
                         }
