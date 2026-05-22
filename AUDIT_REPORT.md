@@ -107,7 +107,33 @@ Nessuna violazione `rounded-full` su pulsanti AI trovata (l'unico `rounded-full`
 - `useEffect` per scroll usa `activeBlock?.id` invece di `activeBlock.id`
 - I due `return` condizionali ora compaiono dopo tutti i hook, con commento `// --- Conditional returns after all hooks ---`
 
-### 5b. Stale closure — `MainApp.tsx`
+### 5b. Violazione Rules of Hooks — `BlockWorkspaceView.tsx` (2026-05-22)
+**Problema:** 6 hook (`useMemo` × 3, `useCallback` × 3) dichiarati dopo il `return` condizionale `if (!block)` alla riga 62, violando la regola che tutti gli hook devono essere chiamati nello stesso ordine a ogni render. Se il componente fosse stato renderizzato prima con `block` definito e poi con `block` undefined, React avrebbe lanciato "Rendered fewer hooks than during the previous render" causando un crash.
+
+| Hook | Era alla riga | Referenziava |
+|------|--------------|--------------|
+| `useMemo mergedContentHtml` | 70 | `block.contentBlocks` |
+| `useMemo allSources` | 76 | `block.messages` |
+| `useCallback handleSaveDocument` | 91 | `onSendMessage` |
+| `useCallback handleAppendSources` | 95 | `allSources`, `handleSaveDocument` |
+| `useCallback handleExportHtml` | 104 | `block.day`, `block.objective` |
+| `useMemo editorToolbarActions` | 150 | `handleExportHtml`, `isExportingHtml` |
+
+**Fix:** Tutti e 6 gli hook spostati prima del `return` condizionale (ora riga 154). Contenuto e dipendenze invariati. `block` è tipizzato come `BlockDetails` non-opzionale, quindi nessun optional chaining aggiuntivo necessario.
+
+**Ordine finale hook nel componente:**
+1. `useState` × 2, `useRef` × 2
+2. `useEffect` scroll
+3. `useMemo webliografiaRilevata`
+4. `useMemo mergedContentHtml`
+5. `useMemo allSources`
+6. `useCallback handleSaveDocument`
+7. `useCallback handleAppendSources`
+8. `useCallback handleExportHtml`
+9. `useMemo editorToolbarActions`
+10. `if (!block) return ...`
+
+### 5c. Stale closure — `MainApp.tsx`
 Nessuna violazione trovata: i callback che accedono a `conversations` usano già `conversationsRef.current`. ✓
 
 ### 5c. `updateConversation` vs `setConversations`
@@ -170,7 +196,7 @@ Font Google Fonts e config Tailwind:
 
 ---
 
-## 8. Problemi aperti — TUTTI RISOLTI (2026-05-21)
+## 8. Problemi aperti — TUTTI RISOLTI (ultimo aggiornamento: 2026-05-22)
 
 | # | File | Problema | Fix applicato |
 |---|------|---------|--------------|
@@ -190,6 +216,7 @@ Font Google Fonts e config Tailwind:
 - **1 import inutilizzato rimosso** (PlanningView `CalendarIcon`, BlockWorkspaceView `Message`)
 - **1 violazione colore corretta** (ConceptMap `bg-green-500` → `bg-emerald-500`)
 - **1 violazione React hooks critica corretta** (PlanningView: 9 hook ora prima dei return condizionali)
+- **1 violazione React hooks corretta** (BlockWorkspaceView: 6 hook spostati prima del `if (!block) return` — 2026-05-22)
 - **7 useEffect con setTimeout ora hanno cleanup** (`return () => clearTimeout(timer)`)
 - **10+ usi di `any` tipizzati** correttamente (inclusi `confirmationProps`, `currentView`, `finalSources`, `masterContext` in usePlanning, tutte le prop `onShowConfirmation` e `onSendMessage`, `DataTransferItem`)
 - **2 tipi esportati** per consentire il typing cross-file (ConfirmationModalProps, ActiveView)

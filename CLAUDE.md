@@ -289,8 +289,10 @@ const ADA_QUICK_CHAT_ID = 'ada-quick-chat'; // ID fisso, non cambia mai
 ### EditableField / EditableTextarea — feedback salvataggio
 Entrambi hanno stato `justSaved`: bordo verde `border-emerald-500/60` per 1.5s dopo ogni save, poi torna al normale. Il timer è pulito sull'unmount. Non toccare questo pattern.
 
-### React rules — useEffect prima dei return condizionali
-Tutti gli `useEffect` devono stare **prima** di qualsiasi `return` condizionale nel componente. Violare questa regola causa errori runtime "rendered more hooks than previous render".
+### React rules — tutti gli hook prima dei return condizionali
+**Tutti** gli hook (`useState`, `useRef`, `useEffect`, `useMemo`, `useCallback`) devono stare **prima** di qualsiasi `return` condizionale nel componente. Violare questa regola causa errori runtime "rendered more hooks than previous render" / "rendered fewer hooks than during the previous render".
+
+Questo vale anche per hook che referenziano `block`, `weekPlan` o altri dati ricevuti come prop. Se il tipo della prop è non-opzionale nella firma del componente, usare il valore direttamente senza optional chaining aggiuntivo — il guard condizionale (`if (!block) return`) rimane comunque dopo tutti gli hook.
 
 ---
 
