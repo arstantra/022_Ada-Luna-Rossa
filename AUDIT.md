@@ -187,6 +187,23 @@ Questi due parametri del hook sono presenti nella firma e nella dependency array
 
 ---
 
+## 🟠 Audit `services/gemini.ts` — 2026-05-23
+
+### Fix applicati
+
+| Priorità | Descrizione | Riga | Stato |
+|----------|-------------|------|-------|
+| 🔴 | Rimosso `// @ts-nocheck` + aggiunto `Part` all'import SDK | 1-2 | ✅ |
+| 🟡 | `fileParts: any[]` → `Part[]` in `buildFontiContext` | 46 | ✅ |
+| 🟡 | `userParts: any[]` → `Part[]` in `streamChatResponse` | 215 | ✅ |
+| 🟡 | Import `* as GeminiService` inutilizzato rimosso da `BlockWorkspaceView.tsx` | BWV:9 | ✅ |
+| 🟠 | `extractArgs` doppia chiamata → assegnato a `args` in `generateGroupSuggestions` | 307-308 | ✅ |
+| 🟠 | `themeSchema` inline → `weekThemeSchema` a livello modulo | 537→523 | ✅ |
+| 🔵 | JSDoc multi-riga su `extractArgs` → una riga | 11-18 | ✅ |
+| 🔵 | Commenti COSA rimossi/accorciati (buildFontiContext, HELPER, userParts, fontiText) | vari | ✅ |
+
+---
+
 ## ✅ Codice verificato — Nessun problema trovato
 
 - `useConversations.ts` — pattern `pendingSavesRef` corretto e documentato
@@ -197,3 +214,4 @@ Questi due parametri del hook sono presenti nella firma e nella dependency array
 - `useMasterContext.ts` — tutti i settings su IndexedDB, nessun localStorage diretto
 - `Sidebar.tsx` — struttura navigazione allineata al CLAUDE.md, accent line viola, no font-semibold sui NavItem attivi
 - `MessageView.tsx` — badge "Trasferito"/"Aggiunto"/"Sostituito" corretto, compatibilità legacy `boolean` OK
+- `services/gemini.ts` — tutte le funzioni esportate in uso, tipi corretti, schema a livello modulo

@@ -6,7 +6,6 @@ import ChatInput from './ChatInput';
 import DocumentEditor from './DocumentEditor';
 import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
-import * as GeminiService from '../services/gemini';
 import FontiDrawer from './FontiDrawer';
 
 // --- MAIN WORKSPACE VIEW ---

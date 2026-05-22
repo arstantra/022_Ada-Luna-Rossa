@@ -1,6 +1,5 @@
 // services/gemini.ts
-// @ts-nocheck
-import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode, Part } from "@google/genai";
 import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData, BlockSource } from '../types';
 import { getBlockFile } from './db';
 import { MODES } from '../constants';
@@ -8,12 +7,7 @@ import TurndownService from 'turndown';
 
 export const ADA_API_KEY_STORAGE = 'ada_gemini_api_key';
 
-/**
- * Estrae i campi tipizzati dai function call args del Gemini SDK.
- * Il SDK tipizza `FunctionCall.args` come opaco (Record<string, unknown>);
- * il doppio cast `as unknown as T` è il pattern TypeScript approvato per
- * attraversare un boundary di tipo non espresso dall'SDK.
- */
+// SDK tipizza FunctionCall.args come opaco; doppio cast è il pattern TS approvato per questo boundary.
 function extractArgs<T>(args: Record<string, unknown> | undefined): T {
     return args as unknown as T;
 }
@@ -38,18 +32,15 @@ const buildHistory = (messages: Message[]): Content[] => {
         }));
 };
 
-// --- FONTI DEL BLOCCO: contesto per il Laboratorio ---
-// Costruisce la sezione testuale e le Part PDF da iniettare nel prompt del Laboratorio.
-// Con fonti vuoto/undefined restituisce valori neutri → zero impatto sul comportamento attuale.
 const buildFontiContext = async (
     fonti: BlockSource[]
-): Promise<{ textSection: string; fileParts: any[] }> => {
+): Promise<{ textSection: string; fileParts: Part[] }> => {
     if (!fonti || fonti.length === 0) {
         return { textSection: '', fileParts: [] };
     }
 
     let textSection = '';
-    const fileParts: any[] = [];
+    const fileParts: Part[] = [];
 
     // 1. URL ----------------------------------------------------------------
     const urlFonti = fonti.filter(f => f.type === 'url');
@@ -112,7 +103,6 @@ const buildFontiContext = async (
     return { textSection, fileParts };
 };
 
-// HELPER FUNCTION TO GENERATE DYNAMIC MAP
 const renderStrategicDashboardToMarkdown = (conversations: Conversation[], weeks: WeekRouteInfo[]): string => {
     const convoMap = new Map<number, Conversation>();
     conversations.forEach(convo => {
@@ -201,8 +191,6 @@ export const streamChatResponse = async (
 
     const fullContext = [masterContext.constitution, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, planningContext, studentContext].filter(Boolean).join('\n\n');
 
-    // Fonti del blocco (Laboratorio): stringa testo + Part PDF.
-    // Con fonti undefined/[] entrambi sono vuoti → nessuna differenza per ChatView.
     const { textSection: fontiText, fileParts: fontiFileParts } =
         await buildFontiContext(fonti ?? []);
 
@@ -210,9 +198,8 @@ export const streamChatResponse = async (
         ? { inlineData: { mimeType: attachment.type, data: attachment.data.split(',')[1] } }
         : null;
 
-    // I fileParts PDF vengono preposti al testo utente per rispettare l'ordine
-    // consigliato dall'API Gemini (media prima del testo che vi si riferisce).
-    const userParts: any[] = [...fontiFileParts, { text: content }];
+    // PDF preposti al testo: ordine consigliato dall'API Gemini (media prima del testo che vi si riferisce).
+    const userParts: Part[] = [...fontiFileParts, { text: content }];
     if (attachmentPart) {
         userParts.push(attachmentPart);
     }
@@ -225,8 +212,7 @@ export const streamChatResponse = async (
         }
     ];
 
-    // Il textSection delle fonti (URL + note) viene aggiunto in coda al system prompt,
-    // dopo il contesto globale, per restare contestualmente vicino al task del blocco.
+    // textSection fonti in coda al system prompt: resta vicino al task del blocco, lontano dal contesto globale.
     const systemText = `${systemInstruction}\n\n# CONTESTO GLOBALE:\n${fullContext}${fontiText ? `\n\n${fontiText}` : ''}`;
 
     const config: GenerateContentParameters['config'] = {
@@ -304,8 +290,9 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
     });
 
     const call = response.functionCalls?.[0];
-    if (call?.name === 'create_student_groups' && extractArgs<{ groups?: GroupDefinition[] }>(call.args).groups) {
-        return { groups: extractArgs<{ groups: GroupDefinition[] }>(call.args).groups };
+    if (call?.name === 'create_student_groups') {
+        const args = extractArgs<{ groups?: GroupDefinition[] }>(call.args);
+        if (args.groups) return { groups: args.groups };
     }
     throw new Error("La risposta dell'AI non conteneva una struttura di gruppi valida.");
 };
@@ -533,20 +520,20 @@ Usa un tono costruttivo e professionale. Formatta la risposta in Markdown.`;
     return response.text.trim();
 };
 
+const weekThemeSchema: FunctionDeclaration = {
+    name: "suggest_week_theme",
+    description: "Suggerisce un tema settimanale creativo basato su un riassunto dei blocchi di lezione pianificati.",
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            theme: { type: Type.STRING, description: "Un tema settimanale conciso, creativo e di forte impatto." },
+            reasoning: { type: Type.STRING, description: "Una breve motivazione (1-2 frasi) che spiega la logica pedagogica dietro il tema proposto." }
+        },
+        required: ["theme", "reasoning"]
+    }
+};
+
 export const generateThemeFromBlocks = async (weekContext: string): Promise<{ theme: string; reasoning: string; }> => {
-    const themeSchema: FunctionDeclaration = {
-        name: "suggest_week_theme",
-        description: "Suggerisce un tema settimanale creativo basato su un riassunto dei blocchi di lezione pianificati.",
-        parameters: {
-            type: Type.OBJECT,
-            properties: {
-                theme: { type: Type.STRING, description: "Un tema settimanale conciso, creativo e di forte impatto." },
-                reasoning: { type: Type.STRING, description: "Una breve motivazione (1-2 frasi) che spiega la logica pedagogica dietro il tema proposto." }
-            },
-            required: ["theme", "reasoning"]
-        }
-    };
-    
     const prompt = `Sei un'esperta di design didattico. Basandoti sul riassunto delle attività pianificate per la settimana, genera un tema settimanale creativo e di forte impatto.
 
 **Attività Pianificate:**
@@ -558,7 +545,7 @@ Usa la funzione 'suggest_week_theme' per la tua risposta.`;
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
-            tools: [{ functionDeclarations: [themeSchema] }],
+            tools: [{ functionDeclarations: [weekThemeSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
