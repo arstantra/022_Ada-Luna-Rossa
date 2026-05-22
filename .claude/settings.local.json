@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -ne \"\" } | Sort-Object)",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(json.dumps\\(p.get\\('exports', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('version:', p.get\\('version'\\)\\); print\\('main:', p.get\\('main'\\)\\); print\\('module:', p.get\\('module'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('sources:', d.get\\('sources', []\\)[:5]\\)\")",
+      "Bash(for f in \"BlockWorkspaceView\" \"ChatInput\" \"ChatView\" \"GroupsArchiveView\" \"InAulaView\" \"ModePills\"; do *)",
+      "Bash(git -C \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\" ls-files dist/)"
+    ]
+  }
+}
