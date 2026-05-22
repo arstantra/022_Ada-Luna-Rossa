@@ -30,6 +30,11 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
     const autosaveTimeoutRef = useRef<number | null>(null);
     const savedStatusTimeoutRef = useRef<number | null>(null);
     const lastSavedContent = useRef(initialContent);
+    // Tracks content pending autosave (set in triggerAutosave, cleared after save)
+    const pendingContentRef = useRef<string | null>(null);
+    // Stable ref to onSave to use in cleanup without stale closure
+    const onSaveRef = useRef(onSave);
+    useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
     // State
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -37,10 +42,18 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     
-    // Cleanup entrambi i timer al unmount del componente
+    // Cleanup al unmount: cancella i timer E salva subito se ci sono modifiche pendenti
     useEffect(() => {
         return () => {
-            if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+            if (autosaveTimeoutRef.current) {
+                clearTimeout(autosaveTimeoutRef.current);
+                // Flush: se c'è contenuto pendente non ancora salvato, salvalo adesso
+                const pending = pendingContentRef.current;
+                if (pending !== null && pending.trim() !== lastSavedContent.current.trim()) {
+                    onSaveRef.current(pending);
+                    lastSavedContent.current = pending;
+                }
+            }
             if (savedStatusTimeoutRef.current) clearTimeout(savedStatusTimeoutRef.current);
         };
     }, []);
@@ -67,17 +80,20 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
     const triggerAutosave = (content: string) => {
         if (!isEditable) return;
         setSaveStatus('editing');
+        pendingContentRef.current = content; // Traccia il contenuto in attesa di salvataggio
         if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
-        
+
         autosaveTimeoutRef.current = window.setTimeout(() => {
             if (content.trim() !== lastSavedContent.current.trim()) {
                 setSaveStatus('saving');
-                onSave(content);
+                onSaveRef.current(content);
                 lastSavedContent.current = content;
+                pendingContentRef.current = null; // Salvataggio avvenuto, niente più pendente
                 if (savedStatusTimeoutRef.current) clearTimeout(savedStatusTimeoutRef.current);
                 savedStatusTimeoutRef.current = window.setTimeout(() => setSaveStatus('saved'), 500);
             } else {
                 setSaveStatus('saved');
+                pendingContentRef.current = null;
             }
         }, 1500);
     };

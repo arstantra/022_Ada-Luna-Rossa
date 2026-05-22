@@ -394,13 +394,13 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                 let finalActions: Action[];
                 if (hasExistingContent) {
                     finalActions = [
-                        { label: "Aggiungi in fondo al Master", payload: { action: 'add_validated_content_as_new_block', messageId: assistantPlaceholder.id } },
-                        { label: "Sostituisci l'intero Master", payload: { action: 'replace_entire_master_content', messageId: assistantPlaceholder.id } }
+                        { label: "Aggiungi al Master", payload: { action: 'add_validated_content_as_new_block', messageId: assistantPlaceholder.id } },
+                        { label: "Sostituisci Master", payload: { action: 'replace_entire_master_content', messageId: assistantPlaceholder.id } }
                     ];
                 } else {
-                    finalActions = [{ 
-                        label: 'Valida Contenuto', 
-                        payload: { action: 'validate_and_archive', messageId: assistantPlaceholder.id } 
+                    finalActions = [{
+                        label: 'Valida Contenuto',
+                        payload: { action: 'validate_and_archive', messageId: assistantPlaceholder.id }
                     }];
                 }
 
