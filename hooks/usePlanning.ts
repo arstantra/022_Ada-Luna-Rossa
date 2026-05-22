@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, Evaluation, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
+import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
 import type { useMasterContext } from './useMasterContext';
 import { fileToAttachment } from '../utils';
 import * as GeminiService from '../services/gemini';
@@ -9,8 +9,6 @@ import { GEMINI_API_ERROR_MESSAGE } from '../constants';
 
 type UpdateConversationFunction = (convoId: string, updater: Partial<Conversation> | ((convo: Conversation) => Conversation)) => void;
 type ShowToastFunction = (message: string, type?: 'success' | 'info' | 'error') => void;
-type RecordAttendanceFunction = (block: BlockDetails, blockIndex: number, weekNumber: number, allWeekStudentIds: string[], presentStudentIds: string[]) => void;
-type AddEvaluationFunction = (studentId: string, evaluation: Evaluation) => void;
 
 interface PlanningMessageParams {
     content: string;
@@ -73,7 +71,7 @@ const createMasterContentHeader = async (block: BlockDetails, weekPlan: WeekPlan
 };
 
 
-export const usePlanning = (updateConversation: UpdateConversationFunction, showToast: ShowToastFunction, recordAttendanceForBlock: RecordAttendanceFunction, addEvaluationToStudent: AddEvaluationFunction) => {
+export const usePlanning = (updateConversation: UpdateConversationFunction, showToast: ShowToastFunction) => {
     const { moduleMap } = useConstitutionCache();
     
     const processPlanningMessage = useCallback(async (params: PlanningMessageParams) => {
@@ -428,7 +426,7 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
           // un re-throw diventerebbe una unhandled rejection.
           showToast(errorMsg, 'error');
         }
-    }, [moduleMap, showToast, updateConversation, addEvaluationToStudent, recordAttendanceForBlock]);
+    }, [moduleMap, showToast, updateConversation]);
 
     const handleReEditBlock = useCallback((conversationId: string, blockIndex: number) => {
         updateConversation(conversationId, convo => {

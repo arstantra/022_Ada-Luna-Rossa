@@ -207,8 +207,6 @@ export type ArchiveSimpleStatePayload =
     | { action: 'archive_simple_state', day: string, status: 'saltato', reason: string };
 export type ValidateAndArchivePayload = { action: 'validate_and_archive', messageId: string };
 export type RecordGroupsPayload = { action: 'record_groups', groups: GroupDefinition[] };
-export type StartReviewPayload = { action: 'start_review' };
-
 // --- Content Block Management Payloads ---
 export type AddValidatedContentAsNewBlockPayload = { action: 'add_validated_content_as_new_block', messageId: string };
 export type ReplaceEntireMasterContentPayload = { action: 'replace_entire_master_content', messageId: string };
@@ -217,8 +215,7 @@ export type UpdateContentBlockPayload = { action: 'update_content_block', conten
 export type ConsolidateAndUpdateContentPayload = { action: 'consolidate_and_update_content', newContent: string };
 
 
-export type PlanningActionPayload = 
-  | StartReviewPayload
+export type PlanningActionPayload =
   | InitializeNormalBlockPayload
   | ArchiveSimpleStatePayload
   | ValidateAndArchivePayload

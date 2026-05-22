@@ -84,7 +84,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   const { shortcuts, addShortcut, updateShortcut, deleteShortcut, bulkUpdateShortcuts } = useToolkitShortcuts(showToast);
   const { categories, addCategory, updateCategory, deleteCategory, bulkUpdateCategories } = useToolkitCategories(showToast);
 
-  const { processPlanningMessage, handleReEditBlock: reEditBlockHandler } = usePlanning(updateConversation, showToast, recordAttendanceForBlock, addEvaluationToStudent);
+  const { processPlanningMessage, handleReEditBlock: reEditBlockHandler } = usePlanning(updateConversation, showToast);
 
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive'>('lobby');
