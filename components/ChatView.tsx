@@ -120,10 +120,11 @@ const ChatView: React.FC<ChatViewProps> = ({
     <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
-        <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 text-purple-400 flex-shrink-0" />
+      {/* ── Header — Zona A: icona+titolo · Zona C: azioni ──────────────── */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm">
+        {/* Zona A */}
+        <ChatBubbleOvalLeftEllipsisIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
 
-        {/* Titolo */}
         {isSearchOpen ? (
           <input
             ref={searchInputRef}
@@ -135,17 +136,17 @@ const ChatView: React.FC<ChatViewProps> = ({
             className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm focus:outline-none"
           />
         ) : (
-          <h1 className="flex-1 font-display font-600 text-white truncate text-sm">
+          <h1 className="flex-1 font-display font-semibold text-white truncate text-sm">
             {isQuickChat ? 'Conversazione con Ada' : conversation.title}
           </h1>
         )}
 
-        {/* Controlli destra: Search */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Zona C — azioni */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           {isSearchOpen ? (
             <>
               {searchHighlight && (
-                <span className="text-xs text-gray-600 font-mono">
+                <span className="text-xs text-gray-600 font-mono mr-1">
                   {visibleMessages.length} risultati
                 </span>
               )}
@@ -160,7 +161,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           ) : (
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-1.5 text-gray-600 hover:text-gray-300 rounded-lg hover:bg-gray-700/50 transition-colors"
+              className="p-1.5 text-gray-500 hover:text-gray-200 rounded-lg hover:bg-gray-700/50 transition-colors"
               title="Cerca nella conversazione"
             >
               <SearchIcon className="h-4 w-4" />
