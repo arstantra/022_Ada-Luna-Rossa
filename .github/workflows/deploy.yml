@@ -43,8 +43,6 @@ jobs:
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
-        with:
-          enablement: true
 
       - name: Upload artefatto
         uses: actions/upload-pages-artifact@v3
