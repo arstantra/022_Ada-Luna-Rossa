@@ -342,7 +342,7 @@ Aggiungere in `Sidebar.tsx` sotto "Progettazione del Corso" una voce "Gantt del 
 
 ---
 
-## Step 6 — Radar equilibrio didattico
+## Step 6 — Radar equilibrio didattico ✅ COMPLETATO (2026-05-24)
 
 **Obiettivo**: visualizzazione radar (spider chart) della distribuzione delle tipologie di lezione, integrata nella `StrategicDashboardView`. Aiuta il docente a vedere se il corso o un modulo è bilanciato tra teoria, pratica e procedura.
 
@@ -388,6 +388,294 @@ Se meno di 3 tipologie sono valorizzate nel corso, non mostrare il radar (non ha
 - Con meno di 3 tipologie: nessun crash, messaggio informativo
 - Con 0 tipologie valorizzate: nessun radar, nessun crash
 - Il radar si aggiorna in tempo reale quando si cambia la tipologia di un blocco
+
+### Scelte implementative (2026-05-24)
+- **Componente separato** `components/DidacticRadarChart.tsx` — esportato per riutilizzo nello Step 9 (doppio poligono ideale/pianificato)
+- **Dimensione SVG**: 48×48 px core + padding dinamico per i count label (viewBox esteso), rende ~62×62px totali — si integra nell'header senza dominarlo
+- **Count label**: posizionati sulla punta di ogni asse (oltre il `maxR`), font-size 5, colore `rgba(165,180,252,0.9)` (indigo chiaro)
+- **Label tipologie**: non nel SVG (troppo piccolo), bensì nel `title` HTML dell'elemento wrapper — tooltip nativo al hover
+- **Blocchi esclusi dal conteggio**: `saltato` e `annullato` — il radar riflette solo le lezioni pianificate o già svolte
+- **Zona B3** nell'header: separatore + `DidacticRadarChart`, visibile solo se `radarData.length > 0`
+- **Meno di 3 tipologie**: la componente restituisce la micro-label `"Aggiungi tipologie per vedere il radar"` inline nel flex header
+
+---
+
+## Step 7 — Modulo come entità strutturata
+
+**Obiettivo**: trasformare il campo `module?: string` (semplice testo libero) in una vera entità `Module` con `id`, titolo, sezioni e tipologie previste. Questo è il prerequisito per la ragnatela avanzata (Step 9) e per le label potenziate sui blocchi. Il campo `module` rimane per retrocompatibilità DB.
+
+**Contesto di progettazione**: i Moduli sono definiti nel Profilo del Corso (documento libero). Ada legge quel documento — già presente nel contesto di sistema come `teacherProfile` — e ne estrae la struttura on-demand, quando il docente assegna un modulo a un blocco. Il risultato confermato viene salvato come `modules[]` sulla `Conversation`.
+
+**File da toccare**: `types.ts`, `constants.ts`, `services/gemini.ts`, `components/BlockWorkspaceView.tsx`, `components/StrategicDashboardView.tsx`
+
+### ⚠️ Non fare
+
+- **Non modificare `active` / `activeBlocks` in `RouteView.tsx`** — è la logica di calendario de La Rotta, già calibrata correttamente. L'inizializzazione `activeBlocks: Array.from({ length: totalBlocks }, (_, i) => i + 1)` non va toccata.
+- Non rimuovere `module?: string` da `BlockDetails` — serve per retrocompatibilità con i dati esistenti in IndexedDB.
+- Non fare parsing eager al salvataggio del Profilo del Corso — il parsing avviene on-demand, non in automatico.
+- Non auto-salvare il risultato del parsing senza conferma del docente — stesso principio di "Genera con ADA".
+
+### Istruzioni
+
+**In `types.ts`:**
+
+1. Aggiungere i nuovi tipi:
+```ts
+export interface ModuleSection {
+  id: string;               // uuid
+  title: string;            // es. "Marco Aurelio e la filosofia stoica"
+  lessonType: LessonType;   // tipo previsto per questa sezione
+  estimatedBlocks: number;  // stima blocchi necessari
+}
+
+export interface CourseModule {
+  id: string;               // uuid
+  order: number;            // 1-based, per ordinamento
+  title: string;            // es. "Modulo 1 — Roma Imperiale"
+  sections: ModuleSection[];
+  estimatedBlocks: number;  // somma o valore indipendente
+  pillar?: string;          // eventuale asse/pilastro di riferimento (testo libero)
+}
+```
+
+> Usare `CourseModule` (non `Module`) per evitare conflitti con il tipo nativo `Module` di TypeScript/JavaScript.
+
+2. Aggiungere a `BlockDetails`:
+```ts
+moduleId?: string;     // riferimento a CourseModule.id
+sectionId?: string;    // riferimento a ModuleSection.id
+// Il campo module?: string rimane per retrocompatibilità
+```
+
+3. Aggiungere a `Conversation`:
+```ts
+modules?: CourseModule[];   // estratti dal Profilo del Corso, confermati dal docente
+```
+
+**In `services/gemini.ts`:**
+
+4. Aggiungere la funzione `extractModulesFromProfile`:
+```ts
+export async function extractModulesFromProfile(
+  teacherProfile: string,
+  apiKey: string
+): Promise<CourseModule[]>
+```
+- Invia al modello Gemini un prompt strutturato che chiede di estrarre i moduli dal testo del Profilo del Corso
+- Il prompt deve richiedere output JSON con schema `CourseModule[]`
+- Usare `response_mime_type: 'application/json'` nella config di generazione per forzare JSON pulito
+- In caso di errore di parsing JSON, restituire array vuoto (non throw)
+
+**In `components/BlockWorkspaceView.tsx`:**
+
+5. Aggiungere un selettore modulo nell'header del blocco (sotto il `TipologiaSelector` già esistente):
+   - Se `conversation.modules` è vuoto o assente: mostrare un pulsante `"Estrai moduli dal Profilo"` (outline sky, piccolo) che chiama `extractModulesFromProfile` e mostra i risultati in un pannello di conferma prima di salvare
+   - Se `conversation.modules` è popolato: mostrare un dropdown compatto con i titoli dei moduli — al click imposta `block.moduleId`
+   - Dopo aver selezionato il modulo: mostrare un secondo selettore per la `sectionId` (le sezioni di quel modulo)
+   - Il blocco eredita `tipologia` dalla sezione selezionata — ma il docente può sovrascriverla con `TipologiaSelector`
+
+6. **Label potenziata nel blocco** (visualizzazione, non editing): mostrare sotto il titolo lezione tre pill compatti:
+   - Modulo: `font-mono text-[9px]` colore sky — es. `M1 Roma Imperiale`
+   - Sezione: `font-mono text-[9px]` colore gray — es. `§ Filosofia stoica`
+   - Tipologia: già esistente da Step 3
+
+**In `components/StrategicDashboardView.tsx`:**
+
+7. Nell'accordion della settimana, se un blocco ha `moduleId`, mostrare la label modulo (`M1`, `M2`…) accanto al titolo lezione — `font-mono text-[9px] text-sky-400/60`. Non aggiungere altri elementi: la card blocco deve rimanere compatta.
+
+### Pattern di salvataggio moduli estratti
+```ts
+// Dopo conferma del docente nel pannello di preview
+updateConversation(conv.id, c => ({
+  ...c,
+  modules: extractedModules   // array CourseModule[] confermato
+}));
+```
+
+### Verifica
+- Estrarre moduli da un Profilo del Corso compilato: la funzione ritorna un array con struttura corretta
+- Assegnare un modulo e una sezione a un blocco: i valori persistono dopo refresh
+- Blocco senza `moduleId`: nessun crash, nessuna label modulo mostrata
+- Il campo `module?: string` esistente non interferisce con la nuova logica
+- TypeScript compila senza errori
+
+---
+
+## Step 8 — Attività con timeline (il canale rigido)
+
+**Obiettivo**: introdurre le `Activity` — entità autonome lanciate da un blocco con scadenza in numero di blocchi. Sono il "canale rigido" del sistema: una volta lanciate, la scadenza non cambia nemmeno se la sequenza delle lezioni cambia. L'asse temporale è in blocchi, non in date.
+
+**Contesto di progettazione**: le attività sono il contratto pubblico con gli studenti ("consegna tassativa"). Vivono in parallelo alla sequenza didattica — non dentro i blocchi ma sopra di essi, come un secondo livello. Nella `StrategicDashboardView` ogni blocco mostra quali attività sono in corso o in scadenza, ma non le contiene.
+
+**File da toccare**: `types.ts`, `components/BlockWorkspaceView.tsx`, `components/StrategicDashboardView.tsx`, `components/GanttView.tsx`
+
+### ⚠️ Non fare
+
+- **Non modificare `active` / `activeBlocks` in `RouteView.tsx`** — vedi Step 7.
+- Non misurare la scadenza in date di calendario — sempre in numero di blocchi dal lancio. Se un blocco salta, il conteggio si sposta automaticamente.
+- Non mettere le attività dentro `BlockDetails` — sono entità a livello `Conversation`, non di blocco. Il blocco le *lancia*, non le *contiene*.
+- Non usare `setConversations` direttamente — sempre `updateConversation`.
+
+### Istruzioni
+
+**In `types.ts`:**
+
+1. Aggiungere il tipo `Activity`:
+```ts
+export type ActivityType =
+  | 'ricerca'
+  | 'audiovisivo'
+  | 'produzione_scritta'
+  | 'progetto'
+  | 'altro';
+
+export type ActivityStatus =
+  | 'in_corso'       // lanciata, scadenza non ancora raggiunta
+  | 'in_scadenza'    // mancano ≤ 1 blocco alla scadenza
+  | 'consegnata'     // docente ha marcato come consegnata
+  | 'scaduta';       // scadenza superata senza consegna
+
+export interface Activity {
+  id: string;                      // uuid
+  title: string;                   // es. "Terme di Caracalla — da Roma ad oggi"
+  type: ActivityType;
+  launchBlockId: string;           // id del BlockDetails da cui è stata lanciata
+  launchWeekNumber: number;        // settimana di lancio
+  launchBlockIndex: number;        // indice blocco nella settimana (0-based)
+  dueInBlocks: number;             // scadenza: N blocchi dopo il lancio
+  moduleId?: string;               // opzionale: modulo di riferimento
+  description?: string;            // istruzioni per gli studenti
+  status: ActivityStatus;
+  deliveredAt?: string;            // ISO date, se consegnata
+}
+```
+
+2. Aggiungere a `Conversation`:
+```ts
+activities?: Activity[];
+```
+
+**In `components/BlockWorkspaceView.tsx`:**
+
+3. Aggiungere un pulsante `"↗ Lancia attività"` nel footer del tab Laboratorio (accanto a "Trasferisci al Master"):
+   - Stile: outline rose/pink — `text-rose-400/70 border border-rose-500/20 rounded-lg hover:bg-rose-500/10`
+   - Al click: aprire un form inline compatto (non modal) con:
+     - Campo `title` (testo libero)
+     - Selezione `type` (pill radio, stile `TipologiaSelector`)
+     - Campo `dueInBlocks` (input numerico, min 1, max 20)
+     - Campo `description` opzionale (textarea 2 righe)
+   - Al salvataggio: creare `Activity` e aggiungerla a `conversation.activities` via `updateConversation`
+
+**In `components/StrategicDashboardView.tsx`:**
+
+4. Per ogni blocco, calcolare le attività in corso o in scadenza in quel blocco:
+```ts
+// Derivato da conversation.activities
+// Un'attività è "su questo blocco" se:
+// blocco rientra nell'intervallo [launchBlockIndex, launchBlockIndex + dueInBlocks]
+// calcolato linearizzando la sequenza blocchi su tutte le settimane
+```
+
+5. Mostrare sotto il titolo lezione di ogni blocco una riga opzionale con le attività attive:
+   - Ogni attività: dot `bg-rose-500` + titolo troncato `text-[9px] font-mono text-rose-300/70`
+   - Se è il blocco di lancio: `↗` davanti
+   - Se è il blocco di scadenza: `⚑` davanti, colore `text-amber-400`
+   - Massimo 2 attività mostrate inline; se di più, badge `+N`
+
+**In `components/GanttView.tsx`:**
+
+6. Aggiungere una sezione "Attività" separata sotto la sezione moduli esistente:
+   - Stessa griglia orizzontale (asse X = settimane)
+   - Ogni attività: barra da `launchWeekNumber` a settimana di scadenza calcolata
+   - Colore barra: rosa/rose per `in_corso`, amber per `in_scadenza`, emerald per `consegnata`, gray per `scaduta`
+   - Il punto di lancio è più scuro (filled), il resto semitrasparente
+   - Cliccando sulla barra: pannello laterale con dettagli attività + pulsante "Segna consegnata"
+
+### Calcolo settimana di scadenza
+```ts
+// Linearizzare la sequenza blocchi considerando routeCalendar
+// Trovare il blocco N-esimo dopo il lancio, risalire alla sua settimana
+function getActivityDueWeek(
+  activity: Activity,
+  routeCalendar: WeekEntry[]
+): number { ... }
+```
+
+### Verifica
+- Lanciare un'attività da un blocco: appare nella lista `conversation.activities`, persiste dopo refresh
+- L'attività compare come overlay nel blocco di lancio e nei blocchi intermedi in `StrategicDashboardView`
+- Nel `GanttView` l'attività appare come barra nella sezione dedicata
+- Marcare un'attività come consegnata: il colore nella barra cambia a emerald
+- Con zero attività: nessun crash, nessuna sezione vuota mostrata nel Gantt
+
+---
+
+## Step 9 — Ragnatela avanzata (doppio poligono ideale vs pianificato)
+
+**Obiettivo**: evolvere il radar del Step 6 da mono-poligono a doppio poligono. Il poligono tratteggiato rappresenta la distribuzione *ideale* derivata dalla struttura dei `CourseModule` (Step 7). Il poligono pieno rappresenta la distribuzione *pianificata* derivata dai blocchi tipizzati. Il docente vede la divergenza e riequilibra.
+
+**Prerequisito**: Step 6 (radar base) e Step 7 (moduli come entità) devono essere completati.
+
+**File da toccare**: `components/StrategicDashboardView.tsx` (o `components/DidacticRadarChart.tsx` se estratto in Step 6)
+
+### ⚠️ Non fare
+
+- **Non modificare `active` / `activeBlocks` in `RouteView.tsx`** — vedi Step 7.
+- Non richiedere input manuale per la distribuzione ideale — è interamente derivata da `conversation.modules[].sections[].lessonType` + `estimatedBlocks`.
+- Non mostrare il radar se `conversation.modules` è vuoto — in quel caso mostrare solo il mono-poligono del Step 6 (degradazione graceful).
+- Non usare librerie esterne per il rendering SVG — rimane SVG puro come in Step 6.
+
+### Istruzioni
+
+**Calcolo distribuzione ideale** (da `CourseModule[]`):
+```ts
+function getIdealDistribution(modules: CourseModule[]): Record<LessonType, number> {
+  const counts: Record<LessonType, number> = { /* zero per tutti i tipi */ };
+  modules.forEach(mod =>
+    mod.sections.forEach(sec => {
+      counts[sec.lessonType] = (counts[sec.lessonType] || 0) + sec.estimatedBlocks;
+    })
+  );
+  return counts;
+}
+```
+
+**Calcolo distribuzione pianificata** (già presente dal Step 6, conta i blocchi per `tipologia`).
+
+**Score di equilibrio**:
+```ts
+// Confronta le proporzioni (non i valori assoluti)
+// score = 1 - media delle differenze assolute percentuali
+// score 1.0 = perfetto allineamento, 0 = massima divergenza
+function computeBalanceScore(
+  ideal: Record<LessonType, number>,
+  planned: Record<LessonType, number>
+): number { ... }
+```
+
+**Rendering SVG — due poligoni**:
+- **Poligono ideale** (tratteggiato): `stroke="#38bdf8"` con `stroke-dasharray="4,2"`, `fill` semitrasparente `#38bdf810`
+- **Poligono pianificato** (pieno): `stroke="#818cf8"` solido, `fill="#818cf820"`
+- Entrambi normalizzati sullo stesso asse (il massimo tra i due set di valori)
+- Legenda compatta sotto il radar: quadratino tratteggiato = "Profilo corso", quadratino pieno = "Pianificato"
+
+**Score di equilibrio** — visualizzazione:
+- Badge accanto al radar: `font-mono text-[10px]`
+- `≥ 80%` → `text-emerald-400` — "Ben bilanciato"
+- `55–79%` → `text-amber-400` — "Da riequilibrare"
+- `< 55%` → `text-rose-400` — "Sbilanciato"
+
+**Degradazione graceful**:
+- `modules` assente o vuoto: mostrare solo il poligono pianificato (comportamento Step 6), nessun score, nessuna legenda
+- Meno di 3 tipologie pianificate: nessun radar, messaggio `"Aggiungi tipologie per vedere il radar"` — identico al Step 6
+- `modules` presenti ma nessuna sezione tipizzata: trattare come assente
+
+### Verifica
+- Con moduli estratti e blocchi tipizzati: entrambi i poligoni visibili e distinti
+- Modifica una tipologia in un blocco: il poligono pianificato si aggiorna in tempo reale
+- Score riflette correttamente la divergenza tra ideale e pianificato
+- Con `modules` vuoto: radar mono-poligono, nessun crash, nessuna legenda doppia
+- TypeScript compila senza errori
 
 ---
 

@@ -247,6 +247,28 @@ interface DocCardState {
 
 ---
 
+## Contesto Istituzionale — Card PTOF (2026-05-23)
+
+Card speciale in `FoundingDocumentsView`, **visibile solo fuori dalla configurazione iniziale** (è opzionale). Appare in cima alla pagina preceduta da un separatore `text-[9px] font-mono uppercase` con label "Contesto istituzionale". I Documenti del Corso normali seguono sotto un secondo separatore "Documenti del corso".
+
+### Scopo
+Accogliere l'estratto del PTOF (e NIV/RAV) che il docente produce con NotebookLM e incollarci. Quando compilato, `ptofExtract` viene iniettato nel context di sistema di Ada con intestazione `# CONTESTO ISTITUZIONALE (PTOF):` — dopo `crewContext` e prima di `planningContext` nella `fullContext` di `gemini.ts`.
+
+### Differenze rispetto alle card standard
+- **Nessun "Genera con ADA"** — il contenuto viene estratto da NotebookLM manualmente
+- **Campo URL notebook**: input `type="url"` salvato su `ptofNotebookUrl` con `onBlur`; se compilato compare pulsante "Apri notebook" (outline sky `text-sky-400/80 border-sky-500/20`)
+- **Kit di estrazione NotebookLM**: pannello collassabile (`isKitOpen`) con 5 prompt pronti (array `KIT_PROMPTS` definito a livello di modulo, fuori dal componente). Ogni prompt ha etichetta `font-mono text-gray-500` e bottone copia con feedback ✓ emerald 2 secondi (`copiedPromptIndex`)
+- `isEditing` parte `false` (read-only di default, matita per abilitare) — identico alle altre card
+
+### DB keys nuove
+```
+LOCAL_STORAGE_PTOF_EXTRACT_KEY     = 'ada-ptof-extract'
+LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY = 'ada-ptof-notebook-url'
+```
+Entrambe gestite in `useMasterContext` come `ptofExtract` / `ptofNotebookUrl` con `handleSavePtofExtract` / `handleSavePtofNotebookUrl`.
+
+---
+
 ## ModePills — Selettore modalità
 
 `ModePills.tsx` è il selettore di modalità. **Nessun dropdown, nessun menu**: è una riga di pill cliccabili inline, senza posizionamento assoluto né z-index.
@@ -515,3 +537,8 @@ progettata → in_corso → archiviata
 - Non rendere i documenti di Gestione del Corso sempre editabili — devono partire read-only e l'editing si abilita con la matita (pattern approvato 2026-05-23, sia FoundingDocumentsView che AdaPersonalityView).
 - Non aggiungere popup di conferma prima di abilitare l'editing dei Documenti Fondanti — il vecchio ConfirmationModal è stato rimosso (2026-05-23). La matita abilita/disabilita editing direttamente.
 - Non rinominare `LOCAL_STORAGE_ROUTE_CALENDAR_KEY` — è la chiave DB per il calendario de La Rotta. Cambiare la chiave perderebbe i dati esistenti degli utenti.
+- Non aggiungere "Genera con ADA" alla card Contesto Istituzionale — il contenuto viene estratto da NotebookLM dal docente manualmente. Non è un documento generabile da Ada.
+- Non mostrare la card Contesto Istituzionale (PTOF) in `isInitialSetup` — è opzionale e fuori dal flusso di onboarding.
+- Non spostare `KIT_PROMPTS` dentro il componente — è un array costante definito a livello di modulo in `FoundingDocumentsView.tsx` per evitare ricreazione ad ogni render.
+- Non tentare un'integrazione API con NotebookLM — non ha API pubblica. Il pattern approvato è: link al notebook + kit di prompt da copiare manualmente + incolla nell'editor.
+- Non centralizzare l'autenticazione Google in un pannello dedicato — NotebookLM si apre nel browser (l'utente è già loggato con l'account scuola Workspace), la Gemini API key è statica, Google Classroom è una feature futura con OAuth separato. Un layer di astrazione finto creerebbe confusione senza semplificare nulla.

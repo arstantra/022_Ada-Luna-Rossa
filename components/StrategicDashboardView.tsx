@@ -7,6 +7,7 @@ import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
 import ObjectiveSuggestionModal from './ObjectiveSuggestionModal';
 import { getExactDateForBlock } from '../utils';
+import DidacticRadarChart from './DidacticRadarChart';
 
 
 interface StrategicDashboardViewProps {
@@ -294,6 +295,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
         return { completate, inCorso, daFare, total: weekData.length };
     }, [weekData]);
 
+    // ── Radar equilibrio didattico ─────────────────────────────────────────────
+    const radarData = useMemo(() => {
+        const counts: Partial<Record<LessonType, number>> = {};
+        conversations.forEach(conv => {
+            if (!conv.weekPlan) return;
+            conv.weekPlan.blocks.forEach(block => {
+                if (!block.tipologia) return;
+                if (block.status === 'saltato' || block.status === 'annullato') return;
+                counts[block.tipologia] = (counts[block.tipologia] || 0) + 1;
+            });
+        });
+        return (Object.entries(counts) as [LessonType, number][])
+            .map(([tipologia, count]) => ({ tipologia, count }));
+    }, [conversations]);
+
     const selectKeyDownHandler = (e: React.KeyboardEvent<HTMLSelectElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.stopPropagation();
@@ -342,6 +358,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
                                 {pendingContentCount} {pendingContentCount === 1 ? 'contenuto in sospeso' : 'contenuti in sospeso'}
                             </span>
+                        </div>
+                    )}
+
+                    {/* Zona B3 — radar equilibrio didattico */}
+                    {radarData.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="w-px h-3.5 bg-gray-700/60" />
+                            <DidacticRadarChart data={radarData} />
                         </div>
                     )}
 
