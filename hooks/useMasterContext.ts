@@ -22,6 +22,8 @@ import {
   LOCAL_STORAGE_ROUTE_CALENDAR_KEY,
   LOCAL_STORAGE_DISCIPLINA_KEY,
   DEFAULT_DISCIPLINA,
+  LOCAL_STORAGE_PTOF_EXTRACT_KEY,
+  LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY,
 } from '../constants';
 
 export const useMasterContext = () => {
@@ -32,6 +34,8 @@ export const useMasterContext = () => {
     const [rulesContext, setRulesContext] = useState('');
     const [teacherProfile, setTeacherProfile] = useState('');
     const [disciplina, setDisciplina] = useState('');
+    const [ptofExtract, setPtofExtract] = useState('');
+    const [ptofNotebookUrl, setPtofNotebookUrl] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
     const [routeCalendar, setRouteCalendar] = useState<WeekEntry[]>([]);
     const [currentModeId, setCurrentModeId] = useState<Mode['id']>(DEFAULT_MODE_ID);
@@ -59,6 +63,8 @@ export const useMasterContext = () => {
                     loadOrSeedSetting(LOCAL_STORAGE_RULES_KEY, DEFAULT_RULES_CONTEXT, setRulesContext),
                     loadOrSeedSetting(LOCAL_STORAGE_TEACHER_KEY, DEFAULT_TEACHER_PROFILE, setTeacherProfile),
                     loadOrSeedSetting(LOCAL_STORAGE_DISCIPLINA_KEY, DEFAULT_DISCIPLINA, setDisciplina),
+                    loadOrSeedSetting(LOCAL_STORAGE_PTOF_EXTRACT_KEY, '', setPtofExtract),
+                    loadOrSeedSetting(LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY, '', setPtofNotebookUrl),
                 ]);
 
                 // Load route calendar (JSON array of WeekEntry)
@@ -105,6 +111,8 @@ export const useMasterContext = () => {
                 setRulesContext(DEFAULT_RULES_CONTEXT);
                 setTeacherProfile(DEFAULT_TEACHER_PROFILE);
                 setDisciplina(DEFAULT_DISCIPLINA);
+                setPtofExtract('');
+                setPtofNotebookUrl('');
                 setBlockDayDefaults({});
                 setCurrentModeId(DEFAULT_MODE_ID);
             } finally {
@@ -163,6 +171,20 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save disciplina:", error); }
     }, []);
 
+    const handleSavePtofExtract = useCallback(async (value: string) => {
+        setPtofExtract(value);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_PTOF_EXTRACT_KEY, value);
+        } catch (error) { console.error("Failed to save PTOF extract:", error); }
+    }, []);
+
+    const handleSavePtofNotebookUrl = useCallback(async (value: string) => {
+        setPtofNotebookUrl(value);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY, value);
+        } catch (error) { console.error("Failed to save PTOF notebook URL:", error); }
+    }, []);
+
     const handleSaveBlockDayDefaults = useCallback(async (defaults: Record<string, string>) => {
         setBlockDayDefaults(defaults);
         try {
@@ -195,6 +217,8 @@ export const useMasterContext = () => {
         rulesContext,
         teacherProfile,
         disciplina,
+        ptofExtract,
+        ptofNotebookUrl,
         blockDayDefaults,
         routeCalendar,
         currentModeId,
@@ -206,6 +230,8 @@ export const useMasterContext = () => {
         handleSaveRules,
         handleSaveTeacherProfile,
         handleSaveDisciplina,
+        handleSavePtofExtract,
+        handleSavePtofNotebookUrl,
         handleSaveBlockDayDefaults,
         handleSaveRouteCalendar,
         handleSaveMode,

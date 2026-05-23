@@ -189,7 +189,11 @@ export const streamChatResponse = async (
 
     const dynamicStrategicMap = renderStrategicDashboardToMarkdown(conversations, availableWeeks);
 
-    const fullContext = [masterContext.constitution, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, planningContext, studentContext].filter(Boolean).join('\n\n');
+    const ptofSection = masterContext.ptofExtract?.trim()
+        ? `# CONTESTO ISTITUZIONALE (PTOF):\n${masterContext.ptofExtract.trim()}`
+        : '';
+
+    const fullContext = [masterContext.constitution, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, ptofSection, planningContext, studentContext].filter(Boolean).join('\n\n');
 
     const { textSection: fontiText, fileParts: fontiFileParts } =
         await buildFontiContext(fonti ?? []);

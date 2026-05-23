@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { marked } from 'marked';
 import type { useMasterContext } from '../hooks/useMasterContext';
 import {
-    XIcon, DocumentTextIcon, PencilIcon, SparklesIcon, RefreshIcon, ChevronDownIcon
+    XIcon, DocumentTextIcon, PencilIcon, SparklesIcon, RefreshIcon, ChevronDownIcon, LinkIcon, CopyIcon, CheckIcon
 } from './Icons';
 import DocumentEditor from './DocumentEditor';
 import { generateDocumentContent, type DocumentContentType } from '../services/gemini';
@@ -20,6 +20,29 @@ interface DocCardState {
     generatedContent: string | null;
 }
 
+const KIT_PROMPTS = [
+    {
+        label: 'Mission e valori',
+        text: 'Analizza questo documento e sintetizza in 150-200 parole la mission della scuola, i valori fondanti e la visione educativa dichiarata. Usa un linguaggio conciso e cita le sezioni rilevanti.',
+    },
+    {
+        label: 'Profilo studente in uscita',
+        text: 'Descrivi in modo strutturato il profilo delle competenze e dei valori che la scuola si propone di sviluppare negli studenti al termine del percorso. Elenca le competenze chiave trasversali esplicitamente dichiarate nel documento.',
+    },
+    {
+        label: 'Priorità didattiche del triennio',
+        text: "Identifica le 3-5 priorità strategiche o didattiche del triennio (es. inclusione, innovazione metodologica, internazionalizzazione, PCTO, digitale). Per ciascuna scrivi una frase sintetica che ne descriva l'obiettivo.",
+    },
+    {
+        label: 'Contesto territoriale',
+        text: "Descrivi brevemente il contesto territoriale, le caratteristiche socioeconomiche dell'utenza scolastica e gli eventuali bisogni formativi specifici menzionati nel documento.",
+    },
+    {
+        label: 'Aree di miglioramento (RAV)',
+        text: 'Se presenti, identifica le aree di miglioramento del RAV integrate nel PTOF: obiettivi di processo, traguardi attesi, azioni prioritarie. Se il documento non contiene questa sezione, indicalo esplicitamente.',
+    },
+];
+
 const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterContext, onClose, isInitialSetup }) => {
     const [localConstitution, setLocalConstitution] = useState(masterContext.constitution);
     const [localRoute, setLocalRoute] = useState(masterContext.routeContext);
@@ -32,7 +55,25 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
         costituzione: { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         regole:       { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         equipaggio:   { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
+        ptof:         { isOpen: false, isEditing: false, isGenerating: false, generatedContent: null },
     }));
+
+    // Stato locale PTOF — URL notebook e pannello kit prompt
+    const [localPtofNotebookUrl, setLocalPtofNotebookUrl] = useState(masterContext.ptofNotebookUrl ?? '');
+    const [isKitOpen, setIsKitOpen] = useState(false);
+    const [copiedPromptIndex, setCopiedPromptIndex] = useState<number | null>(null);
+
+    const handleCopyPrompt = useCallback((text: string, index: number) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedPromptIndex(index);
+            setTimeout(() => setCopiedPromptIndex(null), 2000);
+        });
+    }, []);
+
+    const handleSaveNotebookUrl = useCallback(async (url: string) => {
+        setLocalPtofNotebookUrl(url);
+        await masterContext.handleSavePtofNotebookUrl(url);
+    }, [masterContext]);
 
     const documents = useMemo(() => [
         {
@@ -180,6 +221,159 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                                 Prima configurazione. Compila i Documenti Fondanti per dare ad Ada il contesto del tuo corso
                                 — puoi incollare direttamente da Word. I campi obbligatori sono Progetto Didattico,
                                 Equipaggio e Patto Formativo. Il Profilo del Corso puoi completarlo dopo.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ── Separatore sezione istituzionale ── */}
+                    {!isInitialSetup && (
+                        <div className="pt-3 pb-1">
+                            <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/70 px-1">
+                                Contesto istituzionale
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ── Card Contesto Istituzionale (PTOF) ── */}
+                    {!isInitialSetup && (() => {
+                        const ptofState = cardStates['ptof'];
+                        const ptofContent = masterContext.ptofExtract ?? '';
+                        const hasContent = !!ptofContent.trim();
+
+                        return (
+                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden transition-colors">
+                                {/* Card header */}
+                                <button
+                                    onClick={() => setCardStates(prev => ({ ...prev, ptof: { ...prev['ptof'], isOpen: !prev['ptof'].isOpen } }))}
+                                    className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-700/25 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <span className="text-sm font-semibold text-white truncate">Contesto Istituzionale</span>
+                                        {!ptofState.isOpen && (
+                                            hasContent
+                                                ? <span className="text-[10px] font-mono text-emerald-400/70 shrink-0">● compilato</span>
+                                                : <span className="text-[10px] font-mono text-gray-500 shrink-0">○ vuoto</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                                        <span
+                                            role="button"
+                                            onClick={(e) => { e.stopPropagation(); setCardStates(prev => ({ ...prev, ptof: { ...prev['ptof'], isEditing: !prev['ptof'].isEditing, isOpen: true } })); }}
+                                            title={ptofState.isEditing ? 'Termina modifica' : 'Modifica'}
+                                            className={`p-1.5 rounded-md transition-colors cursor-pointer
+                                                ${ptofState.isEditing
+                                                    ? 'text-blue-400 bg-blue-500/15'
+                                                    : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50'
+                                                }`}
+                                        >
+                                            <PencilIcon className="h-3.5 w-3.5" />
+                                        </span>
+                                        <ChevronDownIcon
+                                            className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${ptofState.isOpen ? 'rotate-180' : ''}`}
+                                        />
+                                    </div>
+                                </button>
+
+                                {/* Card body */}
+                                {ptofState.isOpen && (
+                                    <div className="border-t border-gray-700/40 px-5 pb-5 pt-4 space-y-4">
+                                        <p className="text-gray-400 text-xs leading-relaxed">
+                                            Estratto del PTOF (Piano Triennale dell'Offerta Formativa) e di altri documenti istituzionali
+                                            come il NIV o il RAV. Usa NotebookLM per estrarre le informazioni rilevanti e incollale qui —
+                                            Ada userà questo contesto per rendere ogni scelta didattica coerente con la mission della tua scuola.
+                                        </p>
+
+                                        {/* Campo URL notebook */}
+                                        <div className="flex items-center gap-2">
+                                            <LinkIcon className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+                                            <input
+                                                type="url"
+                                                value={localPtofNotebookUrl}
+                                                onChange={(e) => setLocalPtofNotebookUrl(e.target.value)}
+                                                onBlur={(e) => handleSaveNotebookUrl(e.target.value.trim())}
+                                                placeholder="Incolla qui il link al notebook NotebookLM…"
+                                                className="flex-1 bg-gray-900/60 border border-gray-700/50 rounded-md px-3 py-1.5 text-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-500/80 transition-colors"
+                                            />
+                                            {localPtofNotebookUrl && (
+                                                <a
+                                                    href={localPtofNotebookUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="shrink-0 px-2.5 py-1.5 text-xs text-sky-400/80 border border-sky-500/20 rounded-md hover:bg-sky-500/10 hover:border-sky-400/35 transition-colors"
+                                                >
+                                                    Apri notebook
+                                                </a>
+                                            )}
+                                        </div>
+
+                                        {/* Kit prompt NotebookLM — collassabile */}
+                                        <div className="rounded-lg border border-gray-700/40 bg-gray-900/40 overflow-hidden">
+                                            <button
+                                                onClick={() => setIsKitOpen(v => !v)}
+                                                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-700/20 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-400/80">
+                                                        Kit di estrazione NotebookLM
+                                                    </span>
+                                                    <span className="text-[9px] font-mono text-gray-600 bg-gray-800/60 border border-gray-700/40 rounded px-1.5 py-0.5">
+                                                        5 prompt pronti
+                                                    </span>
+                                                </div>
+                                                <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-500 transition-transform duration-200 ${isKitOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isKitOpen && (
+                                                <div className="border-t border-gray-700/40 px-4 py-3 space-y-2">
+                                                    <p className="text-[11px] text-gray-500 leading-relaxed mb-3">
+                                                        Carica il PTOF (e il RAV, se ce l'hai) in NotebookLM. Poi copia questi prompt uno alla volta nella chat del notebook e incolla le risposte nell'editor qui sotto.
+                                                    </p>
+                                                    {KIT_PROMPTS.map((prompt, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="group flex items-start gap-3 bg-gray-800/50 border border-gray-700/30 rounded-lg px-3.5 py-2.5"
+                                                        >
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[10px] font-mono text-gray-500 mb-1">{prompt.label}</p>
+                                                                <p className="text-xs text-gray-300 leading-relaxed">{prompt.text}</p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleCopyPrompt(prompt.text, i)}
+                                                                title="Copia prompt"
+                                                                className="shrink-0 mt-0.5 p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-gray-700/50 transition-colors"
+                                                            >
+                                                                {copiedPromptIndex === i
+                                                                    ? <CheckIcon className="h-3.5 w-3.5 text-emerald-400" />
+                                                                    : <CopyIcon className="h-3.5 w-3.5" />
+                                                                }
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Editor estratto */}
+                                        <DocumentEditor
+                                            initialContent={ptofContent}
+                                            onSave={masterContext.handleSavePtofExtract}
+                                            mode="html"
+                                            isEditable={ptofState.isEditing}
+                                            includeAlignmentInToolbar={false}
+                                            className="min-h-[30vh]"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Separatore documenti principali ── */}
+                    {!isInitialSetup && (
+                        <div className="pt-3 pb-1 border-t border-gray-700/25 mt-1">
+                            <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/70 px-1 pt-3">
+                                Documenti del corso
                             </p>
                         </div>
                     )}

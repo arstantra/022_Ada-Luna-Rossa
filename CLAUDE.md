@@ -104,8 +104,8 @@ components/
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
   BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
-  FoundingDocumentsView.tsx  — Documenti Fondanti (full-page): Profilo del Corso, Progetto Didattico, Patto Formativo, Equipaggio — tutti in modalità html con DocumentEditor; pulsante "Genera con ADA" per Progetto Didattico e Patto Formativo
-  AdaPersonalityView.tsx     — Personalità di Ada (full-page): editor html delle istruzioni di sistema con pulsante "Genera con ADA"
+  FoundingDocumentsView.tsx  — Documenti Fondanti (full-page): accordion di card collassabili (Profilo del Corso, Progetto Didattico, Patto Formativo, Equipaggio). Tutte partono chiuse. Ogni card ha header con titolo + badge stato + pulsante "Genera con ADA" (solo Progetto Didattico e Patto Formativo) + matita per abilitare editing. Nessun popup di conferma. Autosave via DocumentEditor (1.5s debounce). Genera con ADA carica il contenuto nell'editor ma NON salva finché il docente non modifica.
+  AdaPersonalityView.tsx     — Personalità di Ada (full-page): singola card documento con header interno (titolo + badge stato + "Genera con ADA" + matita). Read-only di default; matita abilita editing. Autosave identico a FoundingDocumentsView. Dopo generazione, editing si abilita automaticamente per revisione prima del salvataggio.
   RouteView.tsx              — La Rotta (full-page): giorni predefiniti dei blocchi + calendario settimane con date lunedì→domenica e toggle blocchi
   ModePills.tsx              — pill inline selezione modalità (sostituisce il vecchio ModeSelector a dropdown)
   EditableField.tsx          — input inline con feedback salvataggio (bordo verde 1.5s)
@@ -203,6 +203,47 @@ interface PlanningViewProps {
     </div>
 </footer>
 ```
+
+---
+
+## Gestione del Corso — Pattern Documento (2026-05-23)
+
+`FoundingDocumentsView` e `AdaPersonalityView` seguono lo stesso pattern coerente:
+
+### Struttura card documento
+```
+┌─────────────────────────────────────────────────────┐
+│ Titolo documento   ● compilato   [Genera con ADA] [✏] │  ← header cliccabile (accordion) o fisso
+├─────────────────────────────────────────────────────┤
+│ Descrizione breve (xs, gray-400)                    │
+│ DocumentEditor (isEditable=isEditing, autosave 1.5s)│
+└─────────────────────────────────────────────────────┘
+```
+
+### Stato per-card (FoundingDocumentsView usa `Record<string, DocCardState>`)
+```ts
+interface DocCardState {
+    isOpen: boolean;        // accordion aperto/chiuso
+    isEditing: boolean;     // editor attivo
+    isGenerating: boolean;  // spinner "Genera con ADA"
+    generatedContent: string | null; // override contenuto dopo generazione
+}
+```
+
+### Comportamento "Genera con ADA"
+- Disponibile solo per Progetto Didattico e Patto Formativo (in FoundingDocumentsView) e Personalità di Ada
+- Richiede Profilo del Corso compilato — altrimenti pulsante disabilitato con tooltip esplicativo
+- **Non salva nel DB** — carica il contenuto nell'editor, abilita l'editing, ma il salvataggio avviene solo quando il docente digita (autosave 1.5s)
+- Tooltip contestuale: se c'è già testo → "Rigenera con ADA (sovrascrive il testo nell'editor, non ancora salvato)"
+
+### Pulsante matita
+- Classe attiva: `text-blue-400 bg-blue-500/15` + `rounded-md p-1.5`
+- Classe inattiva: `text-gray-500 hover:text-gray-300 hover:bg-gray-700/50` + `rounded-md p-1.5`
+- Nessun popup di conferma — toggle diretto
+
+### Badge stato contenuto
+- `● compilato` → `text-[10px] font-mono text-emerald-400/70`
+- `○ vuoto` → `text-[10px] font-mono text-gray-500`
 
 ---
 
@@ -468,5 +509,9 @@ progettata → in_corso → archiviata
 - Non ripristinare il widget Disciplina/Corso nella Sidebar — rimosso (2026-05-23). Il profilo del corso è nei Documenti Fondanti.
 - Non separare di nuovo "Profilo Docente" da "Profilo del Corso" — unificati in un unico documento, stessa chiave DB `ada-teacher-profile`.
 - Non spostare La Rotta o Personalità di Ada dentro i Documenti Fondanti — sono view full-page separate con view id propri (`'la_rotta'`, `'ada_personality'`).
-- Non aggiungere auto-save dopo la generazione con "Genera con ADA" — il contenuto generato carica nell'editor ma si salva solo quando il docente modifica (autosave) o esplicitamente. Questo è intenzionale: il docente deve revisionare prima di salvare.
+- Non aggiungere auto-save dopo la generazione con "Genera con ADA" — il contenuto generato carica nell'editor ma si salva solo quando il docente modifica (autosave 1.5s). Questo è intenzionale: il docente deve revisionare prima di salvare. Dopo la generazione l'editing si abilita automaticamente ma il DB non viene toccato finché non si digita qualcosa.
+- Non riportare il pulsante "Genera con ADA" nell'header di pagina di FoundingDocumentsView o AdaPersonalityView — il suo posto è nell'header interno della card documento (2026-05-23). Stesso vale per il pulsante matita.
+- Non usare tab/pannelli a schede in FoundingDocumentsView — il pattern approvato (2026-05-23) è accordion di card collassabili, ognuna con stato indipendente (isOpen, isEditing, isGenerating, generatedContent).
+- Non rendere i documenti di Gestione del Corso sempre editabili — devono partire read-only e l'editing si abilita con la matita (pattern approvato 2026-05-23, sia FoundingDocumentsView che AdaPersonalityView).
+- Non aggiungere popup di conferma prima di abilitare l'editing dei Documenti Fondanti — il vecchio ConfirmationModal è stato rimosso (2026-05-23). La matita abilita/disabilita editing direttamente.
 - Non rinominare `LOCAL_STORAGE_ROUTE_CALENDAR_KEY` — è la chiave DB per il calendario de La Rotta. Cambiare la chiave perderebbe i dati esistenti degli utenti.

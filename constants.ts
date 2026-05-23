@@ -12,6 +12,8 @@ export const LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY = 'ada-gemini-block-day-defaul
 export const LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar';
 export const LOCAL_STORAGE_DISCIPLINA_KEY = 'ada-disciplina';
 export const DEFAULT_DISCIPLINA = '';
+export const LOCAL_STORAGE_PTOF_EXTRACT_KEY = 'ada-ptof-extract';
+export const LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY = 'ada-ptof-notebook-url';
 
 export const ADA_QUICK_CHAT_ID = 'ada-quick-chat';
 
