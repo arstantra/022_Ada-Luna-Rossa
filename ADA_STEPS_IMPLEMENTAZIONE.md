@@ -400,7 +400,7 @@ Se meno di 3 tipologie sono valorizzate nel corso, non mostrare il radar (non ha
 
 ---
 
-## Step 7 — Modulo come entità strutturata
+## Step 7 — Modulo come entità strutturata ✅ COMPLETATO (2026-05-24)
 
 **Obiettivo**: trasformare il campo `module?: string` (semplice testo libero) in una vera entità `Module` con `id`, titolo, sezioni e tipologie previste. Questo è il prerequisito per la ragnatela avanzata (Step 9) e per le label potenziate sui blocchi. Il campo `module` rimane per retrocompatibilità DB.
 
@@ -498,6 +498,17 @@ updateConversation(conv.id, c => ({
 - Blocco senza `moduleId`: nessun crash, nessuna label modulo mostrata
 - Il campo `module?: string` esistente non interferisce con la nuova logica
 - TypeScript compila senza errori
+
+### Scelte implementative (2026-05-24)
+- **`extractModulesFromProfile`** usa `responseMimeType: 'application/json'` nel config Gemini — JSON pulito senza markdown wrapper. In caso di parse error o array non valido: ritorna `[]` silenziosamente (no throw).
+- **Preview inline** in `BlockWorkspaceView`: pannello collassabile che appare dopo l'estrazione, prima del salvataggio. Mostra M1/M2 + conteggio sezioni. "Conferma" salva via `onSaveModules`, "Annulla" azzera la preview.
+- **Selettori a `<select>` nativi**: modulo e sezione come `<select>` trasparenti (stile `bg-transparent border-none`) — compatti, accessibili, senza z-index issues.
+- **Pill assegnazione**: quando modulo/sezione sono assegnati, vengono mostrati come pill testo con `×` per rimuovere l'assegnazione.
+- **Eredità tipologia**: quando si seleziona una sezione che ha `lessonType`, questo viene ereditato da `block.tipologia` SOLO se il blocco non aveva già una tipologia assegnata manualmente — il docente può sempre sovrascrivere con `TipologiaSelector`.
+- **Label M1 in StrategicDashboard**: mostrata solo se `block.moduleId` è presente e la settimana ha `modules` con il corrispondente id. Colore `text-sky-400/60`, `font-mono text-[9px]`.
+- **`weekData` esteso**: ora include `modules: CourseModule[]` per ogni settimana, derivato da `convo?.modules`. StrategicDashboardView non riceve `modules` come prop — li ricava dalle conversazioni già disponibili.
+- **Catena prop**: `MainApp` → `onSaveModules={handleSaveConversationModules}` → `PlanningView` → `BlockWorkspaceView`. `handleSaveConversationModules` usa `activeConversationId` (la settimana correntemente aperta).
+- **Nessuna migrazione dati**: i blocchi esistenti con `module?: string` non vengono toccati — `moduleId`/`sectionId` sono nuovi campi addizionali.
 
 ---
 

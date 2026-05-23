@@ -1,6 +1,6 @@
 // services/gemini.ts
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode, Part } from "@google/genai";
-import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData, BlockSource } from '../types';
+import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData, BlockSource, CourseModule, ModuleSection, LessonType } from '../types';
 import { getBlockFile } from './db';
 import { MODES } from '../constants';
 import TurndownService from 'turndown';
@@ -724,6 +724,76 @@ ${teacherProfile}`,
         }
     });
     return response.text.trim();
+};
+
+const VALID_LESSON_TYPES = new Set<string>([
+    'frontale_teorica', 'frontale_operativa', 'laboratorio',
+    'verifica', 'discussione', 'uda', 'fsl',
+]);
+
+export const extractModulesFromProfile = async (teacherProfile: string): Promise<CourseModule[]> => {
+    if (!teacherProfile?.trim()) return [];
+
+    const prompt = `Analizza il seguente Profilo del Corso ed estrai i moduli didattici strutturati.
+
+Restituisci SOLO un array JSON valido, senza markdown né testo aggiuntivo, con questa struttura:
+[
+  {
+    "title": "Nome del modulo",
+    "estimatedBlocks": <numero intero>,
+    "pillar": "<asse tematico opzionale, ometti se non presente>",
+    "sections": [
+      {
+        "title": "Nome della sezione o argomento",
+        "lessonType": "<uno tra: frontale_teorica | frontale_operativa | laboratorio | verifica | discussione | uda | fsl>",
+        "estimatedBlocks": <numero intero>
+      }
+    ]
+  }
+]
+
+Regole:
+- Ogni modulo deve avere almeno una sezione
+- estimatedBlocks deve essere >= 1
+- lessonType deve essere uno dei valori elencati esattamente come scritto
+- Se il profilo non contiene moduli chiari, estrai le aree tematiche principali
+
+PROFILO DEL CORSO:
+${teacherProfile}`;
+
+    try {
+        const response = await getAI().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: 'application/json',
+                temperature: 0.2,
+            }
+        });
+
+        const raw = JSON.parse(response.text.trim());
+        if (!Array.isArray(raw)) return [];
+
+        return raw.map((m: Record<string, unknown>, i: number): CourseModule => ({
+            id: crypto.randomUUID(),
+            order: i + 1,
+            title: String(m.title || `Modulo ${i + 1}`),
+            estimatedBlocks: Math.max(1, Number(m.estimatedBlocks) || 1),
+            pillar: m.pillar ? String(m.pillar) : undefined,
+            sections: Array.isArray(m.sections)
+                ? (m.sections as Record<string, unknown>[]).map((s): ModuleSection => ({
+                    id: crypto.randomUUID(),
+                    title: String(s.title || 'Sezione senza titolo'),
+                    lessonType: VALID_LESSON_TYPES.has(String(s.lessonType))
+                        ? (s.lessonType as LessonType)
+                        : 'frontale_teorica',
+                    estimatedBlocks: Math.max(1, Number(s.estimatedBlocks) || 1),
+                }))
+                : [],
+        }));
+    } catch {
+        return [];
+    }
 };
 
 export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonMaterials: string; }> => {

@@ -79,6 +79,23 @@ export type LessonType =
 /** Ciclo di vita di una lezione: pianificata → in corso → archiviata */
 export type LessonState = 'progettata' | 'in_corso' | 'archiviata';
 
+export interface ModuleSection {
+  id: string;
+  title: string;
+  lessonType: LessonType;
+  estimatedBlocks: number;
+}
+
+/** Usa CourseModule (non Module) per evitare conflitti col tipo nativo Module di TS/JS */
+export interface CourseModule {
+  id: string;
+  order: number;                // 1-based
+  title: string;
+  sections: ModuleSection[];
+  estimatedBlocks: number;
+  pillar?: string;
+}
+
 export interface Pillar {
     name: string;
 }
@@ -177,6 +194,9 @@ export interface BlockDetails {
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
     tipologia?: LessonType;
+    moduleId?: string;    // riferimento a CourseModule.id
+    sectionId?: string;   // riferimento a ModuleSection.id
+    // Il campo module?: string rimane per retrocompatibilità DB
 }
 
 export type WeekPlanStatus = 'in progettazione' | 'progettazione completata' | 'in corso' | 'completata';
@@ -281,6 +301,7 @@ weekPlan?: WeekPlan;
   evaluationState?: 'AWAITING_VALUE' | 'AWAITING_NOTES' | 'AWAITING_REVIEW_NOTES'; // For guided evaluation input
   tempEvaluation?: Partial<Evaluation>;
   pendingContent?: DetachedLesson[];
+  modules?: CourseModule[];   // estratti dal Profilo del Corso, confermati dal docente
 }
 
 export interface Mode {

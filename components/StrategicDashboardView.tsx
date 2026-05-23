@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType } from '../types';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule } from '../types';
 import { LESSON_TYPE_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
@@ -44,12 +44,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
             }
         });
         return weeks.map(week => {
-            const plan = convoMap.get(week.weekNumber)?.weekPlan;
+            const convo = convoMap.get(week.weekNumber);
+            const plan = convo?.weekPlan;
             return {
                 ...week,
                 theme: plan?.theme || '',
                 notes: plan?.notes || '',
                 blocks: plan?.blocks || Array.from({ length: week.totalBlocks }, (_, i) => ({ id: `stub-${week.weekNumber}-${i}`, day: 'N/D', status: 'da definire' } as BlockDetails)),
+                modules: convo?.modules || [] as CourseModule[],
             };
         });
     }, [weeks, conversations]);
@@ -460,6 +462,15 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 {LESSON_TYPE_LABELS[block.tipologia]}
                                                             </span>
                                                         )}
+                                                        {block.moduleId && (() => {
+                                                            const mod = week.modules.find(m => m.id === block.moduleId);
+                                                            if (!mod) return null;
+                                                            return (
+                                                                <span className="text-[9px] font-mono text-sky-400/60 flex-shrink-0">
+                                                                    M{mod.order}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
                                                                 <EditableField

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, CourseModule } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
@@ -8,6 +8,7 @@ import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import FontiDrawer from './FontiDrawer';
 import TipologiaSelector from './TipologiaSelector';
+import * as GeminiService from '../services/gemini';
 
 // --- MAIN WORKSPACE VIEW ---
 
@@ -29,14 +30,21 @@ interface BlockWorkspaceViewProps {
     onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
     onPromoteFonte?: (url: string) => void;
     onUpdateTipologia?: (tipologia: LessonType | undefined) => void;
+    // Moduli strutturati — Step 7
+    conversationModules?: CourseModule[];
+    onSaveModules?: (modules: CourseModule[]) => void;
+    onUpdateBlockModuleId?: (moduleId: string | undefined, sectionId?: string | undefined, inheritedTipologia?: LessonType) => void;
+    teacherProfile?: string;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onUpdateTipologia }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onUpdateTipologia, conversationModules, onSaveModules, onUpdateBlockModuleId, teacherProfile }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [extractedPreview, setExtractedPreview] = useState<CourseModule[] | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
-    
+
     const prevMsgCountRef = useRef(0);
 
     useEffect(() => {
@@ -147,6 +155,56 @@ ${htmlContent}
         }
     }, [block.day, block.objective]);
 
+    // ── Modulo attivo e sezione attiva derivati dai conversationModules ───────
+    const selectedModule = useMemo(
+        () => conversationModules?.find(m => m.id === block?.moduleId),
+        [conversationModules, block?.moduleId]
+    );
+    const selectedSection = useMemo(
+        () => selectedModule?.sections.find(s => s.id === block?.sectionId),
+        [selectedModule, block?.sectionId]
+    );
+
+    const handleExtractModules = useCallback(async () => {
+        if (!teacherProfile?.trim() || isExtracting) return;
+        setIsExtracting(true);
+        try {
+            const result = await GeminiService.extractModulesFromProfile(teacherProfile);
+            setExtractedPreview(result.length > 0 ? result : []);
+        } catch {
+            setExtractedPreview([]);
+        } finally {
+            setIsExtracting(false);
+        }
+    }, [teacherProfile, isExtracting]);
+
+    const handleConfirmModules = useCallback(() => {
+        if (!extractedPreview || !onSaveModules) return;
+        onSaveModules(extractedPreview);
+        setExtractedPreview(null);
+    }, [extractedPreview, onSaveModules]);
+
+    const handleModuleChange = useCallback((moduleId: string) => {
+        if (!onUpdateBlockModuleId) return;
+        if (!moduleId) {
+            onUpdateBlockModuleId(undefined, undefined, undefined);
+            return;
+        }
+        const mod = conversationModules?.find(m => m.id === moduleId);
+        const firstSection = mod?.sections[0];
+        onUpdateBlockModuleId(moduleId, undefined, firstSection?.lessonType);
+    }, [onUpdateBlockModuleId, conversationModules]);
+
+    const handleSectionChange = useCallback((sectionId: string) => {
+        if (!onUpdateBlockModuleId || !block?.moduleId) return;
+        if (!sectionId) {
+            onUpdateBlockModuleId(block.moduleId, undefined, undefined);
+            return;
+        }
+        const section = selectedModule?.sections.find(s => s.id === sectionId);
+        onUpdateBlockModuleId(block.moduleId, sectionId, section?.lessonType);
+    }, [onUpdateBlockModuleId, block?.moduleId, selectedModule]);
+
     const editorToolbarActions = useMemo(() => (
         <button
             onClick={handleExportHtml}
@@ -197,6 +255,122 @@ ${htmlContent}
                                         </span>
                                     )}
                                 </button>
+                            )}
+                        </div>
+                    )}
+                    {/* Riga modulo — selettore o estrazione */}
+                    {onUpdateBlockModuleId !== undefined && (
+                        <div className="flex-shrink-0 px-4 py-1.5 border-b border-gray-800/40 bg-[#0D1117]">
+                            {/* Preview estratta in attesa di conferma */}
+                            {extractedPreview !== null && (
+                                <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-2.5 mb-1.5">
+                                    <p className="text-[10px] font-mono text-sky-400/80 mb-1.5">
+                                        {extractedPreview.length > 0
+                                            ? `${extractedPreview.length} moduli estratti — conferma per salvare`
+                                            : 'Nessun modulo trovato nel Profilo del Corso'}
+                                    </p>
+                                    {extractedPreview.length > 0 && (
+                                        <div className="space-y-0.5 mb-2 max-h-28 overflow-y-auto custom-scrollbar">
+                                            {extractedPreview.map(m => (
+                                                <div key={m.id} className="text-[10px] font-mono text-gray-300 leading-snug">
+                                                    <span className="text-sky-400/70">M{m.order}</span>
+                                                    {' '}{m.title}
+                                                    {m.sections.length > 0 && (
+                                                        <span className="text-gray-600 ml-1">({m.sections.length} sez.)</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {extractedPreview.length > 0 && (
+                                            <button
+                                                onClick={handleConfirmModules}
+                                                className="px-2.5 py-0.5 text-[10px] font-mono text-sky-300 border border-sky-500/30 rounded hover:bg-sky-500/15 transition-colors"
+                                            >
+                                                Conferma
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setExtractedPreview(null)}
+                                            className="px-2.5 py-0.5 text-[10px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors"
+                                        >
+                                            Annulla
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Selector / pulsante estrazione */}
+                            {extractedPreview === null && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {!conversationModules?.length ? (
+                                        /* Nessun modulo estratto: mostra pulsante estrazione */
+                                        <button
+                                            onClick={handleExtractModules}
+                                            disabled={isExtracting || !teacherProfile?.trim()}
+                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono text-sky-400/80 border border-sky-500/20 rounded hover:bg-sky-500/10 hover:border-sky-400/35 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            title={!teacherProfile?.trim() ? 'Compila prima il Profilo del Corso nei Documenti Fondanti' : 'Estrai la struttura modulare dal Profilo del Corso'}
+                                        >
+                                            {isExtracting ? 'Estrazione moduli…' : '↗ Estrai moduli dal Profilo'}
+                                        </button>
+                                    ) : (
+                                        /* Moduli disponibili: selettori */
+                                        <>
+                                            {!block?.moduleId ? (
+                                                <select
+                                                    value=""
+                                                    onChange={e => handleModuleChange(e.target.value)}
+                                                    className="bg-transparent border-none text-[10px] font-mono text-gray-500 hover:text-gray-300 focus:outline-none cursor-pointer"
+                                                >
+                                                    <option value="" disabled>Assegna modulo…</option>
+                                                    {conversationModules.map(m => (
+                                                        <option key={m.id} value={m.id}>M{m.order} · {m.title}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <>
+                                                    {/* Pill modulo assegnato */}
+                                                    <span className="flex items-center gap-1 text-[10px] font-mono text-sky-400/80">
+                                                        M{selectedModule?.order} · {selectedModule?.title}
+                                                        <button
+                                                            onClick={() => handleModuleChange('')}
+                                                            className="ml-0.5 text-gray-600 hover:text-gray-300 transition-colors leading-none"
+                                                            title="Rimuovi assegnazione modulo"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                    {/* Sezione */}
+                                                    {selectedModule && (
+                                                        !block?.sectionId ? (
+                                                            <select
+                                                                value=""
+                                                                onChange={e => handleSectionChange(e.target.value)}
+                                                                className="bg-transparent border-none text-[10px] font-mono text-gray-500 hover:text-gray-300 focus:outline-none cursor-pointer"
+                                                            >
+                                                                <option value="" disabled>§ Assegna sezione…</option>
+                                                                {selectedModule.sections.map(s => (
+                                                                    <option key={s.id} value={s.id}>{s.title}</option>
+                                                                ))}
+                                                            </select>
+                                                        ) : (
+                                                            <span className="flex items-center gap-1 text-[10px] font-mono text-gray-500">
+                                                                § {selectedSection?.title}
+                                                                <button
+                                                                    onClick={() => handleSectionChange('')}
+                                                                    className="ml-0.5 text-gray-600 hover:text-gray-300 transition-colors leading-none"
+                                                                    title="Rimuovi assegnazione sezione"
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </span>
+                                                        )
+                                                    )}
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
