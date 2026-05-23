@@ -662,6 +662,66 @@ const blockDetailsSchema: FunctionDeclaration = {
         required: ["lessonTitle", "lessonSyllabus", "lessonMaterials"]
     }
 };
+export type DocumentContentType = 'costituzione' | 'regole' | 'personalita';
+
+export const generateDocumentContent = async (
+    docType: DocumentContentType,
+    teacherProfile: string
+): Promise<string> => {
+    const prompts: Record<DocumentContentType, string> = {
+        costituzione: `Sei un esperto di progettazione didattica. Basandoti sul profilo del corso fornito, genera un Progetto Didattico completo e professionale per questa disciplina.
+
+Il Progetto Didattico deve includere:
+- Una presentazione del corso e dei suoi obiettivi formativi generali
+- I moduli didattici principali (3-5 moduli), ciascuno con nome, descrizione, obiettivi specifici, competenze sviluppate e attività chiave
+- Il filo pedagogico che unisce i moduli
+- I criteri generali di valutazione formativa
+
+Scrivi in modo chiaro, professionale e ispirato. Usa Markdown con titoli (##), sottotitoli (###) e liste puntate.
+
+PROFILO DEL CORSO:
+${teacherProfile}`,
+
+        regole: `Sei un esperto di gestione della classe e valutazione formativa. Basandoti sul profilo del corso fornito, genera un Patto Formativo per questa disciplina.
+
+Il Patto Formativo deve includere:
+- L'ambiente di apprendimento (regole del laboratorio, comportamenti attesi)
+- Il sistema di valutazione (criteri, tipologie di verifica, peso delle componenti)
+- Le modalità di feedback e revisione del lavoro
+- I diritti e doveri degli studenti
+- Le modalità di recupero e approfondimento
+
+Scrivi in modo coinvolgente e positivo, come un vero patto condiviso con la classe. Usa Markdown con titoli (##), sottotitoli (###) e liste puntate.
+
+PROFILO DEL CORSO:
+${teacherProfile}`,
+
+        personalita: `Sei un esperto di AI applicata alla didattica. Basandoti sul profilo del corso fornito, genera le istruzioni di sistema per Ada — l'assistente AI dell'insegnante.
+
+Le istruzioni devono definire:
+- Il tono e lo stile comunicativo di Ada (es. entusiasta, rigorosa, ironica, incoraggiante)
+- Le priorità pedagogiche di Ada in questo contesto specifico
+- Come Ada affianca il docente nella pianificazione, nell'analisi e nel feedback
+- Le peculiarità del corso che Ada deve tenere sempre presente
+- Il "carattere" di Ada: cosa la rende unica e adatta a questo docente
+
+Scrivi le istruzioni in seconda persona rivolgendoti ad Ada (es. "Sei Ada, ..."). Usa Markdown con titoli e liste. Il risultato deve essere direttamente incollabile come system prompt.
+
+PROFILO DEL CORSO:
+${teacherProfile}`,
+    };
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompts[docType] }] }],
+        config: {
+            temperature: 0.65,
+            thinkingConfig: { thinkingBudget: 8192 }
+        }
+    });
+    return response.text.trim();
+};
+
 export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonMaterials: string; }> => {
     const prompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera i dettagli per un blocco di lezione di 2 ore.
 

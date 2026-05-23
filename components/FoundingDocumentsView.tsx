@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { marked } from 'marked';
 import type { useMasterContext } from '../hooks/useMasterContext';
-import { 
-    XIcon, DocumentTextIcon, PencilIcon
+import {
+    XIcon, DocumentTextIcon, PencilIcon, SparklesIcon, RefreshIcon
 } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import DocumentEditor from './DocumentEditor';
+import { generateDocumentContent, type DocumentContentType } from '../services/gemini';
 
 interface FoundingDocumentsViewProps {
     masterContext: ReturnType<typeof useMasterContext>;
@@ -21,13 +23,18 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
     const [setupError, setSetupError] = useState('');
     const [isEditing, setIsEditing] = useState(isInitialSetup || false);
     const [isConfirmingEdit, setIsConfirmingEdit] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedContentMap, setGeneratedContentMap] = useState<Record<string, string>>({});
 
-    const documents = useMemo(() => [
-        { id: 'profilo', title: 'Profilo del Corso', content: isInitialSetup ? localRoute : masterContext.teacherProfile, onSave: isInitialSetup ? setLocalRoute : masterContext.handleSaveTeacherProfile, description: 'Chi sei, dove insegni, in quale scuola e città, la tua disciplina, il tuo curriculum. Compila questo primo — Ada usa queste informazioni per generare gli altri documenti e personalizzare ogni interazione.' },
-        { id: 'costituzione', title: 'Progetto Didattico', content: isInitialSetup ? localConstitution : masterContext.constitution, onSave: isInitialSetup ? setLocalConstitution : masterContext.handleSaveConstitution, description: 'Il progetto di disciplina: moduli, obiettivi, attività chiave. Il DNA del tuo percorso formativo. Scrivi liberamente o incolla da Word — Ada lo legge come contesto fisso.' },
-        { id: 'regole', title: 'Patto Formativo', content: isInitialSetup ? localRules : masterContext.rulesContext, onSave: isInitialSetup ? setLocalRules : masterContext.handleSaveRules, description: 'Il sistema di valutazione e le regole del laboratorio. Scrivi in modo libero — Ada parsa e struttura per te.' },
-        { id: 'equipaggio', title: "L'Equipaggio", content: isInitialSetup ? localCrew : masterContext.crewContext, onSave: isInitialSetup ? setLocalCrew : masterContext.handleSaveCrew, description: 'Le studentesse e gli studenti del corso. Incolla da un foglio di testo, uno per riga o separati da virgola — Ada costruisce il suo registro da qui.' },
-    ], [isInitialSetup, localConstitution, localRoute, localCrew, localRules, masterContext]);
+    const documents = useMemo(() => {
+        const gen = generatedContentMap;
+        return [
+            { id: 'profilo', title: 'Profilo del Corso', content: gen['profilo'] ?? (isInitialSetup ? localRoute : masterContext.teacherProfile), onSave: isInitialSetup ? setLocalRoute : masterContext.handleSaveTeacherProfile, description: 'Chi sei, dove insegni, in quale scuola e città, la tua disciplina, il tuo curriculum. Compila questo primo — Ada usa queste informazioni per generare gli altri documenti e personalizzare ogni interazione.' },
+            { id: 'costituzione', title: 'Progetto Didattico', content: gen['costituzione'] ?? (isInitialSetup ? localConstitution : masterContext.constitution), onSave: isInitialSetup ? setLocalConstitution : masterContext.handleSaveConstitution, description: 'Il progetto di disciplina: moduli, obiettivi, attività chiave. Il DNA del tuo percorso formativo. Scrivi liberamente o incolla da Word — Ada lo legge come contesto fisso.' },
+            { id: 'regole', title: 'Patto Formativo', content: gen['regole'] ?? (isInitialSetup ? localRules : masterContext.rulesContext), onSave: isInitialSetup ? setLocalRules : masterContext.handleSaveRules, description: 'Il sistema di valutazione e le regole del laboratorio. Scrivi in modo libero — Ada parsa e struttura per te.' },
+            { id: 'equipaggio', title: "L'Equipaggio", content: gen['equipaggio'] ?? (isInitialSetup ? localCrew : masterContext.crewContext), onSave: isInitialSetup ? setLocalCrew : masterContext.handleSaveCrew, description: 'Le studentesse e gli studenti del corso. Incolla da un foglio di testo, uno per riga o separati da virgola — Ada costruisce il suo registro da qui.' },
+        ];
+    }, [isInitialSetup, localConstitution, localRoute, localCrew, localRules, masterContext, generatedContentMap]);
 
     const [activeTabId, setActiveTabId] = useState(documents[0].id);
     const activeDocument = useMemo(() => documents.find(d => d.id === activeTabId), [documents, activeTabId]);
@@ -55,6 +62,40 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
         setIsEditing(true);
         setIsConfirmingEdit(false);
     };
+
+    const handleGenerateWithAda = useCallback(async () => {
+        const profiloContent = isInitialSetup ? localRoute : masterContext.teacherProfile;
+        if (!profiloContent?.trim() || isGenerating) return;
+
+        // Mappa tab → tipo documento
+        const docTypeMap: Record<string, DocumentContentType> = {
+            costituzione: 'costituzione',
+            regole: 'regole',
+        };
+        const docType = docTypeMap[activeTabId];
+        if (!docType) return;
+
+        setIsGenerating(true);
+        try {
+            const markdown = await generateDocumentContent(docType, profiloContent);
+            const html = String(marked.parse(markdown));
+
+            // In initial setup aggiorna anche lo stato locale così handleFinishSetup
+            // può salvare il contenuto generato anche se il docente non lo modifica.
+            if (isInitialSetup) {
+                if (activeTabId === 'costituzione') setLocalConstitution(html);
+                else if (activeTabId === 'regole') setLocalRules(html);
+            }
+
+            setGeneratedContentMap(prev => ({ ...prev, [activeTabId]: html }));
+            // In modalità normale, abilita automaticamente la modifica dopo la generazione
+            if (!isInitialSetup) setIsEditing(true);
+        } catch (e) {
+            console.error('[FoundingDocumentsView] Errore generazione ADA:', e);
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [activeTabId, isInitialSetup, localRoute, masterContext.teacherProfile, isGenerating, setLocalConstitution, setLocalRules]);
 
     return (
         <>
@@ -91,26 +132,44 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                                     </button>
                                 ))}
                             </div>
-                            {!isInitialSetup && (
-                                <div>
-                                    {isEditing ? (
-                                        <button 
+                            <div className="flex items-center gap-2 pb-1">
+                                {/* Pulsante "Genera con ADA" — solo per Progetto Didattico e Patto Formativo */}
+                                {(activeTabId === 'costituzione' || activeTabId === 'regole') && (() => {
+                                    const profiloFilled = (isInitialSetup ? localRoute : masterContext.teacherProfile)?.trim();
+                                    return (
+                                        <button
+                                            onClick={handleGenerateWithAda}
+                                            disabled={isGenerating || !profiloFilled}
+                                            title={!profiloFilled ? 'Prima compila il Profilo del Corso' : 'Genera una bozza partendo dal Profilo del Corso'}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            {isGenerating
+                                                ? <RefreshIcon className="h-3.5 w-3.5 animate-spin" />
+                                                : <SparklesIcon className="h-3.5 w-3.5" />
+                                            }
+                                            {isGenerating ? 'Generando…' : 'Genera con ADA'}
+                                        </button>
+                                    );
+                                })()}
+                                {!isInitialSetup && (
+                                    isEditing ? (
+                                        <button
                                             onClick={() => setIsEditing(false)}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                                            className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
                                         >
                                             Termina Modifica
                                         </button>
                                     ) : (
-                                        <button 
+                                        <button
                                             onClick={handleStartEditing}
-                                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                                            className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                                         >
                                             <PencilIcon className="h-4 w-4" />
                                             Modifica Documenti
                                         </button>
-                                    )}
-                                </div>
-                            )}
+                                    )
+                                )}
+                            </div>
                         </div>
                         
                         {activeDocument && (
