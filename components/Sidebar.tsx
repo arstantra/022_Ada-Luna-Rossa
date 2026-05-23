@@ -4,7 +4,7 @@ import {
   BookOpenIcon, ClipboardListIcon, UsersIcon,
   BriefcaseIcon, PresentationChartBarIcon, ToolboxIcon,
   ImageIcon, DocumentTextIcon, PencilIcon, SparklesIcon,
-  TagIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, CalendarDaysIcon,
+  ArrowDownTrayIcon, ArrowUpTrayIcon, CalendarDaysIcon,
   ChevronDownIcon, FolderOpenIcon, WandIcon,
 } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
@@ -41,10 +41,8 @@ interface SidebarProps {
 
   // Gestione del Corso
   onOpenFoundingDocuments: () => void;
-  onOpenTeacherProfile: () => void;
   onOpenBlockDayDefaults: () => void;
   onOpenInstructions: () => void;
-  onOpenLabelManager: () => void;
   onExportData: () => void;
   onImportData: () => void;
   onExportCourseBook: () => void;
@@ -157,8 +155,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenStrategicDashboard, onOpenGantt, onOpenToolkit, onOpenImageGenerator,
   onOpenLezioneinCorso, onOpenArchivioLezioni, onOpenNotebookLM, hasActiveLessons,
   onOpenClassroomTrend, onOpenGroupsArchive, onOpenStudentRoster,
-  onOpenFoundingDocuments, onOpenTeacherProfile, onOpenBlockDayDefaults,
-  onOpenInstructions, onOpenLabelManager, onExportData, onImportData,
+  onOpenFoundingDocuments, onOpenBlockDayDefaults,
+  onOpenInstructions, onExportData, onImportData,
   onExportCourseBook, onOpenApiSettings, onSaveInstructions,
   disciplina, onSaveDisciplina,
   onShowToast,
@@ -364,9 +362,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
 
+            <NavItem icon={<CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />} label="La Rotta" isActive={false} onClick={onOpenBlockDayDefaults} indent />
             <NavItem icon={<DocumentTextIcon className="h-4 w-4 flex-shrink-0" />} label="Documenti Fondanti" isActive={activeView === 'founding_documents'} onClick={onOpenFoundingDocuments} indent />
-            <NavItem icon={<PencilIcon className="h-4 w-4 flex-shrink-0" />} label="Profilo Docente" isActive={false} onClick={onOpenTeacherProfile} indent />
-            <NavItem icon={<CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />} label="Giorni Predefiniti" isActive={false} onClick={onOpenBlockDayDefaults} indent />
 
             <div className="group flex items-center justify-between rounded-lg hover:bg-gray-800/60 transition-colors">
               <button onClick={onOpenInstructions} className="flex-grow flex items-center gap-3 pl-4 pr-2 py-2 text-sm text-gray-400 hover:text-gray-200">
@@ -378,7 +375,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
 
-            <NavItem icon={<TagIcon className="h-4 w-4 flex-shrink-0" />} label="Gestisci Etichette" isActive={false} onClick={onOpenLabelManager} indent />
             <NavItem icon={<ArrowDownTrayIcon className="h-4 w-4 flex-shrink-0" />} label="Esporta Backup" isActive={false} onClick={onExportData} indent />
             <NavItem icon={<ArrowUpTrayIcon className="h-4 w-4 flex-shrink-0" />} label="Importa Backup" isActive={false} onClick={onImportData} indent />
             <NavItem icon={<BookOpenIcon className="h-4 w-4 flex-shrink-0" />} label="Esporta Libro del Corso" isActive={false} onClick={onExportCourseBook} indent />

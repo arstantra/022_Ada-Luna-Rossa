@@ -168,7 +168,7 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save mode:", error); }
     }, []);
 
-    const isUninitialized = !isLoading && (!constitution.trim() || !routeContext.trim() || !crewContext.trim() || !rulesContext.trim());
+    const isUninitialized = !isLoading && (!constitution.trim() || !crewContext.trim() || !rulesContext.trim());
 
     return {
         isLoading,

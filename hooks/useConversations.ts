@@ -63,7 +63,6 @@ export const useConversations = (showToast: (message: string, type?: 'success' |
             id: `conv-${Date.now()}`,
             title: `Nuova Conversazione`,
             messages: [],
-            labelIds: [],
         };
         setConversations(prev => [newConversation, ...prev]);
         setActiveConversationId(newConversation.id);
@@ -178,11 +177,7 @@ export const useConversations = (showToast: (message: string, type?: 'success' |
         updateConversation(convoId, { title: newTitle });
     }, [updateConversation]);
     
-    const updateConversationLabels = useCallback((convoId: string, labelIds: string[]) => {
-      updateConversation(convoId, { labelIds });
-    }, [updateConversation]);
-
-    const bulkUpdateConversations = useCallback(async (newConversations: Conversation[]) => {
+const bulkUpdateConversations = useCallback(async (newConversations: Conversation[]) => {
         setConversations(newConversations);
         try {
             await db.bulkSaveConversations(newConversations);
@@ -206,7 +201,6 @@ export const useConversations = (showToast: (message: string, type?: 'success' |
         updateMessageInConversation,
         updateConversation,
         updateConversationTitle,
-        updateConversationLabels,
         conversationsRef,
     };
 };

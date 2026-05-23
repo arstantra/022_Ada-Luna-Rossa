@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource, LessonType, DetachedLesson } from '../types';
+import type { Conversation, Message, Attachment, Mode, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource, LessonType, DetachedLesson } from '../types';
 import type { ActiveView } from './Sidebar';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import TurndownService from 'turndown';
@@ -25,8 +25,6 @@ import Toast from './Toast';
 // Modals
 import ContextModal from './MasterContextModal';
 import ImageGenerationModal from './ImageGenerationModal';
-import LabelManagementModal from './LabelManagementModal';
-import AssignLabelsModal from './AssignLabelsModal';
 import AddNotebookModal from './AddNotebookModal';
 import ManageNotesModal from './ManageNotesModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -37,7 +35,6 @@ import SaltaLezioneModal from './SaltaLezioneModal';
 import type { SaltaChoice } from './SaltaLezioneModal';
 // Hooks
 import { useConversations } from '../hooks/useConversations';
-import { useLabels } from '../hooks/useLabels';
 import { useStudents } from '../hooks/useStudents';
 import { useNotebooks } from '../hooks/useNotebooks';
 import { useToolkitShortcuts } from '../hooks/useToolkitShortcuts';
@@ -51,9 +48,7 @@ import * as GeminiService from '../services/gemini';
 // Utils & Constants
 import { parseRouteContext, parseCrewContextToNames, generateExportContent, fileToAttachment, generateCourseBookHtml } from '../utils';
 import { 
-    AUTO_LABELS,
     DEFAULT_SYSTEM_INSTRUCTION,
-    DEFAULT_TEACHER_PROFILE,
     GEMINI_API_ERROR_MESSAGE, MODES,
     ADA_QUICK_CHAT_ID,
 } from '../constants';
@@ -78,11 +73,10 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     handleSelectConversation: selectConversationHook,
     handleRenameConversation, handleDeleteConversation,
     handleReorderConversations, updateMessageInConversation, addMessageToConversation,
-    updateConversation, updateConversationTitle, updateConversationLabels, conversationsRef,
+    updateConversation, updateConversationTitle, conversationsRef,
   } = useConversations(showToast);
   
-  const { labels, addLabel, updateLabel, deleteLabel, getOrCreateLabelsByName } = useLabels(showToast);
-  const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttendanceForBlock, updateStudentNotes, updateStudentSummary } = useStudents(masterContext.crewContext);
+const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttendanceForBlock, updateStudentNotes, updateStudentSummary } = useStudents(masterContext.crewContext);
   const { notebooks, addNotebook, updateNotebook, removeNotebook, accessNotebook } = useNotebooks(showToast);
   const { shortcuts, addShortcut, updateShortcut, deleteShortcut, bulkUpdateShortcuts } = useToolkitShortcuts(showToast);
   const { categories, addCategory, updateCategory, deleteCategory, bulkUpdateCategories } = useToolkitCategories(showToast);
@@ -99,13 +93,11 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   // --- Modal States ---
   const [modalState, setModalState] = useState({
     instructions: false,
-    teacherProfile: false,
-    image: false, labelManagement: false, addNotebook: false,
+    image: false, addNotebook: false,
     exportPassword: false, importPassword: false, importConfirm: false,
     blockDayDefaults: false,
   });
-  const [assignLabelsConversation, setAssignLabelsConversation] = useState<Conversation | null>(null);
-  const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(null);
+const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(null);
   const [notebookForNotes, setNotebookForNotes] = useState<Notebook | null>(null);
   const [notebookSuggestion, setNotebookSuggestion] = useState<{title: string} | null>(null);
   const [lessonNotesModalInfo, setLessonNotesModalInfo] = useState<{ convoId: string; blockIndex: number; initialNotes: string; } | null>(null);
@@ -158,82 +150,6 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     });
   }, [conversations, updateConversation]);
   
-  // Effect for Automatic Lifecycle Label Management
-  useEffect(() => {
-    // This effect ensures that each week-plan conversation has the correct "status" label
-    // (e.g., "In Progettazione", "Completata") based on its `weekPlan.status`.
-    // The logic is designed to be resilient against duplicate or legacy auto-labels by:
-    // 1. Ensuring all canonical auto-labels exist in the database.
-    // 2. For each conversation, removing ALL possible auto-labels.
-    // 3. Adding back only the SINGLE, correct, canonical auto-label that matches the current week status.
-    // This prevents label duplication and keeps the state consistent.
-    const autoLabelNames = Object.values(AUTO_LABELS).map(l => l.name);
-
-    // 1. Check if all required auto labels exist in the state.
-    const allLabelsExist = autoLabelNames.every(name =>
-        labels.some(l => l.name.toLowerCase() === name.toLowerCase())
-    );
-
-    // 2. If labels are missing, create them and stop. The effect will re-run once the `labels` state updates.
-    if (!allLabelsExist) {
-        getOrCreateLabelsByName(autoLabelNames);
-        return;
-    }
-    
-    // Find ALL labels that match auto-label names, including potential duplicates from race conditions.
-    const allAutoLabelsInState = labels.filter(l => 
-        autoLabelNames.some(name => name.toLowerCase() === l.name.toLowerCase())
-    );
-    const allAutoLabelIdsInState = allAutoLabelsInState.map(l => l.id);
-
-    // Find the CANONICAL auto-labels (the first one of each name) to be used for adding.
-    const canonicalAutoLabels = autoLabelNames.map(name =>
-        labels.find(l => l.name.toLowerCase() === name.toLowerCase())
-    ).filter((l): l is Label => !!l);
-    
-    // Defensive check: if canonical labels aren't found yet, wait for next render.
-    if (canonicalAutoLabels.length !== autoLabelNames.length) return;
-
-    let needsUpdate = false;
-    const updatedConvos = conversations.map(c => {
-        if (!c.weekPlan) return c; // Only for week plans
-
-        const status = c.weekPlan.status;
-        let targetLabelName: string | null = null;
-        switch (status) {
-            case 'in progettazione': targetLabelName = AUTO_LABELS.PLANNING.name; break;
-            case 'progettazione completata':
-            case 'in corso': // A week in progress is considered planned
-                 targetLabelName = AUTO_LABELS.PLANNED.name; break;
-            case 'completata': targetLabelName = AUTO_LABELS.COMPLETED.name; break;
-        }
-
-        const currentLabelIds = c.labelIds ?? [];
-        const canonicalTargetLabel = targetLabelName ? canonicalAutoLabels.find(l => l.name === targetLabelName) : null;
-        
-        // This is the core of the fix: filter out ALL auto labels, leaving only manual ones.
-        const manualIds = currentLabelIds.filter(id => !allAutoLabelIdsInState.includes(id));
-        
-        // This is the list of labels the conversation *should* have.
-        const correctIds = canonicalTargetLabel ? [...manualIds, canonicalTargetLabel.id] : manualIds;
-
-        // Compare the current set of labels with the correct one to see if an update is needed.
-        // This prevents unnecessary re-renders and handles cleanup.
-        const currentIdsSet = new Set(currentLabelIds);
-        const correctIdsSet = new Set(correctIds);
-
-        if (currentIdsSet.size !== correctIdsSet.size || !correctIds.every(id => currentIdsSet.has(id))) {
-            needsUpdate = true;
-            return { ...c, labelIds: Array.from(correctIdsSet) };
-        }
-        
-        return c;
-    });
-    
-    if (needsUpdate) {
-        setConversations(updatedConvos);
-    }
-  }, [conversations, labels, getOrCreateLabelsByName, setConversations]);
 
 
   const activeConversation = useMemo(() => conversations.find(c => c.id === activeConversationId) ?? null, [conversations, activeConversationId]);
@@ -656,7 +572,6 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
         id: ADA_QUICK_CHAT_ID,
         title: 'Conversa con Ada',
         messages: [],
-        labelIds: [],
       };
       // Aggiunge in testa senza cancellare le altre conversazioni
       setConversations([quickChat, ...conversationsRef.current]);
@@ -956,14 +871,7 @@ ${htmlBody}
       }
   }, [showToast]);
 
-  const handleDeleteLabel = useCallback((labelId: string) => {
-    deleteLabel(labelId);
-    const updatedConvos = conversationsRef.current.map(c => ({ ...c, labelIds: c.labelIds?.filter(id => id !== labelId) }));
-    setConversations(updatedConvos);
-    showToast('Etichetta eliminata e rimossa da tutte le conversazioni.', 'success');
-  }, [deleteLabel, setConversations, showToast, conversationsRef]);
-
-  const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
+const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
      reEditBlockHandler(convoId, blockIndex);
      setView('chat'); // Ensure the view switches to the planning/chat view
      handleSelectConversation(convoId); // Ensure the correct conversation is active
@@ -1481,11 +1389,9 @@ ${htmlBody}
 
   // --- Stabilized callbacks for props ---
   const openInstructionsModal = useCallback(() => setModalState(s => ({ ...s, instructions: true })), []);
-  const openTeacherProfileModal = useCallback(() => setModalState(s => ({ ...s, teacherProfile: true })), []);
-  const openImageModal = useCallback(() => setModalState(s => ({ ...s, image: true })), []);
+const openImageModal = useCallback(() => setModalState(s => ({ ...s, image: true })), []);
   
-  const openLabelManagerModal = useCallback(() => setModalState(s => ({ ...s, labelManagement: true })), []);
-  const openStudentRoster = useCallback(() => setView('roster'), []);
+const openStudentRoster = useCallback(() => setView('roster'), []);
   const openNotebookLM = useCallback(() => setView('notebooklm'), []);
   const openClassroomTrend = useCallback(() => setView('classroom_trend'), []);
   const openGroupsArchive = useCallback(() => setView('groups_archive'), []);
@@ -1534,11 +1440,9 @@ ${htmlBody}
           onOpenGroupsArchive={openGroupsArchive}
           onOpenStudentRoster={openStudentRoster}
           onOpenFoundingDocuments={openFoundingDocuments}
-          onOpenTeacherProfile={openTeacherProfileModal}
           onOpenBlockDayDefaults={openBlockDayDefaultsModal}
           onOpenInstructions={openInstructionsModal}
-          onOpenLabelManager={openLabelManagerModal}
-          onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
+onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
           onImportData={() => importFileRef.current?.click()}
           onExportCourseBook={handleExportCourseBook}
           onOpenApiSettings={onOpenApiSettings}
@@ -1570,22 +1474,9 @@ ${htmlBody}
       
       <ContextModal isOpen={modalState.instructions} onClose={() => setModalState(s=>({...s, instructions: false}))} onSave={masterContext.handleSaveInstructions} onDistill={handleDistillContext} currentContext={masterContext.systemInstruction} defaultContext={DEFAULT_SYSTEM_INSTRUCTION} title="Personalità di Ada" description="Definisci qui la personalità, il ruolo e lo stile di Ada." placeholder="Es: Sei un esperto di programmazione Python..." />
       
-      <ContextModal 
-        isOpen={modalState.teacherProfile} 
-        onClose={() => setModalState(s=>({...s, teacherProfile: false}))} 
-        onSave={masterContext.handleSaveTeacherProfile} 
-        onDistill={handleDistillContext} 
-        currentContext={masterContext.teacherProfile} 
-        defaultContext={DEFAULT_TEACHER_PROFILE} 
-        title="Profilo Docente" 
-        description="Definisci qui chi sei. Ada userà queste informazioni per personalizzare l'esperienza e l'interazione." 
-        placeholder="Nome: Mario Rossi&#10;Materia: Design e Comunicazione&#10;Ruolo: Docente di Laboratorio" 
-      />
 
       <ImageGenerationModal isOpen={modalState.image} onClose={() => setModalState(s=>({...s, image: false}))} onGenerate={handleGenerateImage} isLoading={isLoading} />
       
-      <LabelManagementModal isOpen={modalState.labelManagement} onClose={() => setModalState(s=>({...s, labelManagement: false}))} labels={labels} onAddLabel={addLabel} onUpdateLabel={updateLabel} onDeleteLabel={handleDeleteLabel} conversations={conversations} />
-      {assignLabelsConversation && <AssignLabelsModal isOpen={!!assignLabelsConversation} onClose={() => setAssignLabelsConversation(null)} conversation={assignLabelsConversation} allLabels={labels} onSave={updateConversationLabels} />}
       
       <AddNotebookModal isOpen={modalState.addNotebook} onClose={() => setModalState(s=>({...s, addNotebook: false}))} onSave={addNotebook} onUpdate={updateNotebook} notebookToEdit={notebookToEdit} />
       <ManageNotesModal isOpen={!!notebookForNotes} onClose={() => setNotebookForNotes(null)} onSave={(id, notes) => updateNotebook(id, { notes })} notebook={notebookForNotes} />

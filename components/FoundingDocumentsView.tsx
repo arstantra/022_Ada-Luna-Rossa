@@ -23,26 +23,26 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
     const [isConfirmingEdit, setIsConfirmingEdit] = useState(false);
 
     const documents = useMemo(() => [
-        { id: 'costituzione', title: 'La Costituzione', content: isInitialSetup ? localConstitution : masterContext.constitution, onSave: isInitialSetup ? setLocalConstitution : masterContext.handleSaveConstitution, description: 'Definisce i moduli didattici, i loro obiettivi e le attività chiave. È il DNA del percorso formativo.' },
-        { id: 'rotta', title: 'La Rotta', content: isInitialSetup ? localRoute : masterContext.routeContext, onSave: isInitialSetup ? setLocalRoute : masterContext.handleSaveRoute, description: 'Specifica il calendario delle lezioni, settimana per settimana, indicando il numero di blocchi didattici.' },
-        { id: 'equipaggio', title: "L'Equipaggio", content: isInitialSetup ? localCrew : masterContext.crewContext, onSave: isInitialSetup ? setLocalCrew : masterContext.handleSaveCrew, description: 'Elenca i nomi delle studentesse o degli studenti che partecipano al corso, uno per riga.' },
-        { id: 'regole', title: 'Le Regole', content: isInitialSetup ? localRules : masterContext.rulesContext, onSave: isInitialSetup ? setLocalRules : masterContext.handleSaveRules, description: 'Stabilisce i principi di interazione e collaborazione durante le attività di laboratorio.' }
+        { id: 'costituzione', title: 'Progetto Didattico', content: isInitialSetup ? localConstitution : masterContext.constitution, onSave: isInitialSetup ? setLocalConstitution : masterContext.handleSaveConstitution, description: 'Il progetto di disciplina: moduli, obiettivi, attività chiave. Il DNA del tuo percorso formativo. Scrivi liberamente o incolla da Word — Ada lo legge come contesto fisso.' },
+        { id: 'equipaggio', title: "L'Equipaggio", content: isInitialSetup ? localCrew : masterContext.crewContext, onSave: isInitialSetup ? setLocalCrew : masterContext.handleSaveCrew, description: 'Le studentesse e gli studenti del corso. Incolla da un foglio di testo, uno per riga o separati da virgola — Ada costruisce il suo registro da qui.' },
+        { id: 'regole', title: 'Patto Formativo', content: isInitialSetup ? localRules : masterContext.rulesContext, onSave: isInitialSetup ? setLocalRules : masterContext.handleSaveRules, description: 'Il sistema di valutazione e le regole del laboratorio. Scrivi in modo libero — Ada parsa e struttura per te.' },
+        { id: 'profilo', title: 'Profilo del Corso', content: isInitialSetup ? localRoute : masterContext.teacherProfile, onSave: isInitialSetup ? setLocalRoute : masterContext.handleSaveTeacherProfile, description: 'Chi sei, dove insegni, in quale scuola e città, la tua disciplina, il tuo curriculum. Ada usa questo profilo per personalizzare ogni interazione.' },
     ], [isInitialSetup, localConstitution, localRoute, localCrew, localRules, masterContext]);
 
     const [activeTabId, setActiveTabId] = useState(documents[0].id);
     const activeDocument = useMemo(() => documents.find(d => d.id === activeTabId), [documents, activeTabId]);
     
     const handleFinishSetup = async () => {
-        if (!localConstitution.trim() || !localRoute.trim() || !localCrew.trim() || !localRules.trim()) {
-            setSetupError('Per favore, compila tutti i documenti prima di continuare.');
+        if (!localConstitution.trim() || !localCrew.trim() || !localRules.trim()) {
+            setSetupError('Per favore, compila almeno Progetto Didattico, Equipaggio e Patto Formativo prima di continuare.');
             return;
         }
         setSetupError('');
         await Promise.all([
             masterContext.handleSaveConstitution(localConstitution),
-            masterContext.handleSaveRoute(localRoute),
             masterContext.handleSaveCrew(localCrew),
-            masterContext.handleSaveRules(localRules)
+            masterContext.handleSaveRules(localRules),
+            ...(localRoute.trim() ? [masterContext.handleSaveTeacherProfile(localRoute)] : []),
         ]);
         // L'app passerà alla vista principale grazie all'aggiornamento dello stato nel master context.
     };
@@ -75,7 +75,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                         {isInitialSetup && (
                             <div className="p-4 mb-8 bg-blue-900/50 border border-blue-500/50 rounded-lg text-blue-200 animate-fade-in-down">
                                 <h2 className="font-bold">Benvenuta in Ada!</h2>
-                                <p className="text-sm mt-1">Questa è la prima configurazione. Per favore, compila i seguenti documenti fondanti per dare ad Ada il contesto necessario per lavorare. Le modifiche vengono salvate automaticamente. Una volta compilati tutti i campi, clicca su "Salva e Inizia" in fondo alla pagina.</p>
+                                <p className="text-sm mt-1">Prima configurazione. Compila i Documenti Fondanti per dare ad Ada il contesto del tuo corso — puoi incollare direttamente da Word. I campi obbligatori sono Progetto Didattico, Equipaggio e Patto Formativo. Il Profilo del Corso puoi completarlo dopo.</p>
                             </div>
                         )}
                         
@@ -119,8 +119,10 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                                 <DocumentEditor
                                     initialContent={activeDocument.content}
                                     onSave={activeDocument.onSave}
-                                    mode="markdown"
+                                    mode="html"
                                     isEditable={isEditing}
+                                    includeAlignmentInToolbar={false}
+                                    className="min-h-[50vh]"
                                 />
                             </div>
                         )}

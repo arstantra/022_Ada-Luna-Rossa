@@ -12,12 +12,6 @@ export interface MasterContextData {
     teacherProfile: string;
 }
 
-export interface Label {
-    id: string;
-    name: string;
-    color: string; // Key for LABEL_COLORS in constants
-}
-
 export interface GroundingSource {
     uri: string;
     title: string;
@@ -271,8 +265,7 @@ export interface Conversation {
   id: string;
   title: string;
   messages: Message[];
-  labelIds?: string[];
-  weekPlan?: WeekPlan;
+weekPlan?: WeekPlan;
   studentId?: string; // Link to a student's main record
   evaluationState?: 'AWAITING_VALUE' | 'AWAITING_NOTES' | 'AWAITING_REVIEW_NOTES'; // For guided evaluation input
   tempEvaluation?: Partial<Evaluation>;
