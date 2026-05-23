@@ -16,6 +16,8 @@ import InAulaView from './InAulaView';
 import StudentProfileView from './StudentProfileView';
 import ClassroomTrendView from './ClassroomTrendView';
 import FoundingDocumentsView from './FoundingDocumentsView';
+import AdaPersonalityView from './AdaPersonalityView';
+import RouteView from './RouteView';
 import StrategicDashboardView from './StrategicDashboardView';
 import ToolkitView from './ToolkitView';
 import LobbyView from './LobbyView';
@@ -23,14 +25,12 @@ import GroupsArchiveView from './GroupsArchiveView';
 import GanttView from './GanttView';
 import Toast from './Toast';
 // Modals
-import ContextModal from './MasterContextModal';
 import ImageGenerationModal from './ImageGenerationModal';
 import AddNotebookModal from './AddNotebookModal';
 import ManageNotesModal from './ManageNotesModal';
 import ConfirmationModal from './ConfirmationModal';
 import PasswordPromptModal from './PasswordPromptModal';
 import ImportEvaluationModal from './ImportEvaluationModal';
-import BlockDayDefaultsModal from './BlockDayDefaultsModal';
 import SaltaLezioneModal from './SaltaLezioneModal';
 import type { SaltaChoice } from './SaltaLezioneModal';
 // Hooks
@@ -48,7 +48,6 @@ import * as GeminiService from '../services/gemini';
 // Utils & Constants
 import { parseRouteContext, parseCrewContextToNames, generateExportContent, fileToAttachment, generateCourseBookHtml } from '../utils';
 import { 
-    DEFAULT_SYSTEM_INSTRUCTION,
     GEMINI_API_ERROR_MESSAGE, MODES,
     ADA_QUICK_CHAT_ID,
 } from '../constants';
@@ -92,10 +91,8 @@ const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttenda
 
   // --- Modal States ---
   const [modalState, setModalState] = useState({
-    instructions: false,
     image: false, addNotebook: false,
     exportPassword: false, importPassword: false, importConfirm: false,
-    blockDayDefaults: false,
   });
 const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(null);
   const [notebookForNotes, setNotebookForNotes] = useState<Notebook | null>(null);
@@ -155,20 +152,7 @@ const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(n
   const activeConversation = useMemo(() => conversations.find(c => c.id === activeConversationId) ?? null, [conversations, activeConversationId]);
   const availableWeeks = useMemo(() => parseRouteContext(masterContext.routeContext), [masterContext.routeContext]);
 
-  const handleDistillContext = useCallback(async (textToDistill: string): Promise<string> => {
-    try {
-        const distilledText = await GeminiService.distillText(textToDistill);
-        showToast('Contesto distillato con successo!', 'success');
-        return distilledText;
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
-        console.error("Failed to distill context:", error);
-        showToast(errorMessage, 'error');
-        throw error;
-    }
-  }, [showToast]);
-
-  const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Conversation => {
+const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Conversation => {
     const existingConversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekInfo.weekNumber);
     if (existingConversation) return existingConversation;
 
@@ -1388,10 +1372,8 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
 
 
   // --- Stabilized callbacks for props ---
-  const openInstructionsModal = useCallback(() => setModalState(s => ({ ...s, instructions: true })), []);
-const openImageModal = useCallback(() => setModalState(s => ({ ...s, image: true })), []);
-  
-const openStudentRoster = useCallback(() => setView('roster'), []);
+  const openImageModal = useCallback(() => setModalState(s => ({ ...s, image: true })), []);
+  const openStudentRoster = useCallback(() => setView('roster'), []);
   const openNotebookLM = useCallback(() => setView('notebooklm'), []);
   const openClassroomTrend = useCallback(() => setView('classroom_trend'), []);
   const openGroupsArchive = useCallback(() => setView('groups_archive'), []);
@@ -1399,13 +1381,16 @@ const openStudentRoster = useCallback(() => setView('roster'), []);
   const openToolkit = useCallback(() => setView('toolkit'), []);
   const openStrategicDashboard = useCallback(() => setView('strategic_dashboard'), []);
   const openGantt = useCallback(() => setView('gantt'), []);
-  const openBlockDayDefaultsModal = useCallback(() => setModalState(s => ({ ...s, blockDayDefaults: true })), []);
+  const openAdaPersonality = useCallback(() => setView('ada_personality'), []);
+  const openLaRotta = useCallback(() => setView('la_rotta'), []);
   // --- End of stabilized callbacks ---
 
   const currentView = useMemo((): ActiveView => {
     if (view === 'strategic_dashboard') return 'strategic_dashboard';
     if (view === 'gantt') return 'gantt';
     if (view === 'founding_documents') return 'founding_documents';
+    if (view === 'ada_personality') return 'ada_personality';
+    if (view === 'la_rotta') return 'la_rotta';
     if (view === 'toolkit') return 'toolkit';
     if (view === 'lezione_in_corso') return 'lezione_in_corso';
     if (view === 'archivio_lezioni') return 'archivio_lezioni';
@@ -1440,15 +1425,12 @@ const openStudentRoster = useCallback(() => setView('roster'), []);
           onOpenGroupsArchive={openGroupsArchive}
           onOpenStudentRoster={openStudentRoster}
           onOpenFoundingDocuments={openFoundingDocuments}
-          onOpenBlockDayDefaults={openBlockDayDefaultsModal}
-          onOpenInstructions={openInstructionsModal}
-onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
+          onOpenLaRotta={openLaRotta}
+          onOpenAdaPersonality={openAdaPersonality}
+          onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
           onImportData={() => importFileRef.current?.click()}
           onExportCourseBook={handleExportCourseBook}
           onOpenApiSettings={onOpenApiSettings}
-          onSaveInstructions={masterContext.handleSaveInstructions}
-          disciplina={masterContext.disciplina}
-          onSaveDisciplina={masterContext.handleSaveDisciplina}
           onShowToast={showToast}
         />
         {
@@ -1456,6 +1438,8 @@ onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
             'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} />,
             'gantt': <GanttView conversations={conversations} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} />,
             'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} />,
+            'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
+            'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
             'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
@@ -1472,7 +1456,6 @@ onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
         }
       </div>
       
-      <ContextModal isOpen={modalState.instructions} onClose={() => setModalState(s=>({...s, instructions: false}))} onSave={masterContext.handleSaveInstructions} onDistill={handleDistillContext} currentContext={masterContext.systemInstruction} defaultContext={DEFAULT_SYSTEM_INSTRUCTION} title="Personalità di Ada" description="Definisci qui la personalità, il ruolo e lo stile di Ada." placeholder="Es: Sei un esperto di programmazione Python..." />
       
 
       <ImageGenerationModal isOpen={modalState.image} onClose={() => setModalState(s=>({...s, image: false}))} onGenerate={handleGenerateImage} isLoading={isLoading} />
@@ -1523,13 +1506,6 @@ onExportData={() => setModalState(s => ({...s, exportPassword: true}))}
         Stai per sostituire tutti i dati attuali con quelli del backup. L'operazione non è reversibile. Vuoi continuare?
       </ConfirmationModal>
 
-      <BlockDayDefaultsModal
-          isOpen={modalState.blockDayDefaults}
-          onClose={() => setModalState(s => ({ ...s, blockDayDefaults: false }))}
-          defaults={masterContext.blockDayDefaults}
-          onSave={masterContext.handleSaveBlockDayDefaults}
-      />
-        
       {studentForEvaluationImport && (
           <ImportEvaluationModal
               isOpen={!!studentForEvaluationImport}

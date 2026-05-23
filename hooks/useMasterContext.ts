@@ -1,7 +1,7 @@
 // hooks/useMasterContext.ts
 import { useState, useEffect, useCallback } from 'react';
 import * as db from '../services/db';
-import type { Mode } from '../types';
+import type { Mode, WeekEntry } from '../types';
 import {
   DEFAULT_SYSTEM_INSTRUCTION,
   DEFAULT_CONSTITUTION,
@@ -19,6 +19,7 @@ import {
   LOCAL_STORAGE_TEACHER_KEY,
   LOCAL_STORAGE_MODE_KEY,
   LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY,
+  LOCAL_STORAGE_ROUTE_CALENDAR_KEY,
   LOCAL_STORAGE_DISCIPLINA_KEY,
   DEFAULT_DISCIPLINA,
 } from '../constants';
@@ -32,6 +33,7 @@ export const useMasterContext = () => {
     const [teacherProfile, setTeacherProfile] = useState('');
     const [disciplina, setDisciplina] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
+    const [routeCalendar, setRouteCalendar] = useState<WeekEntry[]>([]);
     const [currentModeId, setCurrentModeId] = useState<Mode['id']>(DEFAULT_MODE_ID);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -58,6 +60,13 @@ export const useMasterContext = () => {
                     loadOrSeedSetting(LOCAL_STORAGE_TEACHER_KEY, DEFAULT_TEACHER_PROFILE, setTeacherProfile),
                     loadOrSeedSetting(LOCAL_STORAGE_DISCIPLINA_KEY, DEFAULT_DISCIPLINA, setDisciplina),
                 ]);
+
+                // Load route calendar (JSON array of WeekEntry)
+                const calendarJson = await db.getSetting(LOCAL_STORAGE_ROUTE_CALENDAR_KEY);
+                if (calendarJson) {
+                    try { setRouteCalendar(JSON.parse(calendarJson)); }
+                    catch (e) { console.error("Failed to parse route calendar, resetting.", e); setRouteCalendar([]); }
+                }
 
                 // Load block day defaults separately as it's JSON
                 const defaultsJson = await db.getSetting(LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY);
@@ -161,6 +170,13 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save block day defaults:", error); }
     }, []);
 
+    const handleSaveRouteCalendar = useCallback(async (calendar: WeekEntry[]) => {
+        setRouteCalendar(calendar);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_ROUTE_CALENDAR_KEY, JSON.stringify(calendar));
+        } catch (error) { console.error("Failed to save route calendar:", error); }
+    }, []);
+
     const handleSaveMode = useCallback(async (value: Mode['id']) => {
         setCurrentModeId(value);
         try {
@@ -180,6 +196,7 @@ export const useMasterContext = () => {
         teacherProfile,
         disciplina,
         blockDayDefaults,
+        routeCalendar,
         currentModeId,
         isUninitialized,
         handleSaveInstructions,
@@ -190,6 +207,7 @@ export const useMasterContext = () => {
         handleSaveTeacherProfile,
         handleSaveDisciplina,
         handleSaveBlockDayDefaults,
+        handleSaveRouteCalendar,
         handleSaveMode,
     };
 };

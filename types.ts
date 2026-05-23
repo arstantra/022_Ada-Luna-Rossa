@@ -12,6 +12,17 @@ export interface MasterContextData {
     teacherProfile: string;
 }
 
+/**
+ * Una settimana nel calendario de La Rotta.
+ * mondayDate: ISO string della data del lunedì (es. "2025-09-15").
+ * activeBlocks: array 1-indexed dei blocchi presenti (es. [1,2,3] oppure [1,3] se BL2 è assente).
+ */
+export interface WeekEntry {
+    weekNumber: number;
+    mondayDate: string;
+    activeBlocks: number[];
+}
+
 export interface GroundingSource {
     uri: string;
     title: string;

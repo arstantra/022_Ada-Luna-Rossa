@@ -1,9 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   ChatBubbleOvalLeftEllipsisIcon, ClipboardDocumentCheckIcon,
   BookOpenIcon, ClipboardListIcon, UsersIcon,
   BriefcaseIcon, PresentationChartBarIcon, ToolboxIcon,
-  ImageIcon, DocumentTextIcon, PencilIcon, SparklesIcon,
+  ImageIcon, DocumentTextIcon, SparklesIcon,
   ArrowDownTrayIcon, ArrowUpTrayIcon, CalendarDaysIcon,
   ChevronDownIcon, FolderOpenIcon, WandIcon,
 } from './Icons';
@@ -14,7 +14,8 @@ export type ActiveView =
   | 'lobby' | 'chat' | 'planning' | 'roster' | 'notebooklm'
   | 'lezione_in_corso' | 'archivio_lezioni'
   | 'student_profile' | 'classroom_trend' | 'founding_documents'
-  | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt';
+  | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt'
+  | 'la_rotta' | 'ada_personality';
 
 interface SidebarProps {
   activeView: ActiveView;
@@ -41,17 +42,12 @@ interface SidebarProps {
 
   // Gestione del Corso
   onOpenFoundingDocuments: () => void;
-  onOpenBlockDayDefaults: () => void;
-  onOpenInstructions: () => void;
+  onOpenLaRotta: () => void;
+  onOpenAdaPersonality: () => void;
   onExportData: () => void;
   onImportData: () => void;
   onExportCourseBook: () => void;
   onOpenApiSettings: () => void;
-  onSaveInstructions: (context: string) => void;
-
-  // Disciplina
-  disciplina: string;
-  onSaveDisciplina: (value: string) => void;
 
   // Misc
   onShowToast: (message: string, type: 'success' | 'info' | 'error') => void;
@@ -155,10 +151,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenStrategicDashboard, onOpenGantt, onOpenToolkit, onOpenImageGenerator,
   onOpenLezioneinCorso, onOpenArchivioLezioni, onOpenNotebookLM, hasActiveLessons,
   onOpenClassroomTrend, onOpenGroupsArchive, onOpenStudentRoster,
-  onOpenFoundingDocuments, onOpenBlockDayDefaults,
-  onOpenInstructions, onExportData, onImportData,
-  onExportCourseBook, onOpenApiSettings, onSaveInstructions,
-  disciplina, onSaveDisciplina,
+  onOpenFoundingDocuments, onOpenLaRotta, onOpenAdaPersonality,
+  onExportData, onImportData,
+  onExportCourseBook, onOpenApiSettings,
   onShowToast,
 }) => {
   const [contenutoOpen, setContenutoOpen] = useState(true);
@@ -166,49 +161,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [monitoraggioOpen, setMonitoraggioOpen] = useState(true);
   const [gestioneOpen, setGestioneOpen] = useState(false);
   const [strumentiOpen, setStrumentiOpen] = useState(false);
-  const [isDisciplinaEditing, setIsDisciplinaEditing] = useState(false);
-  const [disciplinaTemp, setDisciplinaTemp] = useState(disciplina);
-  const disciplinaInputRef = useRef<HTMLInputElement>(null);
-  const instructionImportRef = useRef<HTMLInputElement>(null);
-
-  // Sync disciplina when prop changes
-  React.useEffect(() => { setDisciplinaTemp(disciplina); }, [disciplina]);
-  React.useEffect(() => { if (isDisciplinaEditing) disciplinaInputRef.current?.focus(); }, [isDisciplinaEditing]);
-
-  const handleDisciplinaSave = useCallback(() => {
-    onSaveDisciplina(disciplinaTemp.trim());
-    setIsDisciplinaEditing(false);
-  }, [disciplinaTemp, onSaveDisciplina]);
-
-  const handleDisciplinaKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleDisciplinaSave();
-    else if (e.key === 'Escape') { setDisciplinaTemp(disciplina); setIsDisciplinaEditing(false); }
-  }, [handleDisciplinaSave, disciplina]);
-
-  const handleFileImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      onSaveInstructions(text);
-      onShowToast('Contesto importato con successo!', 'success');
-    };
-    reader.onerror = () => onShowToast('Errore durante la lettura del file.', 'error');
-    reader.readAsText(file);
-    e.target.value = '';
-  }, [onSaveInstructions, onShowToast]);
 
   return (
     <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-600/55 flex-shrink-0 shadow-[4px_0_32px_rgba(0,0,0,0.75)]">
-      <input
-        type="file"
-        ref={instructionImportRef}
-        onChange={handleFileImport}
-        accept=".txt,.md"
-        className="hidden"
-      />
-
       {/* ── Conversa con Ada ──────────────────────────────────────────── */}
       <div className="flex-shrink-0 p-3 border-b border-gray-600/40 bg-gray-900/80 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
         <button
@@ -335,45 +290,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         </CollapsibleSectionLabel>
         <CollapsibleContent isOpen={gestioneOpen}>
           <div className="space-y-0.5 pb-1">
-            {/* Campo Disciplina */}
-            <div className="mx-1 mb-2 mt-1 px-2 py-2 rounded-lg bg-gray-800/60 border border-gray-700/40">
-              <p className="text-[10px] text-gray-600 font-mono uppercase tracking-wider mb-1.5">Disciplina / Corso</p>
-              {isDisciplinaEditing ? (
-                <input
-                  ref={disciplinaInputRef}
-                  type="text"
-                  value={disciplinaTemp}
-                  onChange={e => setDisciplinaTemp(e.target.value)}
-                  onBlur={handleDisciplinaSave}
-                  onKeyDown={handleDisciplinaKeyDown}
-                  placeholder="es. Matematica, Design, Storia…"
-                  className="w-full bg-gray-900 border border-purple-500/40 rounded-md px-2 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500/60"
-                />
-              ) : (
-                <button
-                  onClick={() => setIsDisciplinaEditing(true)}
-                  className="w-full text-left px-2 py-1 rounded-md text-sm hover:bg-gray-700/50 group flex items-center justify-between transition-colors"
-                >
-                  <span className={disciplina ? 'text-purple-300 font-medium' : 'text-gray-600 italic'}>
-                    {disciplina || 'Clicca per impostare…'}
-                  </span>
-                  <PencilIcon className="h-3 w-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              )}
-            </div>
-
-            <NavItem icon={<CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />} label="La Rotta" isActive={false} onClick={onOpenBlockDayDefaults} indent />
+            <NavItem icon={<CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />} label="La Rotta" isActive={activeView === 'la_rotta'} onClick={onOpenLaRotta} indent />
             <NavItem icon={<DocumentTextIcon className="h-4 w-4 flex-shrink-0" />} label="Documenti Fondanti" isActive={activeView === 'founding_documents'} onClick={onOpenFoundingDocuments} indent />
-
-            <div className="group flex items-center justify-between rounded-lg hover:bg-gray-800/60 transition-colors">
-              <button onClick={onOpenInstructions} className="flex-grow flex items-center gap-3 pl-4 pr-2 py-2 text-sm text-gray-400 hover:text-gray-200">
-                <SparklesIcon className="h-4 w-4 flex-shrink-0" />
-                <span>Personalità di Ada</span>
-              </button>
-              <button onClick={() => instructionImportRef.current?.click()} className="p-2 mr-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-700/50 transition-opacity text-gray-500" title="Importa da file">
-                <ArrowUpTrayIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            <NavItem icon={<SparklesIcon className="h-4 w-4 flex-shrink-0" />} label="Personalità di Ada" isActive={activeView === 'ada_personality'} onClick={onOpenAdaPersonality} indent />
 
             <NavItem icon={<ArrowDownTrayIcon className="h-4 w-4 flex-shrink-0" />} label="Esporta Backup" isActive={false} onClick={onExportData} indent />
             <NavItem icon={<ArrowUpTrayIcon className="h-4 w-4 flex-shrink-0" />} label="Importa Backup" isActive={false} onClick={onImportData} indent />
