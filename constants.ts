@@ -1,5 +1,5 @@
 // constants.ts
-import type { Mode, LessonType } from './types';
+import type { Mode, LessonType, ActivityType } from './types';
 
 export const LOCAL_STORAGE_INSTRUCTION_KEY = 'ada-system-instruction';
 export const LOCAL_STORAGE_CONSTITUTION_KEY = 'ada-constitution';
@@ -209,6 +209,14 @@ export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   discussione:        'Discussione',
   uda:                'UDA',
   fsl:                'FSL',
+};
+
+export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
+  ricerca:            'Ricerca',
+  audiovisivo:        'Audiovisivo',
+  produzione_scritta: 'Produzione scritta',
+  progetto:           'Progetto',
+  altro:              'Altro',
 };
 
 export const AUTO_LABELS = {

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, CourseModule } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, CourseModule, ActivityType } from '../types';
+import { ACTIVITY_TYPE_LABELS } from '../constants';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
@@ -35,14 +36,22 @@ interface BlockWorkspaceViewProps {
     onSaveModules?: (modules: CourseModule[]) => void;
     onUpdateBlockModuleId?: (moduleId: string | undefined, sectionId?: string | undefined, inheritedTipologia?: LessonType) => void;
     teacherProfile?: string;
+    // Attività — Step 8
+    onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onUpdateTipologia, conversationModules, onSaveModules, onUpdateBlockModuleId, teacherProfile }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onUpdateTipologia, conversationModules, onSaveModules, onUpdateBlockModuleId, teacherProfile, onAddActivity }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
     const [extractedPreview, setExtractedPreview] = useState<CourseModule[] | null>(null);
+    // Attività form state — Step 8
+    const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
+    const [activityTitle, setActivityTitle] = useState('');
+    const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
+    const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
+    const [activityDescription, setActivityDescription] = useState('');
     const editorRef = useRef<HTMLDivElement>(null);
 
     const prevMsgCountRef = useRef(0);
@@ -204,6 +213,16 @@ ${htmlContent}
         const section = selectedModule?.sections.find(s => s.id === sectionId);
         onUpdateBlockModuleId(block.moduleId, sectionId, section?.lessonType);
     }, [onUpdateBlockModuleId, block?.moduleId, selectedModule]);
+
+    const handleSubmitActivity = useCallback(() => {
+        if (!activityTitle.trim() || !onAddActivity) return;
+        onAddActivity(activityTitle.trim(), activityType, activityDueInBlocks, activityDescription.trim() || undefined);
+        setActivityTitle('');
+        setActivityType('produzione_scritta');
+        setActivityDueInBlocks(4);
+        setActivityDescription('');
+        setIsActivityFormOpen(false);
+    }, [activityTitle, activityType, activityDueInBlocks, activityDescription, onAddActivity]);
 
     const editorToolbarActions = useMemo(() => (
         <button
@@ -393,9 +412,85 @@ ${htmlContent}
                     </div>
                     <footer className="flex-shrink-0 px-6 pb-5 pt-3 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
                         <div className="max-w-3xl mx-auto">
-                            {currentModeId && onModeChange && (
-                                <div className="mb-2">
-                                    <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
+                            {/* Form inline "Lancia attività" */}
+                            {isActivityFormOpen && onAddActivity && (
+                                <div className="mb-3 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3">
+                                    <p className="text-[10px] font-mono text-rose-400/80 mb-2">↗ Nuova attività</p>
+                                    <input
+                                        type="text"
+                                        value={activityTitle}
+                                        onChange={e => setActivityTitle(e.target.value)}
+                                        placeholder="Titolo dell'attività..."
+                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 mb-2"
+                                        autoFocus
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitActivity(); } }}
+                                    />
+                                    <div className="flex items-center gap-1 flex-wrap mb-2">
+                                        {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
+                                            <button
+                                                key={t}
+                                                onClick={() => setActivityType(t)}
+                                                className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                                    activityType === t
+                                                        ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
+                                                        : 'text-gray-600 hover:text-gray-400 border border-transparent'
+                                                }`}
+                                            >
+                                                {ACTIVITY_TYPE_LABELS[t]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-[10px] font-mono text-gray-500">Scadenza:</span>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={20}
+                                            value={activityDueInBlocks}
+                                            onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                                            className="w-12 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center"
+                                        />
+                                        <span className="text-[10px] font-mono text-gray-500">blocchi</span>
+                                    </div>
+                                    <textarea
+                                        value={activityDescription}
+                                        onChange={e => setActivityDescription(e.target.value)}
+                                        placeholder="Istruzioni per gli studenti (opzionale)"
+                                        rows={2}
+                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 resize-none mb-2"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleSubmitActivity}
+                                            disabled={!activityTitle.trim()}
+                                            className="px-3 py-1 text-[10px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            Lancia
+                                        </button>
+                                        <button
+                                            onClick={() => setIsActivityFormOpen(false)}
+                                            className="px-3 py-1 text-[10px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors"
+                                        >
+                                            Annulla
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Riga ModePills + pulsante Lancia attività */}
+                            {!isActivityFormOpen && (
+                                <div className="mb-2 flex items-center justify-between min-h-[22px]">
+                                    {currentModeId && onModeChange
+                                        ? <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
+                                        : <div />
+                                    }
+                                    {onAddActivity && (
+                                        <button
+                                            onClick={() => setIsActivityFormOpen(true)}
+                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono text-rose-400/70 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 hover:border-rose-400/35 transition-colors ml-2 flex-shrink-0"
+                                        >
+                                            ↗ Lancia attività
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             <ChatInput

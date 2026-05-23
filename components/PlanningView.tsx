@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, CourseModule } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, CourseModule, Activity, ActivityType } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -50,9 +50,10 @@ interface PlanningViewProps {
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
   onSaveModules?: (modules: CourseModule[]) => void;
+  onAddActivity?: (activity: Omit<Activity, 'id'>) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onSaveModules }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onSaveModules, onAddActivity }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
@@ -190,6 +191,20 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         };
         handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), promoted] });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
+
+    const handleAddActivity = useCallback((title: string, type: ActivityType, dueInBlocks: number, description?: string) => {
+        if (!weekPlan || !activeBlock || !onAddActivity) return;
+        onAddActivity({
+            title,
+            type,
+            launchBlockId: activeBlock.id,
+            launchWeekNumber: weekPlan.weekNumber,
+            launchBlockIndex: weekPlan.activeBlockIndex,
+            dueInBlocks,
+            description,
+            status: 'in_corso',
+        });
+    }, [weekPlan, activeBlock, onAddActivity]);
 
     const objectiveContent = useMemo(() => {
         if (!activeBlock) return null;
@@ -448,6 +463,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onSaveModules={onSaveModules}
                     onUpdateBlockModuleId={handleUpdateBlockModuleId}
                     teacherProfile={masterContext.teacherProfile}
+                    onAddActivity={onAddActivity ? handleAddActivity : undefined}
                 />
             </main>
             {activeBlock && (

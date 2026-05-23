@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule } from '../types';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity } from '../types';
 import { LESSON_TYPE_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
@@ -312,6 +312,22 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
             .map(([tipologia, count]) => ({ tipologia, count }));
     }, [conversations]);
 
+    // ── Attività — raccolta e mappa offset globale ──────────────────────────────
+    const allActivities = useMemo(
+        () => conversations.flatMap(c => c.activities ?? []) as Activity[],
+        [conversations]
+    );
+
+    const globalOffsetMap = useMemo(() => {
+        const map = new Map<number, number>();
+        let offset = 0;
+        weekData.forEach(w => {
+            map.set(w.weekNumber, offset);
+            offset += w.blocks.length;
+        });
+        return map;
+    }, [weekData]);
+
     const selectKeyDownHandler = (e: React.KeyboardEvent<HTMLSelectElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.stopPropagation();
@@ -449,6 +465,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const blockDate = getExactDateForBlock(week.dates, block.day, teacherProfile);
                                         const dateString = blockDate ? ` - ${blockDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}` : '';
                                         const blockState = getBlockProgressState(block);
+                                        // Attività attive su questo blocco
+                                        const blockGlobalIdx = (globalOffsetMap.get(week.weekNumber) ?? 0) + index;
+                                        const blockActivities = isSpecialStatus ? [] : allActivities.filter(a => {
+                                            if (a.status === 'consegnata' || a.status === 'scaduta') return false;
+                                            const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
+                                            const dueGlobal = launchGlobal + a.dueInBlocks;
+                                            return blockGlobalIdx >= launchGlobal && blockGlobalIdx <= dueGlobal;
+                                        });
 
                                         return (
                                         <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-600/40">
@@ -532,6 +556,28 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             {modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
                                                         </select>
                                                     </div>
+                                                    {/* Attività attive su questo blocco */}
+                                                    {blockActivities.length > 0 && (
+                                                        <div className="flex items-center gap-1.5 pl-8 flex-wrap">
+                                                            {blockActivities.slice(0, 2).map(a => {
+                                                                const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
+                                                                const dueGlobal = launchGlobal + a.dueInBlocks;
+                                                                const isLaunch = blockGlobalIdx === launchGlobal;
+                                                                const isDue = blockGlobalIdx === dueGlobal;
+                                                                return (
+                                                                    <span key={a.id} className={`flex items-center gap-0.5 text-[9px] font-mono ${isDue ? 'text-amber-400' : 'text-rose-300/70'}`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDue ? 'bg-amber-400' : 'bg-rose-500'}`} />
+                                                                        {isLaunch && '↗ '}
+                                                                        {isDue && '⚑ '}
+                                                                        <span className="max-w-[80px] truncate">{a.title}</span>
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                            {blockActivities.length > 2 && (
+                                                                <span className="text-[9px] font-mono text-gray-600">+{blockActivities.length - 2}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2 flex-shrink-0 pl-4">
                                                     {block.isLocked && !isSpecialStatus && (

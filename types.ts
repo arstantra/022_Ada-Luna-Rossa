@@ -96,6 +96,33 @@ export interface CourseModule {
   pillar?: string;
 }
 
+export type ActivityType =
+  | 'ricerca'
+  | 'audiovisivo'
+  | 'produzione_scritta'
+  | 'progetto'
+  | 'altro';
+
+export type ActivityStatus =
+  | 'in_corso'       // lanciata, scadenza non ancora raggiunta
+  | 'in_scadenza'    // mancano ≤ 1 blocco alla scadenza
+  | 'consegnata'     // docente ha marcato come consegnata
+  | 'scaduta';       // scadenza superata senza consegna
+
+export interface Activity {
+  id: string;
+  title: string;
+  type: ActivityType;
+  launchBlockId: string;        // id del BlockDetails da cui è stata lanciata
+  launchWeekNumber: number;
+  launchBlockIndex: number;     // indice blocco nella settimana (0-based)
+  dueInBlocks: number;          // scadenza: N blocchi dopo il lancio
+  moduleId?: string;
+  description?: string;
+  status: ActivityStatus;
+  deliveredAt?: string;         // ISO date, se consegnata
+}
+
 export interface Pillar {
     name: string;
 }
@@ -302,6 +329,7 @@ weekPlan?: WeekPlan;
   tempEvaluation?: Partial<Evaluation>;
   pendingContent?: DetachedLesson[];
   modules?: CourseModule[];   // estratti dal Profilo del Corso, confermati dal docente
+  activities?: Activity[];    // attività lanciate da blocchi di questa settimana
 }
 
 export interface Mode {

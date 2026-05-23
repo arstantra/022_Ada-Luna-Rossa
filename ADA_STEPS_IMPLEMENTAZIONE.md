@@ -512,7 +512,7 @@ updateConversation(conv.id, c => ({
 
 ---
 
-## Step 8 — Attività con timeline (il canale rigido)
+## Step 8 — Attività con timeline (il canale rigido) ✅ COMPLETATO
 
 **Obiettivo**: introdurre le `Activity` — entità autonome lanciate da un blocco con scadenza in numero di blocchi. Sono il "canale rigido" del sistema: una volta lanciate, la scadenza non cambia nemmeno se la sequenza delle lezioni cambia. L'asse temporale è in blocchi, non in date.
 
@@ -618,6 +618,16 @@ function getActivityDueWeek(
 - Nel `GanttView` l'attività appare come barra nella sezione dedicata
 - Marcare un'attività come consegnata: il colore nella barra cambia a emerald
 - Con zero attività: nessun crash, nessuna sezione vuota mostrata nel Gantt
+
+### Scelte implementative (2026-05-24)
+- **`ActivityType` e `ActivityStatus`** in `types.ts`, `activities?: Activity[]` aggiunto a `Conversation`.
+- **`ACTIVITY_TYPE_LABELS`** in `constants.ts` (stesso pattern di `LESSON_TYPE_LABELS`).
+- **Form inline** in `BlockWorkspaceView` footer: compare sopra `ChatInput` al click di "↗ Lancia attività". Coesiste con `ModePills` nella stessa riga quando il form è chiuso. Nessun modale.
+- **Catena prop**: `MainApp.handleAddActivity` → `PlanningView.onAddActivity` → `PlanningView.handleAddActivity` (arricchisce con launchWeekNumber/launchBlockId/launchBlockIndex) → `BlockWorkspaceView.onAddActivity` (riceve title/type/dueInBlocks/description).
+- **`handleMarkActivityDelivered`** in MainApp: cerca la conversazione che contiene l'attività e aggiorna `status: 'consegnata'` + `deliveredAt`.
+- **StrategicDashboardView**: `allActivities` raccoglie da tutte le conversazioni; `globalOffsetMap` mappa weekNumber → offset blocco globale; per ogni blocco computa `blockActivities` (attività il cui intervallo [launchGlobal, dueGlobal] include il blocco). Overlay inline nella card blocco, max 2 + badge `+N`. Prefisso `↗` per blocco di lancio, `⚑` per blocco di scadenza.
+- **GanttView**: `weekBlockCounts` da `conv.weekPlan.blocks.length`; `getActivityDueWeek` conta blocchi in avanti fino a esaurire `dueInBlocks`. Sezione "Attività" separata sotto i moduli. Barra da `launchWeekNumber` a `dueWeek`. Pannello dettaglio in fondo con "✓ Segna consegnata". Nessun pannello se zero attività.
+- **Status derivato al display**: `getEffectiveActivityStatus` computa in_scadenza/scaduta a runtime dal currentWeek vs dueWeek — non serve aggiornamento background del DB.
 
 ---
 

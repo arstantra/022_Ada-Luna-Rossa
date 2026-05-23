@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import type { Conversation, BlockStatus } from '../types';
+import React, { useMemo, useState } from 'react';
+import type { Conversation, BlockStatus, Activity, ActivityStatus } from '../types';
 import { XIcon, CalendarDaysIcon } from './Icons';
 
 // ── Tipi interni ──────────────────────────────────────────────────────────────
@@ -93,6 +93,47 @@ function detectCurrentWeek(conversations: Conversation[]): number | null {
   return null;
 }
 
+// ── Colori attività ───────────────────────────────────────────────────────────
+
+const ACTIVITY_BAR: Record<ActivityStatus, string> = {
+  in_corso:    'bg-rose-800/60',
+  in_scadenza: 'bg-amber-900/60',
+  consegnata:  'bg-emerald-900/50',
+  scaduta:     'bg-gray-800/60',
+};
+const ACTIVITY_DOT_CLS: Record<ActivityStatus, string> = {
+  in_corso:    'bg-rose-500',
+  in_scadenza: 'bg-amber-400',
+  consegnata:  'bg-emerald-500',
+  scaduta:     'bg-gray-500',
+};
+const ACTIVITY_TYPE_LABEL: Record<string, string> = {
+  ricerca: 'Ricerca', audiovisivo: 'Audiovisivo', produzione_scritta: 'Produzione scritta', progetto: 'Progetto', altro: 'Altro',
+};
+
+// ── Helper attività ───────────────────────────────────────────────────────────
+
+function getActivityDueWeek(activity: Activity, weekBlockCounts: Map<number, number>): number {
+  const weekNums = [...weekBlockCounts.keys()].sort((a, b) => a - b);
+  let remaining = activity.dueInBlocks;
+  for (const w of weekNums) {
+    if (w < activity.launchWeekNumber) continue;
+    const total = weekBlockCounts.get(w) ?? 0;
+    const countFromHere = w === activity.launchWeekNumber ? total - activity.launchBlockIndex : total;
+    if (remaining <= countFromHere) return w;
+    remaining -= countFromHere;
+  }
+  return weekNums[weekNums.length - 1] ?? activity.launchWeekNumber;
+}
+
+function getEffectiveActivityStatus(activity: Activity, dueWeek: number, currentWeek: number | null): ActivityStatus {
+  if (activity.status === 'consegnata') return 'consegnata';
+  if (currentWeek === null) return 'in_corso';
+  if (currentWeek > dueWeek) return 'scaduta';
+  if (currentWeek === dueWeek) return 'in_scadenza';
+  return 'in_corso';
+}
+
 // ── Layout constants ──────────────────────────────────────────────────────────
 
 const LEFT      = 192;  // px – larghezza colonna nomi modulo
@@ -106,20 +147,24 @@ interface GanttViewProps {
   conversations: Conversation[];
   onClose: () => void;
   onNavigateToWeek: (weekNumber: number) => void;
+  onMarkActivityDelivered?: (activityId: string) => void;
 }
 
 // ── Header (definito prima di GanttView per evitare forward reference) ────────
 
-const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number }> = ({
-  onClose, count, weeks,
+const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number; activityCount: number }> = ({
+  onClose, count, weeks, activityCount,
 }) => (
   <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-800/50">
     <div className="flex items-center gap-3">
       <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
       <h1 className="text-lg font-display font-semibold text-white">Gantt del Corso</h1>
-      {count > 0 && (
+      {(count > 0 || activityCount > 0) && (
         <span className="text-xs font-mono text-gray-600">
-          {count} moduli · {weeks} settimane
+          {count > 0 && `${count} moduli`}
+          {count > 0 && activityCount > 0 && ' · '}
+          {activityCount > 0 && <span className="text-rose-500/70">{activityCount} attività</span>}
+          {weeks > 0 && ` · ${weeks} settimane`}
         </span>
       )}
     </div>
@@ -146,9 +191,11 @@ const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number 
 
 // ── Componente principale ─────────────────────────────────────────────────────
 
-const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigateToWeek }) => {
+const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigateToWeek, onMarkActivityDelivered }) => {
 
   // Tutti gli hook prima di qualsiasi return condizionale (regola React)
+
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
   const modules = useMemo((): GanttModule[] => {
     const map = new Map<string, GanttModule>();
@@ -180,10 +227,26 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
     return [...map.values()].sort((a, b) => a.firstWeek - b.firstWeek);
   }, [conversations]);
 
-  const maxWeek = useMemo(
-    () => (modules.length === 0 ? 0 : Math.max(...modules.map(m => m.lastWeek))),
-    [modules],
+  const weekBlockCounts = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const conv of conversations) {
+      if (!conv.weekPlan) continue;
+      map.set(conv.weekPlan.weekNumber, conv.weekPlan.blocks.length);
+    }
+    return map;
+  }, [conversations]);
+
+  const activities = useMemo(
+    () => conversations.flatMap(c => c.activities ?? []) as Activity[],
+    [conversations]
   );
+
+  const maxWeek = useMemo(() => {
+    const moduleMax = modules.length === 0 ? 0 : Math.max(...modules.map(m => m.lastWeek));
+    const actDueWeeks = activities.map(a => getActivityDueWeek(a, weekBlockCounts));
+    const actMax = actDueWeeks.length > 0 ? Math.max(...actDueWeeks) : 0;
+    return Math.max(moduleMax, actMax);
+  }, [modules, activities, weekBlockCounts]);
 
   const currentWeek = useMemo(() => detectCurrentWeek(conversations), [conversations]);
 
@@ -203,7 +266,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   if (maxWeek === 0) {
     return (
       <div className="flex flex-col h-full bg-[#0D1117]">
-        <GanttHeader onClose={onClose} count={0} weeks={0} />
+        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm font-mono text-gray-600">
             Nessun dato da visualizzare. Pianifica alcune settimane per vedere il Gantt.
@@ -217,7 +280,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   return (
     <div className="flex flex-col h-full bg-[#0D1117]">
-      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} />
+      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} />
 
       <div className="flex-1 overflow-auto">
         <div className="p-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
@@ -325,8 +388,121 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
               </div>
             );
           })}
+          {/* ── Sezione Attività ─────────────────────────────────────────── */}
+          {activities.length > 0 && (
+            <>
+              <div className="flex mt-8" style={{ height: 28 }}>
+                <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 flex-shrink-0" />
+                  <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/80">Attività</span>
+                  <span className="text-[9px] font-mono text-gray-700">{activities.length}</span>
+                </div>
+                <div className="flex-1 self-center border-t border-gray-800/30" />
+              </div>
+              {activities.map(activity => {
+                const dueWeek = getActivityDueWeek(activity, weekBlockCounts);
+                const effectiveStatus = getEffectiveActivityStatus(activity, dueWeek, currentWeek);
+                const isSelected = selectedActivity?.id === activity.id;
+                const clampedDueWeek = Math.min(dueWeek, maxWeek);
+                return (
+                  <div key={activity.id} className="flex group" style={{ height: ROW }}>
+                    <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center pr-6">
+                      <button
+                        className="w-full text-left truncate"
+                        title={activity.title}
+                        onClick={() => setSelectedActivity(isSelected ? null : activity)}
+                      >
+                        <span className={`text-xs font-display transition-colors ${isSelected ? 'text-rose-300' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                          {activity.title}
+                        </span>
+                      </button>
+                    </div>
+                    <div className="flex-1 relative">
+                      <div className="absolute bottom-0 left-0 right-0 border-b border-gray-800/25 pointer-events-none" />
+                      {currentWeek && currentWeek <= maxWeek && (
+                        <div className="absolute inset-y-0 bg-purple-500/5 pointer-events-none" style={{ left: colL(currentWeek), width: colW() }} />
+                      )}
+                      {/* Bar */}
+                      <button
+                        className={`absolute rounded-sm transition-opacity hover:opacity-80 ${ACTIVITY_BAR[effectiveStatus]}`}
+                        style={{ left: barL(activity.launchWeekNumber), width: barW(activity.launchWeekNumber, clampedDueWeek), height: 4, top: '50%', transform: 'translateY(-50%)' }}
+                        onClick={() => setSelectedActivity(isSelected ? null : activity)}
+                        title={`${activity.title} — scadenza sett. ${dueWeek}`}
+                      />
+                      {/* Launch dot */}
+                      <div
+                        className={`absolute rounded-full ring-1 ring-gray-900 pointer-events-none ${ACTIVITY_DOT_CLS[effectiveStatus]}`}
+                        style={{ left: dotL(activity.launchWeekNumber), top: '50%', transform: 'translate(-50%, -50%)', width: 8, height: 8 }}
+                      />
+                      {/* Due dot (if different week and in bounds) */}
+                      {dueWeek !== activity.launchWeekNumber && dueWeek <= maxWeek && (
+                        <div
+                          className={`absolute rounded-sm ring-1 ring-gray-900 pointer-events-none ${
+                            effectiveStatus === 'consegnata' ? 'bg-emerald-500' :
+                            effectiveStatus === 'scaduta'    ? 'bg-gray-500' : 'bg-amber-400'
+                          }`}
+                          style={{ left: dotL(dueWeek), top: '50%', transform: 'translate(-50%, -50%)', width: 6, height: 6 }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
         </div>
       </div>
+
+      {/* ── Pannello dettaglio attività ──────────────────────────────────────── */}
+      {selectedActivity && (() => {
+        const dueWeek = getActivityDueWeek(selectedActivity, weekBlockCounts);
+        const effectiveStatus = getEffectiveActivityStatus(selectedActivity, dueWeek, currentWeek);
+        return (
+          <div className="flex-shrink-0 border-t border-gray-800/50 bg-gray-900/80 backdrop-blur-sm px-6 py-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${ACTIVITY_DOT_CLS[effectiveStatus]}`} />
+                  <span className="text-sm font-display font-semibold text-white truncate">{selectedActivity.title}</span>
+                  <span className="text-[10px] font-mono text-gray-500 flex-shrink-0">
+                    {ACTIVITY_TYPE_LABEL[selectedActivity.type] || selectedActivity.type}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] font-mono text-gray-500 flex-wrap">
+                  <span>Lanciata: sett. {selectedActivity.launchWeekNumber}</span>
+                  <span>Scadenza: sett. {dueWeek} ({selectedActivity.dueInBlocks} blocchi)</span>
+                  {effectiveStatus === 'consegnata' && <span className="text-emerald-400">● Consegnata</span>}
+                  {effectiveStatus === 'scaduta'    && <span className="text-gray-500">● Scaduta</span>}
+                  {effectiveStatus === 'in_scadenza' && <span className="text-amber-400">● In scadenza</span>}
+                </div>
+                {selectedActivity.description && (
+                  <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">{selectedActivity.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {effectiveStatus !== 'consegnata' && onMarkActivityDelivered && (
+                  <button
+                    onClick={() => {
+                      onMarkActivityDelivered(selectedActivity.id);
+                      setSelectedActivity(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-300 border border-emerald-500/25 rounded-lg hover:bg-emerald-500/10 hover:border-emerald-400/35 transition-all"
+                  >
+                    ✓ Segna consegnata
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedActivity(null)}
+                  className="p-1.5 rounded-md text-gray-600 hover:text-white hover:bg-gray-800/60 transition-colors"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
