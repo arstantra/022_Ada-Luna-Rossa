@@ -104,23 +104,29 @@ components/
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
   BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
+  FoundingDocumentsView.tsx  — Documenti Fondanti (full-page): Profilo del Corso, Progetto Didattico, Patto Formativo, Equipaggio — tutti in modalità html con DocumentEditor; pulsante "Genera con ADA" per Progetto Didattico e Patto Formativo
+  AdaPersonalityView.tsx     — Personalità di Ada (full-page): editor html delle istruzioni di sistema con pulsante "Genera con ADA"
+  RouteView.tsx              — La Rotta (full-page): giorni predefiniti dei blocchi + calendario settimane con date lunedì→domenica e toggle blocchi
   ModePills.tsx              — pill inline selezione modalità (sostituisce il vecchio ModeSelector a dropdown)
   EditableField.tsx          — input inline con feedback salvataggio (bordo verde 1.5s)
   EditableTextarea.tsx       — textarea inline con feedback salvataggio (bordo verde 1.5s)
 
 hooks/
-  useConversations.ts        — stato conversazioni + updateConversation
-  useMasterContext.ts        — contesto docente (disciplina, profilo, API key, currentModeId)
+  useConversations.ts        — stato conversazioni + updateConversation (NIENTE labelIds, NIENTE updateConversationLabels — rimossi)
+  useMasterContext.ts        — contesto docente: systemInstruction, constitution, crewContext, rulesContext, teacherProfile, blockDayDefaults, routeCalendar, currentModeId
   usePlanning.ts             — logica pianificazione blocchi
 
 services/
   db.ts                      — IndexedDB (idb)
-  gemini.ts                  — wrapper Gemini API
+  gemini.ts                  — wrapper Gemini API; include generateDocumentContent(docType, teacherProfile) per generare Progetto Didattico, Patto Formativo, Personalità di Ada a partire dal Profilo del Corso
 
 types.ts                     — tutti i tipi (fonte della verità)
-constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, ecc.
+constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LOCAL_STORAGE_ROUTE_CALENDAR_KEY, ecc.
 utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, ecc.
 ```
+
+> **File orfani (non importati, non rimuovere con rm — solo dead code):**
+> `LabelManagementModal.tsx`, `AssignLabelsModal.tsx`, `BlockDayDefaultsModal.tsx`, `MasterContextModal.tsx`, `hooks/useLabels.ts`
 
 ---
 
@@ -222,9 +228,20 @@ Usare sempre `handlePlanningModeChange` per il Laboratorio. L'iniezione del mess
 
 ## Modello Dati Essenziale
 
+### `WeekEntry` (La Rotta)
+```ts
+export interface WeekEntry {
+    weekNumber: number;
+    mondayDate: string;      // ISO string, es. "2025-09-15"
+    activeBlocks: number[];  // 1-indexed, es. [1,2,3] oppure [1,3] se BL2 assente
+}
+```
+Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar'` (JSON array). Gestita in `useMasterContext` come `routeCalendar: WeekEntry[]` con `handleSaveRouteCalendar`.
+
 ### `Conversation`
 ```ts
-{ id, title, messages: Message[], weekPlan?: WeekPlan, labelIds?, studentId? }
+{ id, title, messages: Message[], weekPlan?: WeekPlan, studentId? }
+// labelIds è stato RIMOSSO — niente etichette nell'app
 ```
 
 ### `WeekPlan`
@@ -362,10 +379,13 @@ Questo vale anche per hook che referenziano `block`, `weekPlan` o altri dati ric
 'students'            — StudentRosterView
 'student_profile'     — StudentProfileView
 'classroom_trend'     — ClassroomTrendView
-'founding_documents'  — FoundingDocumentsView
+'founding_documents'  — FoundingDocumentsView (Documenti Fondanti)
+'la_rotta'            — RouteView (La Rotta — calendario settimane e giorni blocchi)
+'ada_personality'     — AdaPersonalityView (Personalità di Ada — istruzioni di sistema)
 'notebooklm'          — NotebookLMView
 'toolkit'             — ToolkitView
 'groups_archive'      — GroupsArchiveView
+'gantt'               — GanttView (Gantt del Corso)
 ```
 
 ---
@@ -375,10 +395,11 @@ Questo vale anche per hook che referenziano `block`, `weekPlan` o altri dati ric
 Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron, stile monospace) + `CollapsibleContent`. Stato default: CONTENUTI, IN AULA, MONITORAGGIO aperte; GESTIONE chiusa.
 
 ```
-[Conversa con Ada]  — button gradient viola, mostra disciplina come sottotitolo font-mono
+[Conversa con Ada]  — button gradient viola (nessun sottotitolo disciplina — rimosso)
 
 ▾ CONTENUTI DEL CORSO          (CollapsibleSectionLabel, default: aperta)
   • Progettazione del Corso        (→ strategic_dashboard)
+  • Gantt del Corso                (→ gantt)
   • Laboratori e Strumenti ▾       (CollapsibleSection con icona, sotto-livello)
       ↳ Toolkit                    (→ toolkit)
       ↳ Atelier Visivo             (DISABILITATO — badge "API")
@@ -394,9 +415,13 @@ Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron
   • Studentesse                    (→ students / student_profile)
 
 ▾ GESTIONE DEL CORSO           (CollapsibleSectionLabel, default: chiusa)
-    ↳ Disciplina, Documenti Fondanti, Profilo Docente,
-      Personalità di Ada, Etichette, Backup, API Key
+  • Documenti Fondanti             (→ founding_documents)
+  • La Rotta                       (→ la_rotta)
+  • Personalità di Ada             (→ ada_personality)
+  • Backup, API Key
 ```
+
+> **Rimosso definitivamente**: widget Disciplina/Corso in sidebar, NavItem "Etichette", NavItem "Profilo Docente" (inglobato in Profilo del Corso nei Documenti Fondanti).
 
 `NavItem` ha prop `disabled?: boolean` → badge "API", `opacity-30 cursor-not-allowed`.
 
@@ -439,3 +464,9 @@ progettata → in_corso → archiviata
 - Non aggiungere parametri a `usePlanning` oltre a `(updateConversation, showToast)` — la firma è stata semplificata (audit 2026-05-23). `addEvaluationToStudent` e `recordAttendanceForBlock` si chiamano direttamente in `MainApp`, non passano per il hook.
 - Non aggiungere `StartReviewPayload` o un `case 'start_review'` nel switch di `usePlanning` — il tipo è stato rimosso (audit 2026-05-23). Il consuntivo si gestisce con un messaggio testuale normale, senza payload strutturato.
 - Non aggiungere `// @ts-nocheck` a `services/gemini.ts` — rimosso nell'audit 2026-05-23. Usare `Part[]` dall'SDK (`@google/genai`) per tipizzare i part array.
+- Non reintrodurre le Etichette (`labelIds`, `useLabels`, `LabelManagementModal`, `AssignLabelsModal`) — rimosse definitivamente (2026-05-23). La funzione era obsoleta.
+- Non ripristinare il widget Disciplina/Corso nella Sidebar — rimosso (2026-05-23). Il profilo del corso è nei Documenti Fondanti.
+- Non separare di nuovo "Profilo Docente" da "Profilo del Corso" — unificati in un unico documento, stessa chiave DB `ada-teacher-profile`.
+- Non spostare La Rotta o Personalità di Ada dentro i Documenti Fondanti — sono view full-page separate con view id propri (`'la_rotta'`, `'ada_personality'`).
+- Non aggiungere auto-save dopo la generazione con "Genera con ADA" — il contenuto generato carica nell'editor ma si salva solo quando il docente modifica (autosave) o esplicitamente. Questo è intenzionale: il docente deve revisionare prima di salvare.
+- Non rinominare `LOCAL_STORAGE_ROUTE_CALENDAR_KEY` — è la chiave DB per il calendario de La Rotta. Cambiare la chiave perderebbe i dati esistenti degli utenti.

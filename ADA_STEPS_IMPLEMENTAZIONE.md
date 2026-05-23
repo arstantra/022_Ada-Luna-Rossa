@@ -297,6 +297,51 @@ Aggiungere in `Sidebar.tsx` sotto "Progettazione del Corso" una voce "Gantt del 
 
 ---
 
+## Step 5B — Riorganizzazione UX "Gestione del Corso" ✅ COMPLETATO (2026-05-23)
+
+**Obiettivo**: pulizia e riorganizzazione completa della sezione Gestione del Corso. Nessuna funzionalità tecnica nuova — solo miglioramento della struttura, denominazioni, e modalità di editing dei documenti.
+
+### Modifiche apportate
+
+**Documenti Fondanti (`FoundingDocumentsView.tsx`)**
+- Rinominati: Costituzione → "Progetto Didattico", Le Regole → "Patto Formativo"
+- Aggiunto: "Profilo del Corso" (unifica ex-Disciplina + ex-Profilo Docente, stessa chiave DB `ada-teacher-profile`)
+- Ordine tab: Profilo del Corso → Progetto Didattico → Patto Formativo → L'Equipaggio
+- Modalità editor: da `mode="markdown"` a `mode="html"` (WYSIWYG, incolla da Word)
+- Aggiunto pulsante **"Genera con ADA"** (viola outline) per Progetto Didattico e Patto Formativo — legge Profilo del Corso, genera con Gemini, carica nell'editor per revisione (non auto-salva)
+
+**La Rotta (`RouteView.tsx` — nuova view)**
+- Estratta dai Documenti Fondanti, diventa view full-page (`'la_rotta'`)
+- Sezione 1: giorni predefiniti per ciascun blocco (BL1–BL6 → giorno settimana)
+- Sezione 2: calendario settimane con data lunedì (domenica calcolata auto), toggle blocchi attivi
+- Salvataggio in DB: `WeekEntry[]` con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar'`
+
+**Personalità di Ada (`AdaPersonalityView.tsx` — nuova view)**
+- Da modal a view full-page (`'ada_personality'`)
+- Editor HTML `DocumentEditor` sempre editabile
+- Aggiunto pulsante **"Genera con ADA"** — genera istruzioni di sistema basate sul Profilo del Corso
+
+**Etichette — rimozione completa**
+- Rimossi: `useLabels.ts`, `LabelManagementModal.tsx`, `AssignLabelsModal.tsx`, `AUTO_LABELS` useEffect in MainApp
+- Rimosso `labelIds` da tipo `Conversation` e da `useConversations.ts`
+- File fisici lasciati come dead code (bash non ha permessi di scrittura su quei path)
+
+**Sidebar**
+- Rimosso widget Disciplina/Corso
+- "Personalità di Ada" diventa NavItem → `'ada_personality'`
+- "La Rotta" diventa NavItem → `'la_rotta'`
+- Rimossi NavItem "Etichette" e "Profilo Docente"
+
+**`services/gemini.ts`**
+- Aggiunto `generateDocumentContent(docType: 'costituzione'|'regole'|'personalita', teacherProfile)` — funzione di generazione documenti con prompt specifici per tipo
+
+### Note implementative
+- La chiave DB `ada-teacher-profile` rimane invariata — nessuna migrazione dati
+- `routeContext` (testo libero de La Rotta) ancora in DB per retrocompatibilità, ma non più mostrato in UI
+- In initial setup mode, `handleGenerateWithAda` aggiorna sia `generatedContentMap` che lo stato locale (`localConstitution`/`localRules`) per garantire che `handleFinishSetup` salvi il contenuto generato anche se il docente non fa modifiche
+
+---
+
 ## Step 6 — Radar equilibrio didattico
 
 **Obiettivo**: visualizzazione radar (spider chart) della distribuzione delle tipologie di lezione, integrata nella `StrategicDashboardView`. Aiuta il docente a vedere se il corso o un modulo è bilanciato tra teoria, pratica e procedura.
