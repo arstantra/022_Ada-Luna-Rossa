@@ -65,7 +65,6 @@ const BlockEditModal: React.FC<BlockEditModalProps> = ({ isOpen, onClose, block,
                             <option value="da definire">Da Definire</option>
                             <option value="normale">Normale (In Progettazione)</option>
                             <option value="saltato">Saltato</option>
-                            <option value="formazione scuola-lavoro">Formazione Scuola-Lavoro</option>
                             <option value="annullato">Annullato</option>
                         </select>
                     </div>

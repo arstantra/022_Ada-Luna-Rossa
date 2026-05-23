@@ -14,7 +14,7 @@ export type ActiveView =
   | 'lobby' | 'chat' | 'planning' | 'roster' | 'notebooklm'
   | 'lezione_in_corso' | 'archivio_lezioni'
   | 'student_profile' | 'classroom_trend' | 'founding_documents'
-  | 'toolkit' | 'strategic_dashboard' | 'groups_archive';
+  | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt';
 
 interface SidebarProps {
   activeView: ActiveView;
@@ -24,6 +24,7 @@ interface SidebarProps {
 
   // Contenuti del corso
   onOpenStrategicDashboard: () => void;
+  onOpenGantt: () => void;
   onOpenToolkit: () => void;
   onOpenImageGenerator: () => void;
 
@@ -153,7 +154,7 @@ const NavItem: React.FC<{
 const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onOpenConversaConAda,
-  onOpenStrategicDashboard, onOpenToolkit, onOpenImageGenerator,
+  onOpenStrategicDashboard, onOpenGantt, onOpenToolkit, onOpenImageGenerator,
   onOpenLezioneinCorso, onOpenArchivioLezioni, onOpenNotebookLM, hasActiveLessons,
   onOpenClassroomTrend, onOpenGroupsArchive, onOpenStudentRoster,
   onOpenFoundingDocuments, onOpenTeacherProfile, onOpenBlockDayDefaults,
@@ -239,6 +240,12 @@ const Sidebar: React.FC<SidebarProps> = ({
               label="Progettazione del Corso"
               isActive={activeView === 'strategic_dashboard'}
               onClick={onOpenStrategicDashboard}
+            />
+            <NavItem
+              icon={<CalendarDaysIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+              label="Gantt del Corso"
+              isActive={activeView === 'gantt'}
+              onClick={onOpenGantt}
             />
             <CollapsibleSection
               title="Laboratori e Strumenti"

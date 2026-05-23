@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -159,6 +159,10 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
 
+    const handleUpdateTipologia = useCallback((tipologia: LessonType | undefined) => {
+        handleUpdateBlockDetails({ tipologia });
+    }, [handleUpdateBlockDetails]);
+
     const handlePromote = useCallback((url: string) => {
         let title = url;
         try { title = new URL(url).hostname.replace('www.', ''); } catch { /* noop */ }
@@ -178,18 +182,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         switch (activeBlock.status) {
             case 'saltato':
                 return <div className="italic text-red-400/80">{activeBlock.reason || 'Blocco saltato, motivo non specificato'}</div>;
-            case 'formazione scuola-lavoro':
-                return (
-                    <div className="flex-grow flex items-center gap-2">
-                        <span className="font-semibold text-sky-400 flex-shrink-0">Attività FSL: </span>
-                        <EditableField
-                            value={activeBlock.objective || ''}
-                            onSave={(newObjective) => handleUpdateBlockDetails({ objective: newObjective })}
-                            placeholder="Descrivi l'attività FSL..."
-                            className="!py-0"
-                        />
-                    </div>
-                );
             case 'annullato':
                 return (
                     <div className="line-through text-gray-500">
@@ -380,7 +372,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
 
                     {/* Riga 3: obiettivo blocco attivo — solo Laboratorio, solo se presente */}
                     {activeWorkspaceTab === 'laboratorio' && activeBlock && (() => {
-                        const isSpecial = ['saltato', 'formazione scuola-lavoro', 'annullato'].includes(activeBlock.status);
+                        const isSpecial = ['saltato', 'annullato'].includes(activeBlock.status);
                         const hasObjective = activeBlock.objective?.trim();
                         const isEmpty = !hasObjective && !isSpecial && !activeBlock.lessonTitle;
 
@@ -437,6 +429,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onRemoveFonte={handleRemoveFonte}
                     onUpdateFonte={handleUpdateFonte}
                     onPromoteFonte={handlePromote}
+                    onUpdateTipologia={handleUpdateTipologia}
                 />
             </main>
             {activeBlock && (

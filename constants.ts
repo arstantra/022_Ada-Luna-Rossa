@@ -1,5 +1,5 @@
 // constants.ts
-import type { Mode } from './types';
+import type { Mode, LessonType } from './types';
 
 export const LOCAL_STORAGE_INSTRUCTION_KEY = 'ada-system-instruction';
 export const LOCAL_STORAGE_CONSTITUTION_KEY = 'ada-constitution';
@@ -197,6 +197,16 @@ export const LABEL_COLORS = [
   { key: 'pink', name: 'Rosa', bg: 'bg-pink-500/20', text: 'text-pink-300', ring: 'ring-1 ring-inset ring-pink-500/30' },
   { key: 'gray', name: 'Grigio', bg: 'bg-gray-500/20', text: 'text-gray-300', ring: 'ring-1 ring-inset ring-gray-500/30' },
 ];
+
+export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
+  frontale_teorica:   'Frontale teorica',
+  frontale_operativa: 'Frontale operativa',
+  laboratorio:        'Laboratorio',
+  verifica:           'Verifica',
+  discussione:        'Discussione',
+  uda:                'UDA',
+  fsl:                'FSL',
+};
 
 export const AUTO_LABELS = {
   PLANNING: { name: 'In Progettazione', color: 'amber' },

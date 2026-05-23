@@ -64,7 +64,129 @@ Non mappa Chi/Cosa/Come/Perché dello schema EQF — quello è un framework curr
 
 ---
 
-## 4. Il sistema di monitoraggio: tre livelli, visivo, non valutativo
+## 4. Tipologia di lezione (ex Pilastri)
+
+### Origine e problema del termine originale
+
+"Pilastro" nacque come classificazione della modalità didattica nel laboratorio di design della terza liceo — corso strutturato in modo atipico con tre tipi di lezione:
+
+- **Pilastro di sintonizzazione** → lezione frontale teorica ("vi racconto il mondo")
+- **Pilastro operativo** → lezione frontale procedurale ("vi mostro come si fa")
+- **Laboratorio** → attività pratica guidata ("ora fate voi")
+
+Un modello coerente per quel contesto specifico, ma con tre problemi:
+
+1. **Il nome "Pilastro" è opaco** — non comunica nulla a chi non conosce quella storia
+2. **È una soluzione di un corso diventata architettura globale** — non scala ad altre discipline
+3. **È rigida** — tre tipologie fisse, non configurabili per disciplina o stile
+
+### La soluzione: Tipologia di lezione, flessibile e configurabile
+
+Il concetto rimane valido — sapere in fase di pianificazione se una lezione è teoria, procedura o pratica è utile per bilanciare il corso e guidare l'AI. Il nome e la struttura cambiano.
+
+**Tipologia di lezione** è un tag configurabile per disciplina/corso. Valori di default:
+
+| Tipologia | Descrizione |
+|---|---|
+| Frontale teorica | Trasmissione diretta di conoscenze |
+| Frontale operativa | Dimostrazione di procedure e tecniche |
+| Laboratorio | Attività pratica guidata, sperimentazione |
+| Verifica | Valutazione formativa o sommativa |
+| Discussione | Dialogo strutturato, debate, confronto |
+| UDA | Unità di Apprendimento multidisciplinare |
+| FSL | Formazione Scuola Lavoro *(vedi §4.1)* |
+
+I valori sono personalizzabili: per il corso di design tornano Sintonizzazione / Operativa / Laboratorio — ma come configurazione di *quel* corso, non come architettura globale.
+
+### 4.1 FSL entra nella Tipologia
+
+FSL (Formazione Scuola Lavoro) era un pulsante/stato indipendente su `BlockDetails`. Architetturalmente era sbagliato: FSL è una *tipologia di attività*, non uno stato speciale del blocco.
+
+Conseguenza: il sistema degli stati si semplifica e i due assi diventano ortogonali.
+
+**Stati del blocco** — *cosa è successo o può succedere allo slot di calendario*:
+`normale · saltato · da definire · annullato`
+
+**Tipologia** — *come è fatta quella lezione*:
+`Frontale teorica · Frontale operativa · Laboratorio · Verifica · Discussione · UDA · FSL · [personalizzabile]`
+
+Un blocco FSL può essere saltato. Un blocco di verifica può essere da definire. Prima questi due assi erano mescolati nello stesso menu — concettualmente sbagliato, ora separati.
+
+---
+
+## 5. Workflow "Salta lezione" e la coda dei contenuti
+
+### Il problema architetturale sottostante
+
+In ADA lo **slot di calendario** (lunedì 3 marzo) e il **contenuto della lezione** (obiettivo, titolo, materiale) sono la stessa cosa — il blocco li contiene entrambi. Finché tutto va liscio funziona. Quando una lezione salta, i due concetti devono potersi separare.
+
+La soluzione sbagliata è lo slittamento automatico a cascata: se il Modulo 1 ha 5 lezioni pianificate e si salta la L2, far diventare L3→L2, L4→L3, L5→L4 richiede logica ricorsiva, rompe blocchi già elaborati e può spingere contenuti fuori dall'anno scolastico.
+
+### La soluzione: la coda dei contenuti
+
+Quando si salta un blocco già pianificato, il contenuto **si stacca dallo slot** e finisce in una piccola **coda** a livello di corso. I blocchi successivi rimangono dove sono — nessuno slittamento.
+
+```
+PRIMA del salto:
+[L1 ✓] [L2 pianificata] [L3 pianificata] [L4 pianificata] [L5 pianificata]
+
+DOPO aver saltato L2:
+[L1 ✓] [L2 saltata] [L3 pianificata] [L4 pianificata] [L5 pianificata]
+
+Coda contenuti: ⚠ "Contenuto L2 in sospeso — da collocare"
+```
+
+La coda è visibile nella vista del corso. ADA suggerisce automaticamente il prossimo blocco disponibile come destinazione, ma non esegue da sola. Il docente sceglie tra quattro opzioni:
+
+| Opzione | Comportamento |
+|---|---|
+| **Rimanda** | Il contenuto va al prossimo blocco disponibile (confermato dal docente) |
+| **Accorpa** | Si unisce al blocco successivo, che diventa visivamente una "lezione doppia" |
+| **Distribuisci su Classroom** | ADA costruisce il link per inviarlo come attività asincrona |
+| **Archivia** | Il contenuto resta nella storia del blocco saltato, accessibile ma non ricollocato |
+
+Se il blocco saltato era ancora vuoto (non pianificato), nessun punto di decisione — si marca saltato e si va avanti.
+
+### Implementazione leggera
+
+Aggiungere `pendingContent?: DetachedLesson[]` sulla `Conversation`. Una `DetachedLesson` è il contenuto del blocco saltato (obiettivo, titolo, materiale) senza slot di calendario. Nessuna rinumerazione, nessuna catena di aggiornamenti, nessuna logica ricorsiva.
+
+---
+
+## 6. Strumenti visivi di pianificazione
+
+### 6.1 Gantt dei moduli
+
+Vista temporale dell'intero anno scolastico. Complementare alla vista settimana/blocco — quella è chirurgica (il dettaglio), il Gantt è strategico (il quadro d'insieme).
+
+- **Asse orizzontale**: settimane dall'inizio alla fine dell'anno
+- **Barre orizzontali**: un modulo per barra, colorato per distinguerlo
+- **Punti/segmenti nella barra**: i singoli blocchi-lezione
+- **Settimana corrente**: evidenziata
+- **Buchi nella barra**: lezioni saltate, visibili a colpo d'occhio
+
+Funzione principale: accorgersi quando un modulo sta sforando, quando ci sono settimane non pianificate, o quando due moduli si sovrappongono più del previsto. È uno strumento di **controllo della coerenza temporale**.
+
+### 6.2 Radar dell'equilibrio didattico
+
+Applicato al corso o al singolo modulo — non alla singola lezione. Le dimensioni sono le tipologie di lezione configurate per quel corso.
+
+Esempio per il laboratorio di design:
+```
+         Teoria
+           ▲
+    ______/|\______
+   /       |       \
+Laboratorio ─── Procedura
+```
+
+Funzione: il docente vede a colpo d'occhio se il modulo è sbilanciato (troppa teoria, poca pratica) e può riorientare la pianificazione delle settimane successive.
+
+La stessa forma radar usata nel monitoraggio studenti (§7) e nella pianificazione crea coerenza visiva tra i due contesti — un solo tipo di grafico, due scopi diversi.
+
+---
+
+## 7. Il sistema di monitoraggio: tre livelli, visivo, non valutativo
 
 ADA non replica il sistema di valutazione di Classroom. Lo **completa** con un cruscotto a tre livelli basato su segnali visivi, non su voti.
 
@@ -78,7 +200,7 @@ Cruscotto termico della classe. Non giudizi: *segnali diagnostici*.
 Corrisponde alla **verifica di aula anonima** dello schema pedagogico: rileva lacune diffuse per riorientare la didattica in corso d'opera, senza condizionare gli studenti con il voto.
 
 ### Livello 2 — Gruppo
-**Formazione dei gruppi assistita dall'AI** — questa è l'innovazione più originale di ADA, non esistente in nessun tool mainstream.
+**Formazione dei gruppi assistita dall'AI** — innovazione non presente in nessun tool mainstream.
 
 Obiettivo: formare gruppi bilanciati su criteri multipli simultanei:
 - Abilità eterogenee (per favorire peer learning)
@@ -95,7 +217,6 @@ Non un numero: un profilo visivo multidimensionale. Le dimensioni mappano la tri
 Il vantaggio del radar rispetto al voto medio: uno studente con 7 piatto è completamente diverso da uno con 9-9-9-4-4 che ha un gap specifico. Il profilo visivo coglie squilibri che una media nasconde.
 
 ### Distribuzione differenziata
-Il ciclo completo:
 ```
 ADA osserva il profilo  →  suggerisce materiale differenziato  →  docente distribuisce
                                                                           ↓
@@ -104,7 +225,7 @@ ADA osserva il profilo  →  suggerisce materiale differenziato  →  docente di
 
 ---
 
-## 5. Integrazione con Classroom: link contestuali, non API
+## 8. Integrazione con Classroom: link contestuali, non API
 
 **La scelta è deliberata**: nessuna integrazione API con Classroom.
 
@@ -119,9 +240,9 @@ Motivazioni:
 
 ---
 
-## 6. Nodi aperti e terminologia da definire
+## 9. Nodi aperti e terminologia da definire
 
-### 6.1 Il quarto contesto: trovare il nome italiano
+### 9.1 Il quarto contesto: trovare il nome italiano
 
 Il contenuto del quarto contesto (disciplina, documenti fondanti, profilo docente, personalità di Ada, etichette, backup, API key) è l'insieme dei parametri che definiscono il contesto entro cui ADA opera. Non è "gestione del corso" in senso pedagogico — è la cornice.
 
@@ -133,26 +254,15 @@ Candidati:
 
 *Da decidere prima della prossima iterazione UI.*
 
-### 6.2 I Pilastri: rinominare o eliminare?
-
-"Pilastro" non è un termine del lessico pedagogico riconosciuto. Probabilmente nacque come tentativo di aggiungere struttura curricolare (competenze trasversali, assi tematici) a livello di blocco-lezione.
-
-Possibilità:
-- **Eliminare**: se era ridondante con `module` e `objective`
-- **Rinominare in "Traguardo"**: termine delle Indicazioni Nazionali italiane
-- **Rinominare in "Competenza chiave"**: lessico EQF
-
-*Prima di decidere: recuperare casi d'uso reali — cosa veniva scritto nel campo "pilastro" in pratica?*
-
-### 6.3 Verifica sommativa
+### 9.2 Verifica sommativa
 
 Manca un luogo in ADA dove il docente pianifichi la verifica finale di un modulo **in fase di progettazione** (non a posteriori). Nello schema EQF la verifica si progetta insieme agli obiettivi, non dopo.
 
-Questo non è urgente — ADA può delegare la parte valutativa a Classroom via link — ma è un gap consapevole da tenere presente.
+Non urgente — ADA delega la parte valutativa a Classroom via link — ma è un gap consapevole da tenere presente.
 
 ---
 
-## 7. Principi guida per le decisioni future
+## 10. Principi guida per le decisioni future
 
 1. **Non replicare Classroom.** Se Classroom lo fa bene, linkarlo. Ogni feature che duplica Classroom è spreco.
 
@@ -160,22 +270,27 @@ Questo non è urgente — ADA può delegare la parte valutativa a Classroom via 
 
 3. **La settimana è l'unità operativa.** Non il modulo (troppo lungo), non la lezione (troppo granulare). La struttura WeekPlan → BlockDetails è corretta e va preservata.
 
-4. **Visivo prima che numerico.** Nel monitoraggio preferire sempre rappresentazioni visive (radar, heatmap, distribuzione) ai semplici numeri. I numeri nascondono, le forme rivelano.
+4. **Visivo prima che numerico.** Nel monitoraggio e nella pianificazione preferire sempre rappresentazioni visive (radar, gantt, heatmap) ai semplici numeri. I numeri nascondono, le forme rivelano.
 
-5. **L'AI fa il lavoro cognitivo pesante.** Formazione gruppi, suggerimento differenziazione, analisi del profilo classe — questi sono i casi in cui l'AI aggiunge valore reale rispetto a un foglio Excel.
+5. **L'AI fa il lavoro cognitivo pesante.** Formazione gruppi, suggerimento differenziazione, analisi profilo classe — questi sono i casi in cui l'AI aggiunge valore reale rispetto a un foglio Excel.
 
 6. **Zero manutenzione sulle integrazioni.** Link profondi > API. Sempre.
 
+7. **Separare calendario e contenuto.** Lo slot di calendario (giorno/settimana) e il contenuto didattico (obiettivo, materiale) sono due cose distinte. Le feature che li mescolano producono architetture fragili.
+
+8. **Configurabile, non rigido.** Le tipologie di lezione, le dimensioni del radar, le etichette: tutto deve adattarsi alla disciplina e allo stile del docente, non imporre un modello unico.
+
 ---
 
-## 8. Domande ancora aperte (agenda per le prossime sessioni)
+## 11. Domande ancora aperte (agenda per le prossime sessioni)
 
 - [ ] Decidere il nome definitivo del quarto contesto
-- [ ] Chiarire il destino dei "Pilastri" (eliminare / rinominare / riposizionare)
 - [ ] Definire le dimensioni del radar chart per studente (mappatura EQF vs dimensioni operative)
 - [ ] Progettare il flusso di formazione gruppi AI: quali dati in input, quale formato dell'output
 - [ ] Stabilire quali URL di Classroom sono costruibili a partire dai dati ADA già disponibili
-- [ ] Valutare se introdurre un livello "Modulo" leggero nel dato (non un'entità da progettare, ma un contenitore che raggruppa blocchi correlati per la visualizzazione)
+- [ ] Valutare se introdurre un livello "Modulo" leggero nel dato (contenitore che raggruppa blocchi correlati per il Gantt e il radar didattico)
+- [ ] Definire il formato della `DetachedLesson` nella coda contenuti e il punto di ingresso UI per gestirla
+- [ ] Stabilire le tipologie di lezione di default e il meccanismo di configurazione per-corso
 
 ---
 

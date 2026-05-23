@@ -25,7 +25,7 @@ interface PlanningMessageParams {
 
 const areAllBlocksFinalized = (blocks: BlockDetails[]): boolean => {
     return blocks.every(block => {
-        if (block.status === 'saltato' || block.status === 'formazione scuola-lavoro') {
+        if (block.status === 'saltato') {
             return true; // These are final states by definition.
         }
         if (block.status === 'normale') {
@@ -61,10 +61,8 @@ const createMasterContentHeader = async (block: BlockDetails, weekPlan: WeekPlan
         if (block.reason) {
             headerHtml += `<p><strong>Motivo:</strong> ${escapeHtml(block.reason)}</p>`;
         }
-    } else if (block.status === 'formazione scuola-lavoro') {
-        headerHtml += `<p><strong>Stato:</strong> Formazione Scuola-Lavoro (FSL)</p>`;
     }
-    
+
     headerHtml += `<hr><p><br></p>`;
 
     return headerHtml;
@@ -91,23 +89,23 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
             
             switch (actionPayload.action) {
                 case 'initialize_normal_block': {
-                    const { day, objective, module, pillar } = actionPayload;
-                    
+                    const { day, objective, module } = actionPayload;
+
                     const moduleData = moduleMap.get(module);
 
                     if (!moduleData) {
                         showToast(`Dettagli per il modulo "${module}" non trovati. Controlla la formattazione della Costituzione.`, 'error');
                         return; // Stop execution
                     }
-                    
+
                     const constitutionExcerpt = moduleData.role ? `${moduleData.role.split('.')[0]}.` : "Ispirazione non trovata.";
-                    
+
                     const firstAssistantMessage: Message = {
                         id: `msg-ada-${Date.now()}`,
                         role: 'assistant',
-                        content: `Pannello di Contesto aggiornato con **${module}** e focus su **"${pillar}"**.\n\nIniziamo a progettare il contenuto. Descrivimi il flusso della lezione o elencami i punti chiave che vuoi sviluppare.`
+                        content: `Pannello di Contesto aggiornato con **${module}**.\n\nIniziamo a progettare il contenuto. Descrivimi il flusso della lezione o elencami i punti chiave che vuoi sviluppare.`
                     };
-                    
+
                     updateConversation(activeConversation.id, convo => {
                         const newBlocks = [...convo.weekPlan!.blocks];
                         newBlocks[blockIndex] = {
@@ -116,14 +114,13 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                             day,
                             objective,
                             module,
-                            pillar,
                             messages: [firstAssistantMessage],
                             constitutionSummary: constitutionExcerpt,
                             moduleDetails: moduleData,
                         };
                         return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks }};
                     });
-                    return; 
+                    return;
                 }
 
                 case 'archive_simple_state': {
@@ -155,8 +152,7 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                         return { ...convo, weekPlan: { ...convo.weekPlan!, ...weekPlanUpdates, blocks: newBlocks }};
                     });
                     
-                    const statusText = finalStatus === 'saltato' ? 'Saltato' : 'Formazione Scuola-Lavoro';
-                    showToast(`Blocco ${blockIndex + 1} registrato come "${statusText}".`, 'success');
+                    showToast(`Blocco ${blockIndex + 1} registrato come "Saltato".`, 'success');
                     return;
                 }
                 
@@ -361,7 +357,7 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
             return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks }};
         });
 
-        const blockContextPrompt = `Stai progettando il Blocco ${blockIndex + 1} (${blockBeforeUpdate.day}) per la Settimana ${weekPlan.weekNumber}. Tema della settimana: ${weekPlan.theme}. Stato del blocco: ${blockBeforeUpdate.status}. ${blockBeforeUpdate.objective ? `Obiettivo didattico: ${blockBeforeUpdate.objective}` : ''} ${blockBeforeUpdate.module ? `Modulo di riferimento: ${blockBeforeUpdate.module}` : ''} ${blockBeforeUpdate.pillar ? `Pilastro: ${blockBeforeUpdate.pillar}` : ''}. Dialoga con l'utente per definire il contenuto di questo blocco. Sii proattivo e fai domande per guidare la progettazione.`;
+        const blockContextPrompt = `Stai progettando il Blocco ${blockIndex + 1} (${blockBeforeUpdate.day}) per la Settimana ${weekPlan.weekNumber}. Tema della settimana: ${weekPlan.theme}. Stato del blocco: ${blockBeforeUpdate.status}. ${blockBeforeUpdate.objective ? `Obiettivo didattico: ${blockBeforeUpdate.objective}` : ''} ${blockBeforeUpdate.module ? `Modulo di riferimento: ${blockBeforeUpdate.module}` : ''}. Dialoga con l'utente per definire il contenuto di questo blocco. Sii proattivo e fai domande per guidare la progettazione.`;
 
         try {
             const responseStream = await GeminiService.streamChatResponse(

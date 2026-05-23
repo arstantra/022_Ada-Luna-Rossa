@@ -60,7 +60,16 @@ export interface WeekRouteInfo {
 
 // --- TIPI AGGIORNATI PER LA PIANIFICAZIONE DETTAGLIATA ---
 
-export type BlockStatus = 'normale' | 'saltato' | 'formazione scuola-lavoro' | 'da definire' | 'annullato';
+export type BlockStatus = 'normale' | 'saltato' | 'da definire' | 'annullato';
+
+export type LessonType =
+  | 'frontale_teorica'
+  | 'frontale_operativa'
+  | 'laboratorio'
+  | 'verifica'
+  | 'discussione'
+  | 'uda'
+  | 'fsl';
 
 /** Ciclo di vita di una lezione: pianificata → in corso → archiviata */
 export type LessonState = 'progettata' | 'in_corso' | 'archiviata';
@@ -140,7 +149,6 @@ export interface BlockDetails {
     status: BlockStatus;
     reason?: string; // For 'saltato' status
     module?: string;
-    pillar?: string;
     objective?: string;
     constitutionSummary?: string; // For export headers
     moduleDetails?: ModuleDetails;
@@ -163,6 +171,7 @@ export interface BlockDetails {
     projectDeadline?: string; // ISO String for group project deadlines
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
+    tipologia?: LessonType;
 }
 
 export type WeekPlanStatus = 'in progettazione' | 'progettazione completata' | 'in corso' | 'completata';
@@ -201,10 +210,8 @@ export interface LessonWithGroups {
 // --- Planning Action Payloads for Type Safety ---
 export type UpdateBlockDayPayload = { action: 'update_block_day', blockIndex: number, day: string, updateDefault?: boolean };
 export type UpdateObjectivePayload = { action: 'update_objective', blockIndex: number, newObjective: string };
-export type InitializeNormalBlockPayload = { action: 'initialize_normal_block', day: string, objective: string, module: string, pillar: string };
-export type ArchiveSimpleStatePayload = 
-    | { action: 'archive_simple_state', day: string, status: 'formazione scuola-lavoro' } 
-    | { action: 'archive_simple_state', day: string, status: 'saltato', reason: string };
+export type InitializeNormalBlockPayload = { action: 'initialize_normal_block', day: string, objective: string, module: string };
+export type ArchiveSimpleStatePayload = { action: 'archive_simple_state', day: string, status: 'saltato', reason: string };
 export type ValidateAndArchivePayload = { action: 'validate_and_archive', messageId: string };
 export type RecordGroupsPayload = { action: 'record_groups', groups: GroupDefinition[] };
 // --- Content Block Management Payloads ---
@@ -245,6 +252,21 @@ export interface Message {
   actionUsed?: boolean | string; // true (legacy) o la label dell'azione usata es. 'Trasferito' | 'Aggiunto' | 'Sostituito'
 }
 
+export interface DetachedLesson {
+  id: string;
+  sourceBlockId: string;
+  sourceWeekNumber: number;
+  sourceDay: string;
+  objective?: string;
+  lessonTitle?: string;
+  lessonSyllabus?: string;
+  messages?: Message[];
+  contentBlocks?: ContentBlock[];
+  detachedAt: string;
+  distribuita?: boolean;
+  archiviata?: boolean;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -254,6 +276,7 @@ export interface Conversation {
   studentId?: string; // Link to a student's main record
   evaluationState?: 'AWAITING_VALUE' | 'AWAITING_NOTES' | 'AWAITING_REVIEW_NOTES'; // For guided evaluation input
   tempEvaluation?: Partial<Evaluation>;
+  pendingContent?: DetachedLesson[];
 }
 
 export interface Mode {

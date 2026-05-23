@@ -8,7 +8,13 @@
       "Bash(for f in \"BlockWorkspaceView\" \"ChatInput\" \"ChatView\" \"GroupsArchiveView\" \"InAulaView\" \"ModePills\"; do *)",
       "Bash(git -C \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\" ls-files dist/)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npx tsc *)",
+      "PowerShell(cd \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\"; node --version; $tsc = Get-Command tsc -ErrorAction SilentlyContinue; if \\($tsc\\) { $tsc.Source } else { \"tsc non trovato\" })",
+      "Read(//usr/local/bin/**)",
+      "Read(//c/Users/unoav/.nvm/versions/**)",
+      "PowerShell(cd \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\"; node --version; \\(Get-Command node -ErrorAction SilentlyContinue\\).Source)",
+      "Bash(cd \"/mnt/c/Users/unoav/OneDrive/Etichetta_Rossa/Area_Personale/2026/022_Ada Luna Rossa\" && which npx 2>/dev/null && npx tsc --noEmit 2>&1 | head -80 || echo \"npx not found in bash PATH either\")"
     ]
   }
 }

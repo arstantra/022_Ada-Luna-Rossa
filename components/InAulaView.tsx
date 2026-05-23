@@ -274,10 +274,6 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
                 title = `Blocco ${block.blockIndex + 1}: ${block.objective}`;
                 subtitle = dayWithDate;
                 break;
-            case 'formazione scuola-lavoro':
-                title = `Blocco ${block.blockIndex + 1}: Formazione Scuola-Lavoro`;
-                subtitle = `${dayWithDate}`;
-                break;
             default:
                 title = `Blocco ${block.blockIndex + 1}: ${block.objective || 'Obiettivo non definito'}`;
                 subtitle = `${dayWithDate} | ${block.module || 'Modulo N/D'}`;
@@ -614,7 +610,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                     convoId: convo.id, 
                     blockIndex: index 
                 }))
-                .filter(block => (block.contentBlocks && block.contentBlocks.length > 0) || block.status === 'formazione scuola-lavoro' || block.status === 'saltato' || block.status === 'annullato')
+                .filter(block => (block.contentBlocks && block.contentBlocks.length > 0) || block.status === 'saltato' || block.status === 'annullato')
         }).filter(block => block.status !== 'saltato');
 
         const filteredBlocks = allBlocks.filter(block => {
@@ -625,7 +621,6 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 (block.objective || '').toLowerCase().includes(query) ||
                 fullContent.toLowerCase().includes(query) ||
                 (block.module || '').toLowerCase().includes(query) ||
-                (block.pillar || '').toLowerCase().includes(query) ||
                 `blocco ${block.blockIndex + 1}`.includes(query);
 
             const weekMatch = selectedWeek === 'all' || block.weekPlan.weekNumber === parseInt(selectedWeek);

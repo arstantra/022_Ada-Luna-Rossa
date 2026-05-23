@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus } from '../types';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType } from '../types';
+import { LESSON_TYPE_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -16,36 +17,23 @@ interface StrategicDashboardViewProps {
     onClose: () => void;
     onUpdateWeekTheme: (weekNumber: number, theme: string) => void;
     onUpdateBlockObjective: (weekNumber: number, blockIndex: number, objective: string) => void;
-    onGenerateStrategicSuggestions: (prompt: string, module: string, pillar: string | null) => Promise<{ theme: string; objectives: string[]; reasoning: string; }>;
+    onGenerateStrategicSuggestions: (prompt: string, module: string) => Promise<{ theme: string; objectives: string[]; reasoning: string; }>;
     onSaveStrategicData: (weekNumber: number, theme: string, objectives: string[]) => void;
     onGenerateBlockDetails: (weekNumber: number, blockIndex: number) => Promise<void>;
     onUpdateWeekDetails: (weekNumber: number, details: Partial<Pick<WeekPlan, 'notes'>>) => void;
     onUpdateBlockDetails: (weekNumber: number, blockIndex: number, details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonMaterials' | 'isLocked'>>) => void;
     onStartPlanning: (weekInfo: WeekRouteInfo) => void;
-    onUpdateBlockModuleAndPillar: (weekNumber: number, blockIndex: number, module: string, pillar: string, lessonTitle: string) => void;
+    onUpdateBlockModule: (weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const pillarTypes = ['Pilastri di Sintonizzazione', 'Pilastri Operativi', 'Attività Chiave'];
-
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModuleAndPillar, onUpdateBlockStatus, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
-
-    const moduleHasPillars = useMemo(() => {
-        const map = new Map<string, boolean>();
-        modules.forEach(module => {
-            const hasAny = (module.sintonizzazione && module.sintonizzazione.length > 0) ||
-                           (module.operativi && module.operativi.length > 0) ||
-                           (module.attivitaChiave && module.attivitaChiave.length > 0);
-            map.set(module.name, hasAny);
-        });
-        return map;
-    }, [modules]);
 
     const weekData = useMemo(() => {
         const convoMap = new Map<number, Conversation>();
@@ -66,8 +54,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     }, [weeks, conversations]);
 
     const handleGenerateTheme = async (week: typeof weekData[0]) => {
-        const relevantBlocks = week.blocks.filter(b => 
-            (b.status === 'normale' || b.status === 'da definire' || b.status === 'formazione scuola-lavoro') && b.objective && b.objective.trim()
+        const relevantBlocks = week.blocks.filter(b =>
+            (b.status === 'normale' || b.status === 'da definire') && b.objective && b.objective.trim()
         );
     
         const objectivesContext = relevantBlocks.map((b, i) => 
@@ -120,38 +108,22 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
         showToast(`Obiettivo aggiornato per il Blocco ${blockIndex + 1}.`, 'success');
     };
 
-    const handleModulePillarChange = (weekNumber: number, blockIndex: number, moduleName: string, pillarType: string) => {
+    const handleModuleChange = (weekNumber: number, blockIndex: number, moduleName: string) => {
         let newLessonTitle = '';
-    
+
         if (moduleName && constitutionText) {
             const moduleSections = constitutionText.split(/(?=^MODULO \d+:)/gm);
             const fullModuleText = moduleSections.find(s => s.trim().startsWith(moduleName))?.trim() || '';
-    
+
             if (fullModuleText) {
-                // Step 1: Extract base module text (up to the first pillar definition)
                 const firstPillarIndex = fullModuleText.search(/⦁\s*Pilastri|⦁\s*Attività Chiave:/);
-                const baseModuleText = (firstPillarIndex !== -1) ? fullModuleText.substring(0, firstPillarIndex).trim() : fullModuleText;
-                newLessonTitle = baseModuleText;
-    
-                // Step 2: If a pillar type is selected, find its text and append it.
-                if (pillarType) {
-                    let pillarText = '';
-                    // This regex finds the entire block for the selected pillar type, including its header.
-                    const pillarRegex = new RegExp(`(⦁\\s*${pillarType}(?:.*)?:[\\s\\S]*?)(?=⦁\\s*Pilastri|⦁\\s*Attività Chiave:|$)`);
-                    const match = fullModuleText.match(pillarRegex);
-    
-                    if (match && match[1]) {
-                        pillarText = match[1].trim();
-                    }
-                    
-                    if (pillarText) {
-                        newLessonTitle += `\n\n${pillarText}`;
-                    }
-                }
+                newLessonTitle = (firstPillarIndex !== -1)
+                    ? fullModuleText.substring(0, firstPillarIndex).trim()
+                    : fullModuleText;
             }
         }
-        
-        onUpdateBlockModuleAndPillar(weekNumber, blockIndex, moduleName, pillarType, newLessonTitle);
+
+        onUpdateBlockModule(weekNumber, blockIndex, moduleName, newLessonTitle);
     };
 
     const handleToggleAll = useCallback(() => {
@@ -252,7 +224,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     // ── Derivazione stato blocco ────────────────────────────────────────────────
     const getBlockProgressState = (block: BlockDetails): 'da_fare' | 'in_corso' | 'completato' | 'speciale' => {
-        if (block.status === 'saltato' || block.status === 'formazione scuola-lavoro' || block.status === 'annullato') {
+        if (block.status === 'saltato' || block.status === 'annullato') {
             return 'speciale';
         }
         if (block.contentBlocks && block.contentBlocks.length > 0) {
@@ -299,6 +271,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
             </span>
         );
     };
+
+    // ── Contenuti in sospeso (blocchi saltati con contenuto da ricollocare) ─────
+    const pendingContentCount = useMemo(() => {
+        return conversations.reduce((acc, c) => {
+            const active = (c.pendingContent || []).filter(d => !d.archiviata);
+            return acc + active.length;
+        }, 0);
+    }, [conversations]);
 
     // ── Progresso globale del corso ────────────────────────────────────────────
     const progressStats = useMemo(() => {
@@ -351,6 +331,17 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                 {progressStats.daFare}
                             </span>
                             <span className="text-[10px] text-gray-600 font-mono">/ {progressStats.total}</span>
+                        </div>
+                    )}
+
+                    {/* Zona B2 — contenuti in sospeso */}
+                    {pendingContentCount > 0 && (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="w-px h-3.5 bg-gray-700/60" />
+                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[11px] font-mono text-amber-400/90" title="Contenuti distaccati da blocchi saltati, in attesa di collocazione">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                                {pendingContentCount} {pendingContentCount === 1 ? 'contenuto in sospeso' : 'contenuti in sospeso'}
+                            </span>
                         </div>
                     )}
 
@@ -428,8 +419,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                 </summary>
                                 <div className="border-t border-gray-600/50 bg-gray-800/70 px-5 py-4 space-y-3">
                                     {week.blocks.map((block, index) => {
-                                        const isSpecialStatus = block.status === 'saltato' || block.status === 'formazione scuola-lavoro';
-                                        const blockHasPillars = block.module ? moduleHasPillars.get(block.module) ?? false : false;
+                                        const isSpecialStatus = block.status === 'saltato';
                                         const blockDate = getExactDateForBlock(week.dates, block.day, teacherProfile);
                                         const dateString = blockDate ? ` - ${blockDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}` : '';
                                         const blockState = getBlockProgressState(block);
@@ -441,55 +431,45 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
+                                                        {block.tipologia && (
+                                                            <span className="text-[10px] font-mono text-gray-500 flex-shrink-0">
+                                                                {LESSON_TYPE_LABELS[block.tipologia]}
+                                                            </span>
+                                                        )}
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
-                                                                <EditableField 
-                                                                    value={block.reason || ''} 
-                                                                    onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} 
+                                                                <EditableField
+                                                                    value={block.reason || ''}
+                                                                    onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)}
                                                                     placeholder="Motivo per cui il blocco è saltato..."
                                                                     className="!text-red-400 placeholder:!text-red-400/50"
                                                                 />
-                                                            ) : block.status === 'formazione scuola-lavoro' ? (
-                                                                <p className="text-sky-400 italic py-1 text-sm font-medium">Attività di Formazione Scuola-Lavoro</p>
                                                             ) : (
-                                                                <EditableField 
-                                                                    value={block.objective || ''} 
+                                                                <EditableField
+                                                                    value={block.objective || ''}
                                                                     onSave={(newObjective) => {
                                                                         onUpdateBlockObjective(week.weekNumber, index, newObjective);
                                                                         if (newObjective) {
                                                                             onUpdateBlockDetails(week.weekNumber, index, { isLocked: true });
                                                                         }
                                                                     }}
-                                                                    placeholder="Definisci l'obiettivo del blocco..." 
+                                                                    placeholder="Definisci l'obiettivo del blocco..."
                                                                 />
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-1 no-print">
                                                             {(block.status === 'da definire' || block.status === 'normale') ? (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                            onUpdateBlockStatus(week.weekNumber, index, 'saltato');
-                                                                        }}
-                                                                        className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all"
-                                                                        title="Imposta blocco come saltato"
-                                                                    >
-                                                                        Salta
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                            onUpdateBlockStatus(week.weekNumber, index, 'formazione scuola-lavoro');
-                                                                        }}
-                                                                        className="px-2 py-1 text-xs font-medium text-sky-400/70 border border-sky-500/20 rounded-md hover:bg-sky-500/15 hover:text-sky-300 hover:border-sky-400/35 transition-all"
-                                                                        title="Imposta blocco per Formazione Scuola-Lavoro"
-                                                                    >
-                                                                        FSL
-                                                                    </button>
-                                                                </>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        onUpdateBlockStatus(week.weekNumber, index, 'saltato');
+                                                                    }}
+                                                                    className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all"
+                                                                    title="Imposta blocco come saltato"
+                                                                >
+                                                                    Salta
+                                                                </button>
                                                             ) : (
                                                                 <button
                                                                     onClick={(e) => {
@@ -507,11 +487,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className={`flex items-center gap-3 pl-8 ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
                                                         <select
                                                             value={block.module || ''}
-                                                            onChange={(e) => {
-                                                                const newModule = e.target.value;
-                                                                const newPillar = ''; // Reset pillar when module changes
-                                                                handleModulePillarChange(week.weekNumber, index, newModule, newPillar);
-                                                            }}
+                                                            onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
                                                             onClick={(e) => e.stopPropagation()}
                                                             onKeyDown={selectKeyDownHandler}
                                                             disabled={isSpecialStatus || block.isLocked}
@@ -519,19 +495,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         >
                                                             <option value="">Seleziona Modulo...</option>
                                                             {modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
-                                                        </select>
-                                                        <select
-                                                            value={block.pillar || ''}
-                                                            onChange={(e) => handleModulePillarChange(week.weekNumber, index, block.module || '', e.target.value)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={selectKeyDownHandler}
-                                                            disabled={isSpecialStatus || block.isLocked || !block.module || !blockHasPillars}
-                                                            className="w-full md:w-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
-                                                        >
-                                                            <option value="">
-                                                                {block.module ? (blockHasPillars ? 'Seleziona Tipo Pilastro...' : 'Nessun pilastro per questo modulo') : 'Seleziona prima un Modulo'}
-                                                            </option>
-                                                            {pillarTypes.map(type => <option key={type} value={type}>{type}</option>)}
                                                         </select>
                                                     </div>
                                                 </div>

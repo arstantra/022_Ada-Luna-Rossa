@@ -187,11 +187,9 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
         return logs.join('\n\n---\n\n');
     }, [selectedStudentLog, students, conversations]);
     
-    const { moduleAchievement, pillarAchievement } = useMemo(() => {
+    const moduleAchievement = useMemo(() => {
         const moduleTotals: Record<string, number> = {};
         const moduleReviewed: Record<string, number> = {};
-        const pillarTotals: Record<string, number> = {};
-        const pillarReviewed: Record<string, number> = {};
 
         conversations.filter(c => c.weekPlan).forEach(c => {
             c.weekPlan!.blocks.forEach(b => {
@@ -201,26 +199,13 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                         moduleReviewed[b.module] = (moduleReviewed[b.module] || 0) + 1;
                     }
                 }
-                if (b.pillar) {
-                    pillarTotals[b.pillar] = (pillarTotals[b.pillar] || 0) + 1;
-                    if (b.isReviewed) {
-                        pillarReviewed[b.pillar] = (pillarReviewed[b.pillar] || 0) + 1;
-                    }
-                }
             });
         });
 
-        const moduleData = Object.keys(moduleTotals).map(name => ({
+        return Object.keys(moduleTotals).map(name => ({
             name,
             percentage: (moduleReviewed[name] || 0) / moduleTotals[name] * 100
-        })).sort((a,b) => b.percentage - a.percentage);
-        
-        const pillarData = Object.keys(pillarTotals).map(name => ({
-            name,
-            percentage: (pillarReviewed[name] || 0) / pillarTotals[name] * 100
-        })).sort((a,b) => b.percentage - a.percentage);
-
-        return { moduleAchievement: moduleData, pillarAchievement: pillarData };
+        })).sort((a, b) => b.percentage - a.percentage);
     }, [conversations]);
 
     useEffect(() => {
@@ -252,7 +237,6 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                 component: (
                     <div className="space-y-6">
                         <AchievementChart title="Copertura Moduli" data={moduleAchievement} />
-                        <AchievementChart title="Copertura Pilastri" data={pillarAchievement} />
                     </div>
                 )
             },
@@ -274,7 +258,7 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
             const newMap = new Map(dashboardList.map(d => [d.id, d]));
             return prev.map(p => newMap.get(p.id)!).filter(Boolean);
         });
-    }, [analysisData, attendanceData, studentGrowthData, classGrowthData, allPillars, moduleAchievement, pillarAchievement, individualLog, selectedStudentRadar, selectedStudentLog, students]);
+    }, [analysisData, attendanceData, studentGrowthData, classGrowthData, allPillars, moduleAchievement, individualLog, selectedStudentRadar, selectedStudentLog, students]);
 
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {

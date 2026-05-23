@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
@@ -7,6 +7,7 @@ import DocumentEditor from './DocumentEditor';
 import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import FontiDrawer from './FontiDrawer';
+import TipologiaSelector from './TipologiaSelector';
 
 // --- MAIN WORKSPACE VIEW ---
 
@@ -27,9 +28,10 @@ interface BlockWorkspaceViewProps {
     onRemoveFonte?: (fonteId: string) => void;
     onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
     onPromoteFonte?: (url: string) => void;
+    onUpdateTipologia?: (tipologia: LessonType | undefined) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onUpdateTipologia }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -170,22 +172,32 @@ ${htmlContent}
 
             {activeTab === 'laboratorio' && (
                 <>
-                    {/* Mini-toolbar Laboratorio: pulsante Fonti */}
-                    {onAddFonte && (
-                        <div className="flex-shrink-0 flex items-center justify-end px-4 py-1.5 border-b border-gray-800/40 bg-[#0D1117]">
-                            <button
-                                onClick={() => setIsDrawerOpen(true)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 text-gray-300 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors"
-                                title="Fonti del blocco"
-                            >
-                                <BookOpenIcon className="h-4 w-4" />
-                                <span className="text-sm">Fonti</span>
-                                {(block.fonti?.length ?? 0) > 0 && (
-                                    <span className="bg-purple-500/30 text-purple-300 text-[10px] font-mono rounded-full px-1.5">
-                                        {block.fonti!.length}
-                                    </span>
+                    {/* Mini-toolbar Laboratorio: TipologiaSelector + pulsante Fonti */}
+                    {(onUpdateTipologia || onAddFonte) && (
+                        <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-gray-800/40 bg-[#0D1117]">
+                            <div className="flex-1 min-w-0">
+                                {onUpdateTipologia && (
+                                    <TipologiaSelector
+                                        current={block.tipologia}
+                                        onSelect={onUpdateTipologia}
+                                    />
                                 )}
-                            </button>
+                            </div>
+                            {onAddFonte && (
+                                <button
+                                    onClick={() => setIsDrawerOpen(true)}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-gray-300 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors ml-2 flex-shrink-0"
+                                    title="Fonti del blocco"
+                                >
+                                    <BookOpenIcon className="h-4 w-4" />
+                                    <span className="text-sm">Fonti</span>
+                                    {(block.fonti?.length ?? 0) > 0 && (
+                                        <span className="bg-purple-500/30 text-purple-300 text-[10px] font-mono rounded-full px-1.5">
+                                            {block.fonti!.length}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     )}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">

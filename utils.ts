@@ -206,7 +206,6 @@ export const getBlockPlanningStatus = (block: BlockDetails | undefined): BlockPl
             return 'da_definire';
 
         case 'saltato': return 'saltato';
-        case 'formazione scuola-lavoro': return 'fsl';
         case 'annullato': return 'annullato';
 
         case 'normale':

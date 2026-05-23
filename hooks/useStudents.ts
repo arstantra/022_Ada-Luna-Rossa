@@ -150,7 +150,6 @@ export const useStudents = (crewContext: string) => {
                     weekNumber,
                     blockIndex,
                     module: block.module,
-                    pillar: block.pillar,
                 };
                 const existingEvals = Array.isArray(student.evaluations) ? student.evaluations : [];
                 const updatedStudent = { ...student, evaluations: [...existingEvals, evaluation] };

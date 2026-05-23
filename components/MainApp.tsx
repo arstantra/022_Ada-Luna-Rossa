@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource } from '../types';
+import type { Conversation, Message, Attachment, Mode, Label, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource, LessonType, DetachedLesson } from '../types';
 import type { ActiveView } from './Sidebar';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import TurndownService from 'turndown';
@@ -20,6 +20,7 @@ import StrategicDashboardView from './StrategicDashboardView';
 import ToolkitView from './ToolkitView';
 import LobbyView from './LobbyView';
 import GroupsArchiveView from './GroupsArchiveView';
+import GanttView from './GanttView';
 import Toast from './Toast';
 // Modals
 import ContextModal from './MasterContextModal';
@@ -32,6 +33,8 @@ import ConfirmationModal from './ConfirmationModal';
 import PasswordPromptModal from './PasswordPromptModal';
 import ImportEvaluationModal from './ImportEvaluationModal';
 import BlockDayDefaultsModal from './BlockDayDefaultsModal';
+import SaltaLezioneModal from './SaltaLezioneModal';
+import type { SaltaChoice } from './SaltaLezioneModal';
 // Hooks
 import { useConversations } from '../hooks/useConversations';
 import { useLabels } from '../hooks/useLabels';
@@ -87,7 +90,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   const { processPlanningMessage, handleReEditBlock: reEditBlockHandler } = usePlanning(updateConversation, showToast);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive'>('lobby');
+  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt'>('lobby');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [initialPlanningTab, setInitialPlanningTab] = useState<'laboratorio' | 'contenutoMaster' | null>(null);
   const [analysisLoadingBlockId, setAnalysisLoadingBlockId] = useState<string | null>(null);
@@ -111,6 +114,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   const [dataToRestore, setDataToRestore] = useState<db.BackupData | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const [confirmationProps, setConfirmationProps] = useState<Omit<ConfirmationModalProps, 'isOpen' | 'onClose'> | null>(null);
+  const [pendingSaltaInfo, setPendingSaltaInfo] = useState<{ weekNumber: number; blockIndex: number; block: BlockDetails } | null>(null);
 
   const { modules } = useConstitutionCache();
 
@@ -122,14 +126,37 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   useEffect(() => {
     // Controlla se la "nota adesiva" dal ripristino esiste
     if (sessionStorage.getItem('backupRestored') === 'true') {
-      
+
       // Se esiste, come prima cosa, buttala via per non vederla più
       sessionStorage.removeItem('backupRestored');
-      
+
       // Ora, e solo ora, mostra il messaggio di successo all'utente
       showToast('Backup ripristinato con successo!', 'success');
     }
   }, []); // L'array vuoto [] assicura che questo codice venga eseguito solo una volta
+
+  // Migrazione one-shot: blocchi con status 'formazione scuola-lavoro' → status 'normale' + tipologia 'fsl'
+  const fslMigrationDoneRef = useRef(false);
+  useEffect(() => {
+    if (fslMigrationDoneRef.current || conversations.length === 0) return;
+    fslMigrationDoneRef.current = true;
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      const hasFsl = conv.weekPlan.blocks.some(b => (b.status as string) === 'formazione scuola-lavoro');
+      if (!hasFsl) return;
+      updateConversation(conv.id, c => ({
+        ...c,
+        weekPlan: c.weekPlan ? {
+          ...c.weekPlan,
+          blocks: c.weekPlan.blocks.map(b =>
+            (b.status as string) === 'formazione scuola-lavoro'
+              ? { ...b, status: 'normale' as BlockStatus, tipologia: 'fsl' as LessonType }
+              : b
+          )
+        } : undefined
+      }));
+    });
+  }, [conversations, updateConversation]);
   
   // Effect for Automatic Lifecycle Label Management
   useEffect(() => {
@@ -304,20 +331,12 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
       }
   }, [conversationsRef, updateConversation, availableWeeks, getOrCreateConversationForWeek]);
 
-  const handleGenerateStrategicSuggestions = useCallback(async (prompt: string, module: string, pillar: string | null): Promise<{ theme: string; objectives: string[]; reasoning: string; }> => {
+  const handleGenerateStrategicSuggestions = useCallback(async (prompt: string, module: string): Promise<{ theme: string; objectives: string[]; reasoning: string; }> => {
       setIsLoading(true);
       try {
           const moduleDetails = modules.find(m => m.name === module);
           const moduleContext = moduleDetails ? `${moduleDetails.name}\nRuolo: ${moduleDetails.role}\nSignificato: ${moduleDetails.significance}` : module;
-          let pillarContext: string | null = null;
-          if (moduleDetails && pillar) {
-              const allPillars = [...moduleDetails.sintonizzazione.map(p => p.name), ...moduleDetails.operativi.map(p => p.name), ...moduleDetails.attivitaChiave];
-              if (allPillars.includes(pillar)) {
-                  pillarContext = pillar;
-              }
-          }
-
-          const result = await GeminiService.generateStrategicSuggestions(prompt, moduleContext, pillarContext);
+          const result = await GeminiService.generateStrategicSuggestions(prompt, moduleContext, null);
           showToast('Suggerimenti strategici generati!', 'success');
           return result;
       } catch (error) {
@@ -418,7 +437,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
   }, [conversationsRef, updateConversation, availableWeeks, getOrCreateConversationForWeek]);
   
 
-  const handleUpdateBlockModuleAndPillar = useCallback((weekNumber: number, blockIndex: number, module: string, pillar: string, lessonTitle: string) => {
+  const handleUpdateBlockModule = useCallback((weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => {
     let conversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
 
     if (!conversation) {
@@ -429,19 +448,19 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
         }
         conversation = getOrCreateConversationForWeek(weekInfo);
     }
-    
+
     if (conversation.weekPlan) {
         updateConversation(conversation.id, c => {
             const newBlocks = [...c.weekPlan.blocks];
             if (newBlocks[blockIndex]) {
-                newBlocks[blockIndex] = { ...newBlocks[blockIndex], module, pillar, lessonTitle };
+                newBlocks[blockIndex] = { ...newBlocks[blockIndex], module, lessonTitle };
             }
             return { ...c, weekPlan: { ...c.weekPlan!, blocks: newBlocks } };
         });
     }
   }, [conversationsRef, updateConversation, availableWeeks, getOrCreateConversationForWeek]);
 
-  const handleUpdateBlockStatus = useCallback((weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => {
+  const applyBlockStatus = useCallback((weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => {
     const existingConvo = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
 
     const updateBlockInConversation = (c: Conversation) => {
@@ -465,13 +484,131 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
             console.error(`Cannot create and update status for non-existent week: ${weekNumber}`);
             return;
         }
-
         const newConversation = getOrCreateConversationForWeek(weekInfo);
-        
-        // Use a functional update to ensure we're updating the just-created conversation
         updateConversation(newConversation.id, updateBlockInConversation);
     }
   }, [availableWeeks, updateConversation, conversationsRef, getOrCreateConversationForWeek]);
+
+  const handleUpdateBlockStatus = useCallback((weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => {
+    if (status === 'saltato') {
+        const convo = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
+        const block = convo?.weekPlan?.blocks[blockIndex];
+        const hasContent = block && (
+            block.objective?.trim() ||
+            block.lessonTitle?.trim() ||
+            (block.messages && block.messages.length > 0) ||
+            (block.contentBlocks && block.contentBlocks.length > 0)
+        );
+        if (hasContent && block) {
+            setPendingSaltaInfo({ weekNumber, blockIndex, block });
+            return;
+        }
+    }
+    applyBlockStatus(weekNumber, blockIndex, status, reason);
+  }, [applyBlockStatus, conversationsRef]);
+
+  const handleSaltaChoice = useCallback((choice: SaltaChoice) => {
+    if (!pendingSaltaInfo) return;
+    const { weekNumber, blockIndex, block } = pendingSaltaInfo;
+    const convo = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
+    if (!convo) return;
+
+    if (choice === 'accorpa') {
+        // Trova il prossimo blocco non-saltato nella stessa settimana, poi nelle settimane successive
+        let targetConvoId: string | null = null;
+        let targetBlockIndex: number | null = null;
+
+        const sameWeekBlocks = convo.weekPlan!.blocks;
+        for (let i = blockIndex + 1; i < sameWeekBlocks.length; i++) {
+            if (sameWeekBlocks[i].status !== 'saltato' && sameWeekBlocks[i].status !== 'annullato') {
+                targetConvoId = convo.id;
+                targetBlockIndex = i;
+                break;
+            }
+        }
+
+        if (targetConvoId === null) {
+            const sortedConvos = conversationsRef.current
+                .filter(c => c.weekPlan && c.weekPlan.weekNumber > weekNumber)
+                .sort((a, b) => a.weekPlan!.weekNumber - b.weekPlan!.weekNumber);
+            for (const nextConvo of sortedConvos) {
+                const idx = nextConvo.weekPlan!.blocks.findIndex(
+                    b => b.status !== 'saltato' && b.status !== 'annullato'
+                );
+                if (idx !== -1) {
+                    targetConvoId = nextConvo.id;
+                    targetBlockIndex = idx;
+                    break;
+                }
+            }
+        }
+
+        if (targetConvoId !== null && targetBlockIndex !== null) {
+            updateConversation(targetConvoId, c => {
+                if (!c.weekPlan) return c;
+                const newBlocks = [...c.weekPlan.blocks];
+                const target = { ...newBlocks[targetBlockIndex!] };
+                if (block.objective?.trim()) {
+                    target.objective = target.objective?.trim()
+                        ? `${target.objective}\n\n[Accorpato] ${block.objective}`
+                        : block.objective;
+                }
+                if (block.lessonTitle?.trim() && !target.lessonTitle?.trim()) {
+                    target.lessonTitle = block.lessonTitle;
+                }
+                if (block.lessonSyllabus?.trim() && !target.lessonSyllabus?.trim()) {
+                    target.lessonSyllabus = block.lessonSyllabus;
+                }
+                newBlocks[targetBlockIndex!] = target;
+                return { ...c, weekPlan: { ...c.weekPlan!, blocks: newBlocks } };
+            });
+        } else {
+            showToast('Nessun blocco disponibile per accorpare. Il contenuto è stato messo in coda.', 'info');
+            // Fallback a rimanda
+            const detached: DetachedLesson = {
+                id: crypto.randomUUID(),
+                sourceBlockId: block.id,
+                sourceWeekNumber: weekNumber,
+                sourceDay: block.day,
+                objective: block.objective,
+                lessonTitle: block.lessonTitle,
+                lessonSyllabus: block.lessonSyllabus,
+                messages: block.messages,
+                contentBlocks: block.contentBlocks,
+                detachedAt: new Date().toISOString(),
+            };
+            updateConversation(convo.id, c => ({
+                ...c,
+                pendingContent: [...(c.pendingContent || []), detached],
+            }));
+        }
+        applyBlockStatus(weekNumber, blockIndex, 'saltato');
+        return;
+    }
+
+    // Per rimanda, distribuisci, archivia: crea DetachedLesson e aggiungila alla coda
+    const detached: DetachedLesson = {
+        id: crypto.randomUUID(),
+        sourceBlockId: block.id,
+        sourceWeekNumber: weekNumber,
+        sourceDay: block.day,
+        objective: block.objective,
+        lessonTitle: block.lessonTitle,
+        lessonSyllabus: block.lessonSyllabus,
+        messages: block.messages,
+        contentBlocks: block.contentBlocks,
+        detachedAt: new Date().toISOString(),
+        distribuita: choice === 'distribuisci' ? true : undefined,
+        archiviata: choice === 'archivia' ? true : undefined,
+    };
+
+    updateConversation(convo.id, c => ({
+        ...c,
+        pendingContent: [...(c.pendingContent || []), detached],
+    }));
+    applyBlockStatus(weekNumber, blockIndex, 'saltato');
+    setPendingSaltaInfo(null);
+  }, [pendingSaltaInfo, conversationsRef, updateConversation, applyBlockStatus, showToast]);
 
   const handleUpdateBlockInConversation = useCallback((convoId: string, blockIndex: number, updatedBlockData: Partial<BlockDetails>) => {
     updateConversation(convoId, convo => {
@@ -1355,11 +1492,13 @@ ${htmlBody}
   const openFoundingDocuments = useCallback(() => setView('founding_documents'), []);
   const openToolkit = useCallback(() => setView('toolkit'), []);
   const openStrategicDashboard = useCallback(() => setView('strategic_dashboard'), []);
+  const openGantt = useCallback(() => setView('gantt'), []);
   const openBlockDayDefaultsModal = useCallback(() => setModalState(s => ({ ...s, blockDayDefaults: true })), []);
   // --- End of stabilized callbacks ---
 
   const currentView = useMemo((): ActiveView => {
     if (view === 'strategic_dashboard') return 'strategic_dashboard';
+    if (view === 'gantt') return 'gantt';
     if (view === 'founding_documents') return 'founding_documents';
     if (view === 'toolkit') return 'toolkit';
     if (view === 'lezione_in_corso') return 'lezione_in_corso';
@@ -1384,6 +1523,7 @@ ${htmlBody}
           activeView={currentView}
           onOpenConversaConAda={handleOpenConversaConAda}
           onOpenStrategicDashboard={openStrategicDashboard}
+          onOpenGantt={openGantt}
           onOpenToolkit={openToolkit}
           onOpenImageGenerator={openImageModal}
           onOpenLezioneinCorso={openLezioneinCorso}
@@ -1410,9 +1550,10 @@ ${htmlBody}
         {
           {
             'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} />,
+            'gantt': <GanttView conversations={conversations} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} />,
             'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
-            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModuleAndPillar={handleUpdateBlockModuleAndPillar} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
+            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
             'lezione_in_corso': <InAulaView viewMode="in_corso" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
             'archivio_lezioni': <InAulaView viewMode="archivio" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
@@ -1517,6 +1658,13 @@ ${htmlBody}
               {...confirmationProps}
           />
       )}
+
+      <SaltaLezioneModal
+          isOpen={!!pendingSaltaInfo}
+          onClose={() => setPendingSaltaInfo(null)}
+          blockSummary={pendingSaltaInfo?.block.lessonTitle || pendingSaltaInfo?.block.objective || ''}
+          onChoice={handleSaltaChoice}
+      />
 
       {notebookSuggestion && (
         <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out bg-gray-700 border border-gray-600 animate-fade-in-down">
