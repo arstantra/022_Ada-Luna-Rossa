@@ -67,11 +67,14 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
         setSaveStatus('saved');
     }, [initialContent, mode]);
 
-    // Sync HTML content with prop
+    // Sync HTML content with prop — ma NON mentre l'utente sta editando.
+    // Se pendingContentRef.current è non-null, c'è un autosave in volo: non
+    // sovrascrivere l'innerHTML o il cursore (e il contenuto) andrebbero persi.
     useEffect(() => {
         if (mode === 'html' && editorRef.current) {
             const contentToSet = initialContent || '<p></p>';
-            if (editorRef.current.innerHTML !== contentToSet) {
+            const editorHasFocus = document.activeElement === editorRef.current;
+            if (!pendingContentRef.current && !editorHasFocus && editorRef.current.innerHTML !== contentToSet) {
                 editorRef.current.innerHTML = contentToSet;
             }
         }
@@ -259,7 +262,7 @@ const DocumentEditor = React.forwardRef<HTMLDivElement, DocumentEditorProps>(({
             >
                 {isDraggingOver && (
                     <div className="absolute inset-0 bg-blue-500/10 border-2 border-dashed border-blue-400 rounded-lg flex items-center justify-center pointer-events-none">
-                        <span className="text-blue-300 font-semibold">Rilascia l'immagine per caricarla</span>
+                        <span className="text-blue-300 font-semibold">Rilascia l\'immagine per caricarla</span>
                     </div>
                 )}
             </div>

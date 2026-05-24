@@ -25,7 +25,31 @@ const prefixToType = (prefix: string): CourseContentType => {
     return 'modulo'; // fallback
 };
 
+/**
+ * Se il testo è HTML (salvato dall'editor rich-text), estrae il testo piano
+ * preservando le newline tra blocchi. Il constitutionParser usa regex sui prefissi
+ * MODULO/UDA/FSL/EDUCAZIONE CIVICA che devono apparire come testo, non come tag.
+ */
+const stripHtmlToText = (input: string): string => {
+    if (!input.includes('<')) return input; // già testo piano, skip
+    // Nel browser usiamo DOMParser per estrarre il testo in modo sicuro
+    if (typeof document !== 'undefined') {
+        const div = document.createElement('div');
+        div.innerHTML = input;
+        // Sostituisce i blocchi-livello con newline per preservare la struttura
+        div.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,br,hr,div').forEach(el => {
+            el.prepend(document.createTextNode('\n'));
+        });
+        return (div.textContent || div.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    // Fallback server-side: strip tag con regex
+    return input.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim();
+};
+
 export const parseConstitution = (constitutionText: string): ParsedConstitution => {
+    // Normalizza: se il testo è HTML (dall'editor), estraiamo il testo piano
+    // in modo che le regex sui prefissi MODULO/UDA/ecc. funzionino correttamente.
+    constitutionText = stripHtmlToText(constitutionText);
     const modules: ModuleDetails[] = [];
     const moduleMap = new Map<string, ModuleDetails>();
     const contentUnits: CourseContentUnit[] = [];

@@ -1,6 +1,7 @@
 // hooks/useStudents.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Student, Evaluation, BlockDetails } from '../types';
+// Student type ora include firstName, lastName, hasBES, hasDSA, besNotes, dsaNotes, certificationNotes
 import { parseCrewContextToNames } from '../utils';
 import * as db from '../services/db';
 
@@ -170,6 +171,43 @@ export const useStudents = (crewContext: string) => {
         }
     }, []);
 
+    /** Aggiunge uno studente dalla lista strutturata (modale Equipaggio) */
+    const addStructuredStudent = useCallback(async (data: Omit<Student, 'id' | 'evaluations' | 'adaSummary'>): Promise<Student> => {
+        const newStudent: Student = {
+            id: `student-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            name: data.name,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            notes: data.notes ?? '',
+            evaluations: [],
+            hasBES: data.hasBES,
+            hasDSA: data.hasDSA,
+            besNotes: data.besNotes,
+            dsaNotes: data.dsaNotes,
+            certificationNotes: data.certificationNotes,
+        };
+        setStudents(prev => [...prev, newStudent].sort((a, b) => a.name.localeCompare(b.name, 'it')));
+        await db.saveStudent(newStudent);
+        return newStudent;
+    }, []);
+
+    /** Aggiorna i dati anagrafici/inclusione di uno studente (modale Equipaggio) */
+    const updateStructuredStudent = useCallback(async (id: string, data: Partial<Omit<Student, 'id' | 'evaluations' | 'adaSummary'>>) => {
+        let updated: Student | null = null;
+        setStudents(prev => prev.map(s => {
+            if (s.id !== id) return s;
+            updated = { ...s, ...data };
+            return updated;
+        }));
+        if (updated) await db.saveStudent(updated);
+    }, []);
+
+    /** Elimina uno studente dalla lista strutturata */
+    const deleteStructuredStudent = useCallback(async (id: string) => {
+        setStudents(prev => prev.filter(s => s.id !== id));
+        await db.bulkDeleteStudents([id]);
+    }, []);
+
     return {
         students,
         isLoading,
@@ -178,5 +216,8 @@ export const useStudents = (crewContext: string) => {
         updateStudentNotes,
         updateStudentSummary,
         recordAttendanceForBlock,
+        addStructuredStudent,
+        updateStructuredStudent,
+        deleteStructuredStudent,
     };
 };

@@ -5,12 +5,19 @@ import {
     XIcon, DocumentTextIcon, PencilIcon, SparklesIcon, RefreshIcon, ChevronDownIcon, LinkIcon, CopyIcon, CheckIcon
 } from './Icons';
 import DocumentEditor from './DocumentEditor';
+import CrewRosterCard, { buildCrewContext } from './CrewRosterCard';
 import { generateDocumentContent, type DocumentContentType } from '../services/gemini';
+import type { Student } from '../types';
 
 interface FoundingDocumentsViewProps {
     masterContext: ReturnType<typeof useMasterContext>;
     onClose: () => void;
     isInitialSetup?: boolean;
+    // Studenti — per la card Equipaggio strutturata
+    students: Student[];
+    onAddStudent: (data: Omit<Student, 'id' | 'evaluations' | 'adaSummary'>) => Promise<Student>;
+    onUpdateStudent: (id: string, data: Partial<Omit<Student, 'id' | 'evaluations' | 'adaSummary'>>) => Promise<void>;
+    onDeleteStudent: (id: string) => Promise<void>;
 }
 
 interface DocCardState {
@@ -19,6 +26,33 @@ interface DocCardState {
     isGenerating: boolean;
     generatedContent: string | null;
 }
+
+/**
+ * Pre-processa il testo generato per la costituzione aggiungendo heading markdown
+ * davanti ai prefissi speciali del sistema (MODULO N:, UDA N:, FSL:, EDUCAZIONE CIVICA:).
+ * Questo permette a marked.parse() di generare <h2>/<h3> con gerarchia visiva.
+ * I prefissi vengono preservati esattamente così come sono (il constitutionParser
+ * li riconosce e fa lo strip dell'HTML prima di parsare).
+ */
+const addHeadingsToConstitution = (text: string): string => {
+    return text
+        .split('\n')
+        .map(line => {
+            const trimmed = line.trim();
+            // MODULO N: Titolo → ## MODULO N: Titolo
+            if (/^MODULO\s*\d+\s*:/i.test(trimmed)) return `## ${trimmed}`;
+            // UDA N: Titolo → ### UDA N: Titolo
+            if (/^UDA\s*\d*\s*:/i.test(trimmed)) return `### ${trimmed}`;
+            // EDUCAZIONE CIVICA: Titolo → ### EDUCAZIONE CIVICA: Titolo
+            if (/^EDUCAZIONE CIVICA\s*\d*\s*:/i.test(trimmed)) return `### ${trimmed}`;
+            // FSL N: Titolo → ### FSL N: Titolo
+            if (/^FSL\s*\d*\s*:/i.test(trimmed)) return `### ${trimmed}`;
+            // Ruolo: / Significato: → grassetto inline
+            if (/^(Ruolo|Significato):/i.test(trimmed)) return `**${trimmed}**`;
+            return line;
+        })
+        .join('\n');
+};
 
 const KIT_PROMPTS = [
     {
@@ -43,7 +77,10 @@ const KIT_PROMPTS = [
     },
 ];
 
-const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterContext, onClose, isInitialSetup }) => {
+const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
+    masterContext, onClose, isInitialSetup,
+    students, onAddStudent, onUpdateStudent, onDeleteStudent,
+}) => {
     const [localConstitution, setLocalConstitution] = useState(masterContext.constitution);
     const [localRoute, setLocalRoute] = useState(masterContext.routeContext);
     const [localCrew, setLocalCrew] = useState(masterContext.crewContext);
@@ -54,7 +91,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
         profilo:      { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         costituzione: { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         regole:       { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
-        equipaggio:   { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
+        equipaggio:   { isOpen: false, isEditing: false, isGenerating: false, generatedContent: null },
         ptof:         { isOpen: false, isEditing: false, isGenerating: false, generatedContent: null },
     }));
 
@@ -103,16 +140,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
             description: 'Il sistema di valutazione e le regole del laboratorio. Scrivi liberamente — Ada parsa e struttura per te.',
             canGenerate: true,
         },
-        {
-            id: 'equipaggio',
-            title: "L'Equipaggio",
-            content: cardStates['equipaggio'].generatedContent
-                ?? (isInitialSetup ? localCrew : masterContext.crewContext),
-            onSave: isInitialSetup ? setLocalCrew : masterContext.handleSaveCrew,
-            description: 'Le studentesse e gli studenti del corso. Incolla da un foglio di testo, uno per riga o separati da virgola — Ada costruisce il suo registro da qui.',
-            canGenerate: false,
-        },
-    ], [isInitialSetup, localConstitution, localRoute, localCrew, localRules, masterContext, cardStates]);
+    ], [isInitialSetup, localConstitution, localRoute, localRules, masterContext, cardStates]);
 
     const profiloFilled = !!(isInitialSetup ? localRoute : masterContext.teacherProfile)?.trim();
 
@@ -150,11 +178,21 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
 
         try {
             const markdown = await generateDocumentContent(docType, profiloContent);
-            const html = String(marked.parse(markdown));
+            // Per la costituzione, aggiungi heading markdown ai prefissi speciali
+            // prima di convertire in HTML, così h2/h3 vengono renderizzati con gerarchia visiva.
+            const preparedMarkdown = docId === 'costituzione'
+                ? addHeadingsToConstitution(markdown)
+                : markdown;
+            const html = String(marked.parse(preparedMarkdown));
 
             if (isInitialSetup) {
                 if (docId === 'costituzione') setLocalConstitution(html);
                 else if (docId === 'regole') setLocalRules(html);
+            } else {
+                // Salva subito nel DB — non aspettare che l'utente digiti qualcosa.
+                // Altrimenti al refresh il contenuto generato va perso.
+                if (docId === 'costituzione') await masterContext.handleSaveConstitution(html);
+                else if (docId === 'regole') await masterContext.handleSaveRules(html);
             }
 
             setCardStates(prev => ({
@@ -176,14 +214,18 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
     }, [isInitialSetup, localRoute, masterContext.teacherProfile]);
 
     const handleFinishSetup = async () => {
-        if (!localConstitution.trim() || !localCrew.trim() || !localRules.trim()) {
+        // Nel nuovo flusso gli studenti sono già nel DB tramite CrewRosterCard.
+        // Usiamo il crewContext generato dalla lista strutturata se ci sono studenti,
+        // altrimenti il fallback localCrew (per retro-compatibilità).
+        const crewToSave = students.length > 0 ? buildCrewContext(students) : localCrew;
+        if (!localConstitution.trim() || !crewToSave.trim() || !localRules.trim()) {
             setSetupError('Per favore, compila almeno Progetto Didattico, Equipaggio e Patto Formativo prima di continuare.');
             return;
         }
         setSetupError('');
         await Promise.all([
             masterContext.handleSaveConstitution(localConstitution),
-            masterContext.handleSaveCrew(localCrew),
+            masterContext.handleSaveCrew(crewToSave),
             masterContext.handleSaveRules(localRules),
             ...(localRoute.trim() ? [masterContext.handleSaveTeacherProfile(localRoute)] : []),
         ]);
@@ -378,6 +420,44 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                         </div>
                     )}
 
+                    {/* ── Card Equipaggio (lista strutturata, NON DocumentEditor) ── */}
+                    {(() => {
+                        const equipState = cardStates['equipaggio'];
+                        const hasStudents = students.length > 0;
+                        return (
+                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden transition-colors">
+                                <button
+                                    onClick={() => toggleOpen('equipaggio')}
+                                    className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-700/25 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <span className="text-sm font-semibold text-white truncate">L'Equipaggio</span>
+                                        {!equipState.isOpen && (
+                                            hasStudents
+                                                ? <span className="text-[10px] font-mono text-emerald-400/70 shrink-0">● {students.length} student{students.length === 1 ? 'e' : 'sse/i'}</span>
+                                                : <span className="text-[10px] font-mono text-gray-500 shrink-0">○ vuoto</span>
+                                        )}
+                                    </div>
+                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${equipState.isOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {equipState.isOpen && (
+                                    <div className="border-t border-gray-700/40 px-5 pb-5 pt-4">
+                                        <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+                                            Le studentesse e gli studenti del corso. Aggiungi ognuno con nome, cognome e — se necessario — segnalazioni BES/DSA. Ada usa questi profili per adattare suggerimenti e attività.
+                                        </p>
+                                        <CrewRosterCard
+                                            students={students}
+                                            onAddStudent={onAddStudent}
+                                            onUpdateStudent={onUpdateStudent}
+                                            onDeleteStudent={onDeleteStudent}
+                                            onCrewContextChange={masterContext.handleSaveCrew}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
                     {documents.map(doc => {
                         const state = cardStates[doc.id];
                         const hasContent = !!doc.content?.trim();
@@ -414,23 +494,23 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({ masterCon
                                                         : hasContent
                                                             ? 'Rigenera con ADA (sovrascrive il testo nell\'editor, non ancora salvato)'
                                                             : 'Genera una bozza partendo dal Profilo del Corso'
-                                                }
-                                                className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border transition-colors
-                                                    ${!profiloFilled || state.isGenerating
-                                                        ? 'text-purple-400/40 border-purple-500/15 cursor-not-allowed'
-                                                        : 'text-purple-300 border-purple-500/25 hover:bg-purple-500/10 hover:border-purple-400/40 cursor-pointer'
-                                                    }`}
-                                                aria-disabled={!profiloFilled || state.isGenerating}
-                                            >
-                                                {state.isGenerating
-                                                    ? <RefreshIcon className="h-3 w-3 animate-spin" />
-                                                    : <SparklesIcon className="h-3 w-3" />
-                                                }
-                                                <span className="hidden sm:inline">
-                                                    {state.isGenerating ? 'Generando…' : 'Genera con ADA'}
+                                                    }
+                                                    className={`flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border transition-colors
+                                                        ${!profiloFilled || state.isGenerating
+                                                            ? 'text-purple-400/40 border-purple-500/15 cursor-not-allowed'
+                                                            : 'text-purple-300 border-purple-500/25 hover:bg-purple-500/10 hover:border-purple-400/40 cursor-pointer'
+                                                        }`}
+                                                    aria-disabled={!profiloFilled || state.isGenerating}
+                                                >
+                                                    {state.isGenerating
+                                                        ? <RefreshIcon className="h-3 w-3 animate-spin" />
+                                                        : <SparklesIcon className="h-3 w-3" />
+                                                    }
+                                                    <span className="hidden sm:inline">
+                                                        {state.isGenerating ? 'Generando…' : 'Genera con ADA'}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        )}
+                                            )}
 
                                         {/* Pulsante matita — solo fuori dalla configurazione iniziale */}
                                         {!isInitialSetup && (

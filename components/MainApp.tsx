@@ -74,7 +74,7 @@ const MainApp: React.FC<MainAppProps> = ({ masterContext, onOpenApiSettings }) =
     updateConversation, updateConversationTitle, conversationsRef,
   } = useConversations(showToast);
   
-const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttendanceForBlock, updateStudentNotes, updateStudentSummary } = useStudents(masterContext.crewContext);
+const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttendanceForBlock, updateStudentNotes, updateStudentSummary, addStructuredStudent, updateStructuredStudent, deleteStructuredStudent } = useStudents(masterContext.crewContext);
   const { notebooks, addNotebook, updateNotebook, removeNotebook, accessNotebook } = useNotebooks(showToast);
   const { shortcuts, addShortcut, updateShortcut, deleteShortcut, bulkUpdateShortcuts } = useToolkitShortcuts(showToast);
   const { categories, addCategory, updateCategory, deleteCategory, bulkUpdateCategories } = useToolkitCategories(showToast);
@@ -1505,7 +1505,7 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
           {
             'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} />,
             'gantt': <GanttView conversations={conversations} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} onMarkActivityDelivered={handleMarkActivityDelivered} />,
-            'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} />,
+            'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} students={students} onAddStudent={addStructuredStudent} onUpdateStudent={updateStructuredStudent} onDeleteStudent={deleteStructuredStudent} />,
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
             'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
@@ -1608,9 +1608,10 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
                 <p className="text-xs text-gray-300">Vuoi salvare il notebook in cui lavorerai?</p>
             </div>
             <button onClick={() => { setNotebookSuggestion(null); handleOpenAddNotebookModal({ title: notebookSuggestion.title }); }} className="ml-4 px-3 py-1 bg-blue-600 rounded-md text-xs hover:bg-blue-700">Sì, aggiungi</button>
-             <button onClick={() => setNotebookSuggestion(null)} className="ml-2 text-xl font-semibold leading-none">&times;</button>
+            <button onClick={() => setNotebookSuggestion(null)} className="ml-2 px-3 py-1 bg-gray-600 rounded-md text-xs hover:bg-gray-500">No, grazie</button>
         </div>
       )}
+
     </>
   );
 };

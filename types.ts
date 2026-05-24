@@ -10,6 +10,13 @@ export interface MasterContextData {
     crewContext: string;
     rulesContext: string;
     teacherProfile: string;
+    ptofExtract?: string;
+}
+
+export interface Label {
+    id: string;
+    name: string;
+    color: string;
 }
 
 /**
@@ -47,13 +54,24 @@ export interface Evaluation {
 
 export interface Student {
     id: string;
+    /** Nome completo — usato ovunque per retro-compatibilità. Derivato da firstName+lastName se disponibili. */
     name: string;
+    /** Nome (inserimento strutturato da modale Equipaggio) */
+    firstName?: string;
+    /** Cognome (inserimento strutturato da modale Equipaggio) */
+    lastName?: string;
     notes?: string;
     evaluations: Evaluation[];
     adaSummary?: {
         content: string;
         date: string; // ISO string
     };
+    // Campi inclusione — inseriti nel modale Equipaggio
+    hasBES?: boolean;
+    hasDSA?: boolean;
+    besNotes?: string;
+    dsaNotes?: string;
+    certificationNotes?: string;
 }
 
 export interface WeekRouteInfo {
@@ -408,6 +426,20 @@ export interface InferredConceptMastery {
     concept: string;
     mastery: MasteryLevel;
     pillarType: PillarType;
+}
+
+export interface InferredMastery {
+    pillar: string;
+    pillarType: PillarType;
+    masteryLevel: MasteryLevel;
+    evidence: string;
+}
+
+export interface InferredWeekAnalysis {
+    weekNumber: number;
+    classEnergy: EnergyLevel;
+    studentGrowth: InferredStudentGrowth[];
+    masteryMap: InferredMastery[];
 }
 
 export interface QualitativeAnalysisData {

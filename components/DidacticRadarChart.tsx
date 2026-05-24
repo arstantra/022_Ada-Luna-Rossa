@@ -49,8 +49,8 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
     ];
     const n = allTipologie.length;
 
-    const plannedMap = new Map(data.map(d => [d.tipologia, d.count]));
-    const idealMap   = new Map((idealData ?? []).map(d => [d.tipologia, d.count]));
+    const plannedMap = new Map<LessonType, number>(data.map(d => [d.tipologia, d.count] as [LessonType, number]));
+    const idealMap   = new Map<LessonType, number>((idealData ?? []).map(d => [d.tipologia, d.count] as [LessonType, number]));
 
     const plannedCounts = allTipologie.map(t => plannedMap.get(t) ?? 0);
     const idealCounts   = allTipologie.map(t => idealMap.get(t) ?? 0);
@@ -232,7 +232,7 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
             {score !== null && scorePercent !== null && (
                 <span className={`flex-shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-mono leading-none mt-0.5 ${scoreBadgeStyle}`}>
                     {scorePercent}%
-                </span>
+                            </span>
             )}
         </div>
     );

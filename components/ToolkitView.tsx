@@ -265,7 +265,7 @@ const ToolkitView: React.FC<ToolkitViewProps> = memo(({
                 
                 if (oldIndex !== -1 && newIndex !== -1) {
                     const reordered = arrayMove(sortedCategories, oldIndex, newIndex);
-                    const updatesToPersist = reordered.map((category, index) => ({ ...category, order: index }));
+                    const updatesToPersist = reordered.map((category: ToolkitCategory, index: number) => ({ ...category, order: index }));
                     onBulkUpdateCategories(updatesToPersist);
                 }
             }
