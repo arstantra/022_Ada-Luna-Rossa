@@ -26,11 +26,12 @@ interface StrategicDashboardViewProps {
     onStartPlanning: (weekInfo: WeekRouteInfo) => void;
     onUpdateBlockModule: (weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
+    onUpdateBlockTipologia: (weekNumber: number, blockIndex: number, tipologia: LessonType | '') => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
@@ -430,6 +431,15 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div ref={weeksContainerRef} className="max-w-6xl mx-auto space-y-4">
+                        {weekData.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+                                <span className="text-4xl opacity-20">🗓</span>
+                                <p className="text-sm text-gray-500 font-sans max-w-xs">
+                                    Nessuna settimana configurata.<br />
+                                    Vai in <span className="font-mono text-gray-400">Gestione del Corso → La Rotta</span> per aggiungere le settimane del corso.
+                                </p>
+                            </div>
+                        )}
                         {weekData.map(week => {
                             return (
                             <details key={week.weekNumber} className="group rounded-xl border border-gray-600/55 bg-gray-800/55 overflow-hidden transition-all duration-200 hover:border-gray-500/70">
@@ -574,6 +584,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             <option value="">Seleziona Modulo...</option>
                                                             {modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
                                                         </select>
+                                                        <select
+                                                            value={block.tipologia || ''}
+                                                            onChange={(e) => {
+                                                                onUpdateBlockTipologia(week.weekNumber, index, e.target.value as LessonType | '');
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={selectKeyDownHandler}
+                                                            disabled={isSpecialStatus}
+                                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+                                                        >
+                                                            <option value="">Tipologia...</option>
+                                                            {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
+                                                                <option key={key} value={key}>{label}</option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                     {/* Attività attive su questo blocco */}
                                                     {blockActivities.length > 0 && (
@@ -629,8 +654,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <EditableTextarea value={block.lessonTitle || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="Verrà popolato selezionando un modulo..." rows={1} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label>
-                                                    <EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
+                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label><EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
                                             </div>
                                         </details>

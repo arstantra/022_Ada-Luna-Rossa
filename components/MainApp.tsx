@@ -46,7 +46,7 @@ import { usePlanning } from '../hooks/usePlanning';
 import * as db from '../services/db';
 import * as GeminiService from '../services/gemini';
 // Utils & Constants
-import { parseRouteContext, parseCrewContextToNames, generateExportContent, fileToAttachment, generateCourseBookHtml } from '../utils';
+import { routeCalendarToWeekInfos, parseCrewContextToNames, generateExportContent, fileToAttachment, generateCourseBookHtml } from '../utils';
 import { 
     GEMINI_API_ERROR_MESSAGE, MODES,
     ADA_QUICK_CHAT_ID,
@@ -150,7 +150,13 @@ const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(n
 
 
   const activeConversation = useMemo(() => conversations.find(c => c.id === activeConversationId) ?? null, [conversations, activeConversationId]);
-  const availableWeeks = useMemo(() => parseRouteContext(masterContext.routeContext), [masterContext.routeContext]);
+  // Le settimane visibili in Progettazione del Corso derivano direttamente
+  // dal calendario strutturato di La Rotta (routeCalendar). Se non ci sono
+  // settimane configurate, il dashboard mostra uno stato vuoto.
+  const availableWeeks = useMemo(
+    () => routeCalendarToWeekInfos(masterContext.routeCalendar),
+    [masterContext.routeCalendar]
+  );
 
 const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Conversation => {
     const existingConversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekInfo.weekNumber);
@@ -406,6 +412,19 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     }
     applyBlockStatus(weekNumber, blockIndex, status, reason);
   }, [applyBlockStatus, conversationsRef]);
+
+  const handleUpdateBlockTipologia = useCallback((weekNumber: number, blockIndex: number, tipologia: LessonType | '') => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex ? { ...b, tipologia: (tipologia || undefined) as LessonType | undefined } : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  }, [availableWeeks, getOrCreateConversationForWeek, updateConversation]);
 
   const handleSaltaChoice = useCallback((choice: SaltaChoice) => {
     if (!pendingSaltaInfo) return;
@@ -1468,7 +1487,7 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
             'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
-            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} showToast={showToast} />,
+            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
             'lezione_in_corso': <InAulaView viewMode="in_corso" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
             'archivio_lezioni': <InAulaView viewMode="archivio" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,

@@ -1,5 +1,5 @@
 // utils.ts
-import type { Attachment, WeekRouteInfo, WeekPlan, BlockDetails, Message, Conversation, Student } from './types';
+import type { Attachment, WeekRouteInfo, WeekPlan, BlockDetails, Message, Conversation, Student, WeekEntry } from './types';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 
@@ -62,6 +62,42 @@ export const parseRouteContext = (context: string): WeekRouteInfo[] => {
         };
     }).filter(w => w.weekNumber > 0 && w.totalBlocks > 0);
 };
+
+const _italianMonthsShort = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+/**
+ * Formatta una settimana (lunedì ISO) in "15-21 set" o "30 set - 6 ott" se il mese cambia.
+ * Compatibile con il regex usato da getExactDateForBlock: /(\d+)(?:-\d+)?\s+(\w+)/i
+ */
+export const formatRouteWeekDates = (mondayIso: string): string => {
+    if (!mondayIso) return 'N/D';
+    const monday = new Date(mondayIso + 'T12:00:00');
+    if (isNaN(monday.getTime())) return 'N/D';
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const monDay = monday.getDate();
+    const sunDay = sunday.getDate();
+    const monMonth = _italianMonthsShort[monday.getMonth()];
+    const sunMonth = _italianMonthsShort[sunday.getMonth()];
+    if (monday.getMonth() === sunday.getMonth()) {
+        return `${monDay}-${sunDay} ${monMonth}`;
+    }
+    return `${monDay} ${monMonth} - ${sunDay} ${sunMonth}`;
+};
+
+/**
+ * Converte il calendario strutturato di La Rotta (WeekEntry[]) in WeekRouteInfo[]
+ * usato da Progettazione del Corso. Le settimane appaiono nell'ordine in cui
+ * sono state aggiunte in La Rotta; il numero di blocchi riflette activeBlocks.length.
+ */
+export const routeCalendarToWeekInfos = (calendar: WeekEntry[]): WeekRouteInfo[] =>
+    calendar
+        .filter(e => e.activeBlocks.length > 0)
+        .map(e => ({
+            weekNumber: e.weekNumber,
+            dates: formatRouteWeekDates(e.mondayDate),
+            totalBlocks: e.activeBlocks.length,
+        }));
 
 /**
  * Parses the teacher's name from the profile string.
