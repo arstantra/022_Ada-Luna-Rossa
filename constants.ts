@@ -1,5 +1,5 @@
 // constants.ts
-import type { Mode, LessonType, ActivityType } from './types';
+import type { Mode, LessonType, ActivityType, CourseContentType } from './types';
 
 export const LOCAL_STORAGE_INSTRUCTION_KEY = 'ada-system-instruction';
 export const LOCAL_STORAGE_CONSTITUTION_KEY = 'ada-constitution';
@@ -201,14 +201,21 @@ export const LABEL_COLORS = [
   { key: 'gray', name: 'Grigio', bg: 'bg-gray-500/20', text: 'text-gray-300', ring: 'ring-1 ring-inset ring-gray-500/30' },
 ];
 
+/** Modalità pedagogica di conduzione — il "come" (5 voci stabili) */
 export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   frontale_teorica:   'Frontale teorica',
   frontale_operativa: 'Frontale operativa',
   laboratorio:        'Laboratorio',
   verifica:           'Verifica',
   discussione:        'Discussione',
-  uda:                'UDA',
-  fsl:                'FSL',
+};
+
+/** Tipo di unità di contenuto del corso — il "cosa" (parsato dal Progetto Didattico) */
+export const COURSE_CONTENT_TYPE_LABELS: Record<CourseContentType, string> = {
+  modulo:            'Modulo',
+  uda:               'UDA',
+  educazione_civica: 'Educazione Civica',
+  fsl:               'FSL',
 };
 
 export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {

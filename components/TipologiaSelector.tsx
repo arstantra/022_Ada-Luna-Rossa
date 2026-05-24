@@ -8,8 +8,6 @@ const TIPOLOGIA_COLORS: Record<LessonType, string> = {
     laboratorio:        'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
     verifica:           'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
     discussione:        'bg-purple-500/15 text-purple-300 ring-1 ring-inset ring-purple-500/25',
-    uda:                'bg-orange-500/15 text-orange-300 ring-1 ring-inset ring-orange-500/25',
-    fsl:                'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25',
 };
 
 const LESSON_TYPES = Object.keys(LESSON_TYPE_LABELS) as LessonType[];

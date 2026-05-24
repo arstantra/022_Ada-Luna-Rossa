@@ -675,13 +675,47 @@ export const generateDocumentContent = async (
     const prompts: Record<DocumentContentType, string> = {
         costituzione: `Sei un esperto di progettazione didattica. Basandoti sul profilo del corso fornito, genera un Progetto Didattico completo e professionale per questa disciplina.
 
-Il Progetto Didattico deve includere:
-- Una presentazione del corso e dei suoi obiettivi formativi generali
-- I moduli didattici principali (3-5 moduli), ciascuno con nome, descrizione, obiettivi specifici, competenze sviluppate e attività chiave
-- Il filo pedagogico che unisce i moduli
-- I criteri generali di valutazione formativa
+Il Progetto Didattico deve usare OBBLIGATORIAMENTE i seguenti prefissi riconosciuti dal sistema per le unità di contenuto:
 
-Scrivi in modo chiaro, professionale e ispirato. Usa Markdown con titoli (##), sottotitoli (###) e liste puntate.
+  MODULO N: Titolo        → un modulo didattico principale (con numero 0-based)
+  UDA N: Titolo           → un'Unità di Apprendimento / compito autentico
+  EDUCAZIONE CIVICA: Titolo  → un percorso di educazione civica (numero opzionale)
+  FSL: Titolo             → attività di Formazione Scuola-Lavoro strutturata (numero opzionale)
+
+Usa SOLO i prefissi pertinenti al profilo del corso. Non inventare prefissi diversi.
+
+I prefissi sono case-sensitive e devono essere esattamente come mostrati sopra (tutto maiuscolo, con due punti). Il sistema li legge direttamente per popolare le tendine di pianificazione di Ada — usarli correttamente consente all'AI di proporre le unità nelle interfacce di pianificazione.
+
+Per ogni sezione MODULO includi (facoltativi ma molto utili):
+  Ruolo: descrizione sintetica del ruolo nel percorso
+  Significato: perché questo modulo è significativo per gli studenti
+  ⦁ Pilastri di Sintonizzazione: concetto 1; concetto 2; concetto 3
+  ⦁ Pilastri Operativi: competenza 1; competenza 2; competenza 3
+  ⦁ Attività Chiave: attività 1; attività 2; attività 3
+
+Per UDA, EDUCAZIONE CIVICA e FSL includi almeno:
+  Ruolo: descrizione sintetica
+  Significato: motivazione pedagogica
+
+Esempio di struttura corretta:
+---
+MODULO 0: Orientamento
+Ruolo: Accoglienza e presentazione del percorso formativo.
+Significato: ...
+
+MODULO 1: Fondamenti
+Ruolo: ...
+...
+
+UDA 1: Nome del compito autentico
+Ruolo: ...
+Significato: ...
+
+EDUCAZIONE CIVICA: Cittadinanza Digitale
+Ruolo: ...
+---
+
+Scrivi solo le sezioni pertinenti al profilo del corso. Usa il formato sopra, senza intestazioni Markdown aggiuntive attorno ai prefissi — i prefissi sono già i titoli di sezione.
 
 PROFILO DEL CORSO:
 ${teacherProfile}`,
@@ -728,7 +762,7 @@ ${teacherProfile}`,
 
 const VALID_LESSON_TYPES = new Set<string>([
     'frontale_teorica', 'frontale_operativa', 'laboratorio',
-    'verifica', 'discussione', 'uda', 'fsl',
+    'verifica', 'discussione',
 ]);
 
 export const extractModulesFromProfile = async (teacherProfile: string): Promise<CourseModule[]> => {
@@ -795,6 +829,7 @@ ${teacherProfile}`;
         return [];
     }
 };
+
 
 export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonMaterials: string; }> => {
     const prompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera i dettagli per un blocco di lezione di 2 ore.

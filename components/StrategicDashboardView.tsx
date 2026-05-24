@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity } from '../types';
-import { LESSON_TYPE_LABELS } from '../constants';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity, CourseContentUnit } from '../types';
+import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -14,6 +14,7 @@ interface StrategicDashboardViewProps {
     conversations: Conversation[];
     weeks: WeekRouteInfo[];
     modules: ModuleDetails[];
+    contentUnits: CourseContentUnit[];
     constitutionText: string;
     onClose: () => void;
     onUpdateWeekTheme: (weekNumber: number, theme: string) => void;
@@ -27,11 +28,12 @@ interface StrategicDashboardViewProps {
     onUpdateBlockModule: (weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
     onUpdateBlockTipologia: (weekNumber: number, blockIndex: number, tipologia: LessonType | '') => void;
+    onToggleFslPeriod: (weekNumber: number, blockIndex: number, value: boolean) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
@@ -510,6 +512,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
+                                                        {block.isFslPeriod && (
+                                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
+                                                                FSL
+                                                            </span>
+                                                        )}
                                                         {block.moduleId && (() => {
                                                             const mod = week.modules.find(m => m.id === block.moduleId);
                                                             if (!mod) return null;
@@ -567,7 +574,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className={`flex items-center gap-3 pl-8 ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                    <div className={`flex items-center gap-3 pl-8 flex-wrap ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                        {/* Tendina "Cosa" — unità di contenuto dal Progetto Didattico */}
                                                         <select
                                                             value={block.module || ''}
                                                             onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
@@ -576,9 +584,23 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             disabled={isSpecialStatus || block.isLocked}
                                                             className="w-full md:w-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                                                         >
-                                                            <option value="">Seleziona Modulo...</option>
-                                                            {modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
+                                                            <option value="" disabled>— unità didattica —</option>
+                                                            {contentUnits.length > 0
+                                                                ? (['modulo', 'uda', 'educazione_civica', 'fsl'] as const).flatMap(type => {
+                                                                    const units = contentUnits.filter(u => u.type === type);
+                                                                    if (units.length === 0) return [];
+                                                                    return [
+                                                                        <optgroup key={type} label={COURSE_CONTENT_TYPE_LABELS[type]}>
+                                                                            {units.map(u => (
+                                                                                <option key={u.id} value={u.title}>{u.title}</option>
+                                                                            ))}
+                                                                        </optgroup>
+                                                                    ];
+                                                                })
+                                                                : modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)
+                                                            }
                                                         </select>
+                                                        {/* Tendina "Come" — modalità pedagogica (5 voci stabili) */}
                                                         <select
                                                             value={block.tipologia || ''}
                                                             onChange={(e) => {
@@ -589,11 +611,27 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             disabled={isSpecialStatus}
                                                             className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
                                                         >
-                                                            <option value="">Tipologia...</option>
+                                                            <option value="" disabled>— tipologia di lezione —</option>
                                                             {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
                                                                 <option key={key} value={key}>{label}</option>
                                                             ))}
                                                         </select>
+                                                        {/* Toggle periodo FSL */}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod);
+                                                            }}
+                                                            title={block.isFslPeriod ? 'Disattiva periodo FSL' : 'Attiva periodo FSL'}
+                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${
+                                                                block.isFslPeriod
+                                                                    ? 'text-sky-400 border-sky-500/40 bg-sky-500/10'
+                                                                    : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'
+                                                            }`}
+                                                        >
+                                                            FSL
+                                                        </button>
                                                     </div>
                                                     {/* Attività attive su questo blocco */}
                                                     {blockActivities.length > 0 && (
@@ -642,6 +680,55 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     </button>
                                                     <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
                                                 </div>
+                                            </summary>
+                                            <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
+                                                {block.lessonTitle && (
+                                                <div>
+                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Estratto dalla Costituzione</label>
+                                                    <EditableTextarea value={block.lessonTitle} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="" rows={1} disabled={isSpecialStatus || block.isLocked} />
+                                                </div>
+                                                )}
+                                                <div>
+                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label><EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
+                                                </div>
+                                            </div>
+                                        </details>
+                                    )})}
+                                    <div className="mt-3 pt-4 border-t border-gray-700/30">
+                                        <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Note sulla Settimana</label>
+                                        <EditableTextarea value={week.notes || ''} onSave={(val) => onUpdateWeekDetails(week.weekNumber, { notes: val })} placeholder="Appunti, promemoria, collegamenti interdisciplinari..." />
+                                    </div>
+                                </div>
+                            </details>
+                        )})}
+                    </div>
+                </div>
+            </main>
+            {objectiveModalInfo && (() => {
+                const week = weekData.find(w => w.weekNumber === objectiveModalInfo.weekNumber);
+                const block = week?.blocks[objectiveModalInfo.blockIndex];
+                if (!week || !block) return null;
+
+                const moduleContext = block.lessonTitle || '';
+
+                return (
+                    <ObjectiveSuggestionModal
+                        isOpen={!!objectiveModalInfo}
+                        onClose={() => setObjectiveModalInfo(null)}
+                        onSelectObjective={(objective) => handleSelectObjective(objectiveModalInfo.weekNumber, objectiveModalInfo.blockIndex, objective)}
+                        weekNumber={objectiveModalInfo.weekNumber}
+                        blockIndex={objectiveModalInfo.blockIndex}
+                        theme={week.theme || 'Nessun tema definito'}
+                        prompt={block.lessonSyllabus || ''}
+                        moduleContext={moduleContext}
+                    />
+                );
+            })()}
+        </>
+    );
+};
+
+export default StrategicDashboardView;
                                             </summary>
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
                                                 {block.lessonTitle && (

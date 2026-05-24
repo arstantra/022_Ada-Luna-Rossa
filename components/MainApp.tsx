@@ -105,7 +105,7 @@ const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(n
   const [confirmationProps, setConfirmationProps] = useState<Omit<ConfirmationModalProps, 'isOpen' | 'onClose'> | null>(null);
   const [pendingSaltaInfo, setPendingSaltaInfo] = useState<{ weekNumber: number; blockIndex: number; block: BlockDetails } | null>(null);
 
-  const { modules } = useConstitutionCache();
+  const { modules, contentUnits } = useConstitutionCache();
 
 
   useEffect(() => {
@@ -124,24 +124,34 @@ const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(n
     }
   }, []); // L'array vuoto [] assicura che questo codice venga eseguito solo una volta
 
-  // Migrazione one-shot: blocchi con status 'formazione scuola-lavoro' → status 'normale' + tipologia 'fsl'
+  // Migrazione one-shot: blocchi con status 'formazione scuola-lavoro' → status 'normale' + isFslPeriod: true
+  // (v2: tipologia 'fsl' → rimossa dal LessonType, FSL è ora flag isFslPeriod)
   const fslMigrationDoneRef = useRef(false);
   useEffect(() => {
     if (fslMigrationDoneRef.current || conversations.length === 0) return;
     fslMigrationDoneRef.current = true;
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
-      const hasFsl = conv.weekPlan.blocks.some(b => (b.status as string) === 'formazione scuola-lavoro');
+      const hasFsl = conv.weekPlan.blocks.some(
+        b => (b.status as string) === 'formazione scuola-lavoro' || (b.tipologia as string) === 'fsl'
+      );
       if (!hasFsl) return;
       updateConversation(conv.id, c => ({
         ...c,
         weekPlan: c.weekPlan ? {
           ...c.weekPlan,
-          blocks: c.weekPlan.blocks.map(b =>
-            (b.status as string) === 'formazione scuola-lavoro'
-              ? { ...b, status: 'normale' as BlockStatus, tipologia: 'fsl' as LessonType }
-              : b
-          )
+          blocks: c.weekPlan.blocks.map(b => {
+            const wasOldStatus = (b.status as string) === 'formazione scuola-lavoro';
+            const wasOldTipologia = (b.tipologia as string) === 'fsl';
+            if (!wasOldStatus && !wasOldTipologia) return b;
+            const updated = { ...b };
+            if (wasOldStatus) updated.status = 'normale' as BlockStatus;
+            if (wasOldTipologia) {
+              updated.isFslPeriod = true;
+              updated.tipologia = undefined;
+            }
+            return updated;
+          })
         } : undefined
       }));
     });
@@ -421,6 +431,19 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
       if (!c.weekPlan) return c;
       const blocks = c.weekPlan.blocks.map((b, i) =>
         i === blockIndex ? { ...b, tipologia: (tipologia || undefined) as LessonType | undefined } : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  }, [availableWeeks, getOrCreateConversationForWeek, updateConversation]);
+
+  const handleToggleFslPeriod = useCallback((weekNumber: number, blockIndex: number, value: boolean) => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex ? { ...b, isFslPeriod: value || undefined } : b
       );
       return { ...c, weekPlan: { ...c.weekPlan, blocks } };
     });
@@ -1487,7 +1510,7 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
             'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
-            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} showToast={showToast} />,
+            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} contentUnits={contentUnits} constitutionText={masterContext.constitution} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} onToggleFslPeriod={handleToggleFslPeriod} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
             'lezione_in_corso': <InAulaView viewMode="in_corso" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
             'archivio_lezioni': <InAulaView viewMode="archivio" conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} />,
@@ -1571,6 +1594,51 @@ const handleReEditBlock = useCallback((convoId: string, blockIndex: number) => {
               {...confirmationProps}
           />
       )}
+
+      <SaltaLezioneModal
+          isOpen={!!pendingSaltaInfo}
+          onClose={() => setPendingSaltaInfo(null)}
+          blockSummary={pendingSaltaInfo?.block.lessonTitle || pendingSaltaInfo?.block.objective || ''}
+          onChoice={handleSaltaChoice}
+      />
+
+      {notebookSuggestion && (
+        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out bg-gray-700 border border-gray-600 animate-fade-in-down">
+            <div>
+                <p className="font-semibold">Contenuto preparato per NotebookLM!</p>
+                <p className="text-xs text-gray-300">Vuoi salvare il notebook in cui lavorerai?</p>
+            </div>
+            <button onClick={() => { setNotebookSuggestion(null); handleOpenAddNotebookModal({ title: notebookSuggestion.title }); }} className="ml-4 px-3 py-1 bg-blue-600 rounded-md text-xs hover:bg-blue-700">Sì, aggiungi</button>
+             <button onClick={() => setNotebookSuggestion(null)} className="ml-2 text-xl font-semibold leading-none">&times;</button>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default MainApp;
+    <SaltaLezioneModal
+          isOpen={!!pendingSaltaInfo}
+          onClose={() => setPendingSaltaInfo(null)}
+          blockSummary={pendingSaltaInfo?.block.lessonTitle || pendingSaltaInfo?.block.objective || ''}
+          onChoice={handleSaltaChoice}
+      />
+
+      {notebookSuggestion && (
+        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out bg-gray-700 border border-gray-600 animate-fade-in-down">
+            <div>
+                <p className="font-semibold">Contenuto preparato per NotebookLM!</p>
+                <p className="text-xs text-gray-300">Vuoi salvare il notebook in cui lavorerai?</p>
+            </div>
+            <button onClick={() => { setNotebookSuggestion(null); handleOpenAddNotebookModal({ title: notebookSuggestion.title }); }} className="ml-4 px-3 py-1 bg-blue-600 rounded-md text-xs hover:bg-blue-700">Sì, aggiungi</button>
+             <button onClick={() => setNotebookSuggestion(null)} className="ml-2 text-xl font-semibold leading-none">&times;</button>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default MainApp;
 
       <SaltaLezioneModal
           isOpen={!!pendingSaltaInfo}

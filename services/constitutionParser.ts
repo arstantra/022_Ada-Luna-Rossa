@@ -1,75 +1,121 @@
 // services/constitutionParser.ts
-import type { Pillar, ModuleDetails, ParsedConstitution } from '../types';
+import type { Pillar, ModuleDetails, ParsedConstitution, CourseContentType, CourseContentUnit } from '../types';
 
 const parsePillarsOrActivities = (text: string): string[] => {
     if (!text) return [];
-    // Content can be "⦁ Item 1; Item 2" or "⦁ Item 1\n⦁ Item 2" or just a list separated by ;
     return text.split(/⦁|;|\n\s*-/)
         .map(p => p.trim())
         .filter(Boolean);
 };
 
+/**
+ * Regex che riconosce i prefissi supportati come inizio di sezione.
+ * Case-insensitive, numero opzionale, segue i due punti.
+ * Esempi: "MODULO 0:", "UDA 1:", "EDUCAZIONE CIVICA:", "FSL 1:"
+ */
+const SECTION_HEADER_RE = /^(MODULO|UDA|EDUCAZIONE CIVICA|FSL)\s*(\d+)?\s*:/im;
+
+/** Determina il CourseContentType a partire dal prefisso testuale (case-insensitive) */
+const prefixToType = (prefix: string): CourseContentType => {
+    const p = prefix.toUpperCase().trim();
+    if (p === 'MODULO') return 'modulo';
+    if (p === 'UDA') return 'uda';
+    if (p.startsWith('EDUCAZIONE')) return 'educazione_civica';
+    if (p === 'FSL') return 'fsl';
+    return 'modulo'; // fallback
+};
+
 export const parseConstitution = (constitutionText: string): ParsedConstitution => {
     const modules: ModuleDetails[] = [];
     const moduleMap = new Map<string, ModuleDetails>();
+    const contentUnits: CourseContentUnit[] = [];
 
-    // Split text into module sections, keeping the delimiter, and filter out any empty strings.
-    const moduleSections = constitutionText.split(/(?=^MODULO \d+:)/gm).filter(s => s.trim().startsWith('MODULO'));
-    const totalModules = moduleSections.length;
+    // Contatori per tipo (per calcolare l'ordine 1-based)
+    const typeCounters: Record<CourseContentType, number> = {
+        modulo: 0,
+        uda: 0,
+        educazione_civica: 0,
+        fsl: 0,
+    };
 
-    for (let i = 0; i < totalModules; i++) {
-        const section = moduleSections[i];
+    // Split in sezioni usando il lookahead sul pattern di header.
+    const allSections = constitutionText
+        .split(/(?=^(?:MODULO|UDA|EDUCAZIONE CIVICA|FSL)\s*(?:\d+)?\s*:)/gim)
+        .filter(s => SECTION_HEADER_RE.test(s));
 
-        const nameMatch = section.match(/^MODULO \d+:.*$/m);
-        const name = nameMatch ? nameMatch[0].trim() : 'Modulo Sconosciuto';
-        
-        const moduleNumberMatch = name.match(/^MODULO (\d+):/);
-        const moduleNumber = moduleNumberMatch ? parseInt(moduleNumberMatch[1], 10) : -1;
+    const totalSections = allSections.length;
 
-        // Module 0 (introductory) and the last module (conclusive) are special cases
-        // and should not have pillars or activities.
-        const isSpecialModule = (moduleNumber === 0) || (i === totalModules - 1);
+    for (let i = 0; i < totalSections; i++) {
+        const section = allSections[i];
 
-        // Regexes made more robust to handle optional sections and varying whitespace.
-        const roleMatch = section.match(/Ruolo:\s*([\s\S]*?)(?=Significato:|⦁\s*Pilastri|Attività Chiave:|$)/);
-        const significanceMatch = section.match(/Significato:\s*([\s\S]*?)(?=⦁\s*Pilastri|Attività Chiave:|$)/);
-        
-        let sintonizzazionePillars: Pillar[] = [];
-        let operativiPillars: Pillar[] = [];
-        let attivitaChiaveItems: string[] = [];
+        const headerMatch = section.match(/^(MODULO|UDA|EDUCAZIONE CIVICA|FSL)\s*(\d+)?\s*:(.*)/im);
+        if (!headerMatch) continue;
 
-        // Only parse pillars and activities for standard modules.
-        if (!isSpecialModule) {
-            const sintonizzazioneMatch = section.match(/⦁\s*Pilastri di Sintonizzazione(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Pilastri Operativi|⦁\s*Attività Chiave:|$)/);
-            const operativiMatch = section.match(/⦁\s*Pilastri Operativi(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Attività Chiave:|$)/);
-            let attivitaChiaveMatch = section.match(/⦁\s*Attività Chiave(?:.*)?:\s*([\s\S]*?)(?=\nMODULO|$)/);
-            
-            sintonizzazionePillars = sintonizzazioneMatch 
-                ? parsePillarsOrActivities(sintonizzazioneMatch[1]).map(name => ({name})) 
-                : [];
-            
-            operativiPillars = operativiMatch 
-                ? parsePillarsOrActivities(operativiMatch[1]).map(name => ({name})) 
-                : [];
+        const rawPrefix = headerMatch[1];
+        const rawNumber = headerMatch[2];
+        const rawTitleRest = headerMatch[3].trim();
 
-            attivitaChiaveItems = attivitaChiaveMatch 
-                ? parsePillarsOrActivities(attivitaChiaveMatch[1])
-                : [];
-        }
+        const type = prefixToType(rawPrefix);
+        typeCounters[type]++;
+        const order = rawNumber ? parseInt(rawNumber, 10) : typeCounters[type];
 
+        const title = rawTitleRest || `${rawPrefix} ${order}`;
+        const id = `${type}-${order}`;
 
-        const moduleDetail: ModuleDetails = {
-            name,
-            role: roleMatch ? roleMatch[1].trim() : '',
-            significance: significanceMatch ? significanceMatch[1].trim() : '',
-            sintonizzazione: sintonizzazionePillars,
-            operativi: operativiPillars,
-            attivitaChiave: attivitaChiaveItems,
+        const roleMatch = section.match(/Ruolo:\s*([\s\S]*?)(?=Significato:|⦁\s*Pilastri|Attività Chiave:|$)/i);
+        const significanceMatch = section.match(/Significato:\s*([\s\S]*?)(?=⦁\s*Pilastri|Attività Chiave:|$)/i);
+
+        const unit: CourseContentUnit = {
+            id,
+            type,
+            title,
+            order,
+            role: roleMatch ? roleMatch[1].trim() : undefined,
+            significance: significanceMatch ? significanceMatch[1].trim() : undefined,
         };
-        
-        modules.push(moduleDetail);
-        moduleMap.set(name, moduleDetail);
+        contentUnits.push(unit);
+
+        // --- Logica legacy per i MODULI (retrocompatibilità) ---
+        if (type === 'modulo') {
+            const fullHeaderLine = section.match(/^.*$/m)?.[0]?.trim() ?? `MODULO ${order}: ${title}`;
+            const name = fullHeaderLine;
+
+            const moduleNumber = order;
+            const isSpecialModule = (moduleNumber === 0) || (i === totalSections - 1);
+
+            let sintonizzazionePillars: Pillar[] = [];
+            let operativiPillars: Pillar[] = [];
+            let attivitaChiaveItems: string[] = [];
+
+            if (!isSpecialModule) {
+                const sintonizzazioneMatch = section.match(/⦁\s*Pilastri di Sintonizzazione(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Pilastri Operativi|⦁\s*Attività Chiave:|$)/i);
+                const operativiMatch = section.match(/⦁\s*Pilastri Operativi(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Attività Chiave:|$)/i);
+                const attivitaChiaveMatch = section.match(/⦁\s*Attività Chiave(?:.*)?:\s*([\s\S]*?)(?=\n(?:MODULO|UDA|EDUCAZIONE CIVICA|FSL)|$)/i);
+
+                sintonizzazionePillars = sintonizzazioneMatch
+                    ? parsePillarsOrActivities(sintonizzazioneMatch[1]).map(n => ({ name: n }))
+                    : [];
+                operativiPillars = operativiMatch
+                    ? parsePillarsOrActivities(operativiMatch[1]).map(n => ({ name: n }))
+                    : [];
+                attivitaChiaveItems = attivitaChiaveMatch
+                    ? parsePillarsOrActivities(attivitaChiaveMatch[1])
+                    : [];
+            }
+
+            const moduleDetail: ModuleDetails = {
+                name,
+                role: roleMatch ? roleMatch[1].trim() : '',
+                significance: significanceMatch ? significanceMatch[1].trim() : '',
+                sintonizzazione: sintonizzazionePillars,
+                operativi: operativiPillars,
+                attivitaChiave: attivitaChiaveItems,
+            };
+
+            modules.push(moduleDetail);
+            moduleMap.set(name, moduleDetail);
+        }
     }
-    
-    return { modules, moduleMap };
+
+    return { modules, moduleMap, contentUnits };
 };

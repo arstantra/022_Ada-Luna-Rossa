@@ -67,14 +67,26 @@ export interface WeekRouteInfo {
 
 export type BlockStatus = 'normale' | 'saltato' | 'da definire' | 'annullato';
 
+/** Modalità pedagogica di conduzione della lezione — il "come" (vocabolario stabile, 5 voci) */
 export type LessonType =
   | 'frontale_teorica'
   | 'frontale_operativa'
   | 'laboratorio'
   | 'verifica'
-  | 'discussione'
-  | 'uda'
-  | 'fsl';
+  | 'discussione';
+
+/** Tipo di unità di contenuto del corso — il "cosa" (dichiarato nel Progetto Didattico) */
+export type CourseContentType = 'modulo' | 'uda' | 'educazione_civica' | 'fsl';
+
+/** Unità di contenuto parsata dal Progetto Didattico */
+export interface CourseContentUnit {
+  id: string;             // formato: `${type}-${order}`, es. "modulo-1", "uda-1"
+  type: CourseContentType;
+  title: string;          // testo dopo il prefisso, es. "Fondamenti del Design"
+  order: number;          // posizione 1-based per tipo
+  role?: string;          // da "Ruolo:" nel Progetto Didattico
+  significance?: string;  // da "Significato:" nel Progetto Didattico
+}
 
 /** Ciclo di vita di una lezione: pianificata → in corso → archiviata */
 export type LessonState = 'progettata' | 'in_corso' | 'archiviata';
@@ -137,8 +149,9 @@ export interface ModuleDetails {
 }
 
 export interface ParsedConstitution {
-    modules: ModuleDetails[];
+    modules: ModuleDetails[];           // mantenuto per retrocompatibilità
     moduleMap: Map<string, ModuleDetails>;
+    contentUnits: CourseContentUnit[];  // lista flat di tutte le unità (moduli, UDA, EC, FSL)
 }
 
 export interface GroupDefinition {
@@ -221,6 +234,7 @@ export interface BlockDetails {
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
     tipologia?: LessonType;
+    isFslPeriod?: boolean;  // flag periodo FSL: badge visuale, ortogonale allo stato
     moduleId?: string;    // riferimento a CourseModule.id
     sectionId?: string;   // riferimento a ModuleSection.id
     // Il campo module?: string rimane per retrocompatibilità DB
