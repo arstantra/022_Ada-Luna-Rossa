@@ -42,27 +42,6 @@ export const parseCrewContextToNames = (context: string): string[] => {
         .filter(name => name.length > 0);
 };
 
-
-/**
- * Parses the route context string into an array of WeekRouteInfo objects.
- */
-export const parseRouteContext = (context: string): WeekRouteInfo[] => {
-    const lines = context.split('\n').filter(line => line.trim().startsWith('Settimana'));
-    return lines.map(line => {
-        const weekMatch = line.match(/Settimana (\d+)/);
-        const dateMatch = line.match(/: (.*?)\s\(/);
-        const blockMatch = line.match(/(\d+) blocchi/);
-        const notesMatch = line.match(/-\s*(.*)/);
-
-        return {
-            weekNumber: weekMatch ? parseInt(weekMatch[1], 10) : 0,
-            dates: dateMatch ? dateMatch[1].trim() : 'N/D',
-            totalBlocks: blockMatch ? parseInt(blockMatch[1], 10) : 0,
-            notes: notesMatch ? notesMatch[1].trim() : undefined,
-        };
-    }).filter(w => w.weekNumber > 0 && w.totalBlocks > 0);
-};
-
 const _italianMonthsShort = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
 
 /**

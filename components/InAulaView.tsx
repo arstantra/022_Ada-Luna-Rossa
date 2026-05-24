@@ -354,7 +354,7 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
                                     <h5 className="text-sm font-semibold text-gray-300 mb-2">Artefatti da Creare</h5>
                                     <ul className="space-y-1.5">
                                         {block.artifacts.map((artifact, index) => (
-                                            <li key={index} className="group flex items-center justify-between text-sm text-gray-300 bg-gray-700/50 px-2 py-1 rounded-md">
+                                            <li key={`artifact-${artifact}-${index}`} className="group flex items-center justify-between text-sm text-gray-300 bg-gray-700/50 px-2 py-1 rounded-md">
                                                 <span className="flex items-center gap-2"><DocumentTextIcon className="h-4 w-4 text-gray-400"/>{artifact}</span>
                                                 <button onClick={() => onDeleteArtifact(index)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"><TrashIcon className="h-4 w-4"/></button>
                                             </li>
@@ -437,7 +437,7 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
                                     disabled={showAsCancelled}
                                 >
                                     {!showAsCancelled && (
-                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${isLessonOpen ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${isLessonOpen ? 'bg-red-500 text-white' : 'bg-emerald-600 text-white'}`}>
                                             {isLessonOpen ? 'Chiudi Lezione' : 'Apri Lezione'}
                                         </span>
                                     )}

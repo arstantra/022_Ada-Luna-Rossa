@@ -52,7 +52,6 @@ import {
     ADA_QUICK_CHAT_ID,
 } from '../constants';
 import LessonNotesModal from './LessonNotesModal';
-import GroupWorkSummary from './GroupWorkSummary';
 
 interface MainAppProps {
   masterContext: ReturnType<typeof useMasterContext>;

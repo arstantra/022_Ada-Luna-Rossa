@@ -26,7 +26,7 @@ const ParticipationThermometer: React.FC<ParticipationThermometerProps> = ({ dat
         <div className="flex justify-around items-end h-64 gap-4 px-4">
             {data.map(({ module, presence }) => {
                 const barHeight = (presence / maxPresence) * chartHeight;
-                const color = presence > 80 ? 'bg-green-500' : presence > 60 ? 'bg-yellow-500' : 'bg-red-500';
+                const color = presence > 80 ? 'bg-emerald-500' : presence > 60 ? 'bg-yellow-500' : 'bg-red-500';
 
                 return (
                     <div key={module} className="flex flex-col items-center flex-grow text-center">

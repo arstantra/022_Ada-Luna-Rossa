@@ -49,7 +49,7 @@ Controlla uno per uno questi file sospetti e **cancellali se non sono mai import
 - `components/BlockDayDefaultsModal.tsx` — stessa verifica.
 - `components/PasswordPromptModal.tsx` — stessa verifica.
 - `contexts/ConstitutionCacheContext.tsx` — verifica se il context è consumato da qualche componente.
-- `services/constitutionParser.ts` — verifica se importato da qualche file.
+- `services/constitutionParser.ts` — **ATTENZIONE**: questo file è CRITICO e non va eliminato. È importato da `ConstitutionCacheContext.tsx` e usato ovunque si leggano le unità del Progetto Didattico. Verificane gli import come controllo di salute, ma non proporre l'eliminazione.
 - `logos.ts` — verifica se importato da qualche file.
 - `metadata.json` — verifica se letto da qualche file o solo documentazione.
 - `desktop.ini` — file di sistema Windows, cancellalo senza verifica.
@@ -60,8 +60,19 @@ Rimuovi le icone esportate da `Icons.tsx` che non sono mai usate nel progetto (z
 ### 2c. Tipi morti in `types.ts`
 Identifica interfacce, type alias o enum esportati ma mai referenziati altrove. Rimuovili o — se sembrano intenzionalmente reserved — aggiungici un commento `// reserved`.
 
+**ATTENZIONE — tipi introdotti nel refactor 2026-05-24, NON eliminare:**
+- `CourseContentType` — union type per il "cosa" (modulo/uda/educazione_civica/fsl)
+- `CourseContentUnit` — interfaccia unità didattica parsata dal Progetto Didattico
+- `ParsedConstitution.contentUnits: CourseContentUnit[]` — campo aggiunto a `ParsedConstitution`
+- `BlockDetails.isFslPeriod?: boolean` — flag visivo ortogonale
+
+Questi tipi sono intenzionali e usati da `constitutionParser.ts`, `ConstitutionCacheContext.tsx`, `StrategicDashboardView.tsx`, `MainApp.tsx`.
+
 ### 2d. Costanti e funzioni morte in `utils.ts`, `constants.ts`, `config.ts`
 Rimuovi le esportazioni non referenziate. Se una funzione sembra intenzionalmente mantenuta per uso futuro, aggiungi un commento esplicito.
+
+**ATTENZIONE — costante introdotta nel refactor 2026-05-24, NON eliminare:**
+- `COURSE_CONTENT_TYPE_LABELS: Record<CourseContentType, string>` in `constants.ts` — usata in `StrategicDashboardView.tsx` per le label del selettore "Cosa".
 
 ---
 

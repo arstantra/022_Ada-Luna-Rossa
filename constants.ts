@@ -188,19 +188,6 @@ export const MODES: Mode[] = [
 
 export const DEFAULT_MODE_ID: Mode['id'] = 'balanced';
 
-export const LABEL_COLORS = [
-  { key: 'red', name: 'Rosso', bg: 'bg-red-500/20', text: 'text-red-300', ring: 'ring-1 ring-inset ring-red-500/30' },
-  { key: 'orange', name: 'Arancione', bg: 'bg-orange-500/20', text: 'text-orange-300', ring: 'ring-1 ring-inset ring-orange-500/30' },
-  { key: 'amber', name: 'Ambra', bg: 'bg-amber-500/20', text: 'text-amber-300', ring: 'ring-1 ring-inset ring-amber-500/30' },
-  { key: 'green', name: 'Verde', bg: 'bg-green-500/20', text: 'text-green-300', ring: 'ring-1 ring-inset ring-green-500/30' },
-  { key: 'teal', name: 'Teal', bg: 'bg-teal-500/20', text: 'text-teal-300', ring: 'ring-1 ring-inset ring-teal-500/30' },
-  { key: 'sky', name: 'Cielo', bg: 'bg-sky-500/20', text: 'text-sky-300', ring: 'ring-1 ring-inset ring-sky-500/30' },
-  { key: 'indigo', name: 'Indaco', bg: 'bg-indigo-500/20', text: 'text-indigo-300', ring: 'ring-1 ring-inset ring-indigo-500/30' },
-  { key: 'purple', name: 'Viola', bg: 'bg-purple-500/20', text: 'text-purple-300', ring: 'ring-1 ring-inset ring-purple-500/30' },
-  { key: 'pink', name: 'Rosa', bg: 'bg-pink-500/20', text: 'text-pink-300', ring: 'ring-1 ring-inset ring-pink-500/30' },
-  { key: 'gray', name: 'Grigio', bg: 'bg-gray-500/20', text: 'text-gray-300', ring: 'ring-1 ring-inset ring-gray-500/30' },
-];
-
 /** Modalità pedagogica di conduzione — il "come" (5 voci stabili) */
 export const LESSON_TYPE_LABELS: Record<LessonType, string> = {
   frontale_teorica:   'Frontale teorica',
@@ -224,10 +211,4 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   produzione_scritta: 'Produzione scritta',
   progetto:           'Progetto',
   altro:              'Altro',
-};
-
-export const AUTO_LABELS = {
-  PLANNING: { name: 'In Progettazione', color: 'amber' },
-  PLANNED: { name: 'Progettazione Completata', color: 'sky' },
-  COMPLETED: { name: 'Svolta', color: 'green' },
 };

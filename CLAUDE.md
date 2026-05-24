@@ -68,7 +68,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 | `da_fare` | `bg-slate-500` | `text-slate-400/80` | nessun obiettivo né messaggi |
 | `in_corso` | `bg-amber-400` | `text-amber-400/80` | ha obiettivo/messaggi ma non contentBlocks |
 | `completato` | `bg-emerald-500` | `text-emerald-400` | ha contentBlocks |
-| `speciale` | `bg-gray-500` | `text-gray-500/80` | saltato · fsl · annullato |
+| `speciale` | `bg-gray-500` | `text-gray-500/80` | saltato · annullato (+ isFslPeriod aggiunge badge sky ortogonale) |
 
 #### Sistema 2 — `getBlockDotColor` via `getBlockPlanningStatus` (PlanningView, 9 stati)
 | Stato planning | Dot | Mappa a macrostato |
@@ -99,7 +99,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 components/
   MainApp.tsx                — orchestratore centrale, routing, tutti gli handler
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
-  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats, selector tipologia per blocco
+  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod
   InAulaView.tsx             — vista lezione (archivio + in_corso)
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
@@ -118,15 +118,13 @@ hooks/
 
 services/
   db.ts                      — IndexedDB (idb)
-  gemini.ts                  — wrapper Gemini API; include generateDocumentContent(docType, teacherProfile) per generare Progetto Didattico, Patto Formativo, Personalità di Ada a partire dal Profilo del Corso
+  gemini.ts                  — wrapper Gemini API; include generateDocumentContent(docType, teacherProfile) per generare Progetto Didattico, Patto Formativo, Personalità di Ada a partire dal Profilo del Corso; VALID_LESSON_TYPES set (5 voci, senza uda/fsl)
+  constitutionParser.ts      — parseConstitution(): splitta il Progetto Didattico in sezioni MODULO/UDA/EDUCAZIONE CIVICA/FSL, restituisce { modules, moduleMap, contentUnits: CourseContentUnit[] }. File CRITICO — importato da ConstitutionCacheContext.tsx.
 
 types.ts                     — tutti i tipi (fonte della verità)
-constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LOCAL_STORAGE_ROUTE_CALENDAR_KEY, ecc.
+constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LOCAL_STORAGE_ROUTE_CALENDAR_KEY, LESSON_TYPE_LABELS (5 voci), COURSE_CONTENT_TYPE_LABELS, ecc.
 utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, routeCalendarToWeekInfos, formatRouteWeekDates
 ```
-
-> **File orfani (non importati, non rimuovere con rm — solo dead code):**
-> `LabelManagementModal.tsx`, `AssignLabelsModal.tsx`, `BlockDayDefaultsModal.tsx`, `MasterContextModal.tsx`, `hooks/useLabels.ts`
 
 ---
 
@@ -317,7 +315,8 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
 ```ts
 {
   id, day, status: BlockStatus,     // 'normale'|'saltato'|'da definire'|'annullato'
-  tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione'|'uda'|'fsl'
+  tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione' — SOLO modalità pedagogica ("come")
+  isFslPeriod?: boolean,            // flag visivo ortogonale: badge sky "FSL" sul blocco, non altera status né tipologia
   lessonState?: LessonState,        // 'progettata'|'in_corso'|'archiviata'
   objective?, module?,
   lessonTitle?, lessonSyllabus?,    // pianificazione dettagliata
@@ -330,7 +329,9 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
   sectionId?: string                // riferimento a ModuleSection.id
 }
 ```
-`BlockStatus` = `'normale' | 'saltato' | 'da definire' | 'annullato'` — FSL non è più uno stato, è una `tipologia`.
+`BlockStatus` = `'normale' | 'saltato' | 'da definire' | 'annullato'`.
+`LessonType` = modalità pedagogica ("come"), **5 voci**: `frontale_teorica · frontale_operativa · laboratorio · verifica · discussione`. UDA e FSL sono stati rimossi — non sono modalità di conduzione della lezione.
+`isFslPeriod` = flag ortogonale allo stato e alla tipologia: indica che il blocco è in un periodo FSL (badge `sky`), ma il blocco può avere qualsiasi status e qualsiasi tipologia.
 
 ### Stato automatico blocco (derivato, non salvato)
 ```ts
@@ -341,6 +342,50 @@ const getBlockProgressState = (block): 'da_fare'|'in_corso'|'completato'|'specia
   return 'da_fare';
 }
 ```
+
+### Tipi "Cosa / Come" — separazione corso/didattica (2026-05-24)
+
+La distinzione è architetturale: il **"cosa"** è la struttura del corso (modulo, UDA, EC, FSL definiti nel Progetto Didattico); il **"come"** è la modalità pedagogica di conduzione della lezione (frontale, laboratorio, ecc.).
+
+```ts
+// "Come" — modalità pedagogica (LessonType, 5 voci stabili)
+type LessonType = 'frontale_teorica' | 'frontale_operativa' | 'laboratorio' | 'verifica' | 'discussione';
+
+// "Cosa" — tipo struttura contenuto corso (CourseContentType, 4 voci)
+type CourseContentType = 'modulo' | 'uda' | 'educazione_civica' | 'fsl';
+
+// Unità di contenuto parsata dal Progetto Didattico
+interface CourseContentUnit {
+  id: string;              // es. "modulo-1", "uda-2", "fsl-1"
+  type: CourseContentType;
+  title: string;
+  order: number;
+  role?: string;
+  significance?: string;
+}
+
+// ParsedConstitution (esteso)
+interface ParsedConstitution {
+  modules: ModuleDetails[];          // retrocompatibilità — solo i MODULI
+  moduleMap: Map<string, ModuleDetails>;
+  contentUnits: CourseContentUnit[]; // TUTTE le unità (moduli + UDA + EC + FSL)
+}
+```
+
+`COURSE_CONTENT_TYPE_LABELS: Record<CourseContentType, string>` in `constants.ts`:
+`{ modulo: 'Modulo', uda: 'UDA', educazione_civica: 'Educazione Civica', fsl: 'FSL' }`
+
+In `StrategicDashboardView` l'accordion blocco mostra due select separati:
+- **Cosa** (primo select): opzioni raggruppate per `CourseContentType` via `<optgroup>`, deriva da `contentUnits` (fallback a `modules` se vuoto). Placeholder: `— unità didattica —`
+- **Come** (secondo select): `LessonType` 5 voci. Placeholder: `— tipologia di lezione —`
+- **Toggle FSL**: button `text-sky-400` che imposta `isFslPeriod` (ortogonale ai due select)
+
+Handler in `MainApp`:
+- `handleUpdateBlockTipologia` — salva la `LessonType` selezionata (il "come")
+- `handleUpdateBlockModule` — salva il titolo dell'unità didattica (il "cosa") in `block.module`
+- `handleToggleFslPeriod` — imposta/rimuove `isFslPeriod` sul blocco
+
+Migrazione one-shot (useEffect in MainApp): vecchio `tipologia: 'fsl'` → `isFslPeriod: true, tipologia: undefined`.
 
 ### Progresso globale (progressStats — calcolato in StrategicDashboardView)
 ```ts
@@ -560,6 +605,8 @@ progettata → in_corso → archiviata
 - Non tentare un'integrazione API con NotebookLM — non ha API pubblica. Il pattern approvato è: link al notebook + kit di prompt da copiare manualmente + incolla nell'editor.
 - Non centralizzare l'autenticazione Google in un pannello dedicato — NotebookLM si apre nel browser (l'utente è già loggato con l'account scuola Workspace), la Gemini API key è statica, Google Classroom è una feature futura con OAuth separato. Un layer di astrazione finto creerebbe confusione senza semplificare nulla.
 - Non usare `parseRouteContext` per derivare `availableWeeks` — la funzione legacy leggeva il testo libero `routeContext`. Usare `routeCalendarToWeekInfos(masterContext.routeCalendar)` che legge il calendario strutturato `WeekEntry[]`.
-- Non aggiungere `'formazione scuola-lavoro'` a `BlockStatus` — FSL è diventato una `tipologia` (`LessonType`), non uno stato del blocco. Lo stato del blocco è `'normale' | 'saltato' | 'da definire' | 'annullato'`.
-- Non dimenticare la prop `onUpdateBlockTipologia` quando si passa props a `StrategicDashboardView` — serve per salvare la tipologia dal selettore nell'accordion blocco.
-- Non limitare il selettore tipologia a un solo componente — `tipologia` è selezionabile sia in `StrategicDashboardView` (accordion blocco) che in `BlockWorkspaceView` / `PlanningView` (laboratorio). I due selettori usano lo stesso handler `handleUpdateBlockTipologia` in `MainApp`.
+- Non aggiungere `'formazione scuola-lavoro'` a `BlockStatus` — lo stato del blocco è `'normale' | 'saltato' | 'da definire' | 'annullato'`. FSL si gestisce con `isFslPeriod: boolean` (flag visivo) o come `CourseContentType` nel selettore "Cosa".
+- Non aggiungere `uda` o `fsl` a `LessonType` — rimossi (2026-05-24). `LessonType` è il "come" (modalità pedagogica), non il "cosa" (struttura del corso). UDA e FSL sono `CourseContentType`, non tipologie di lezione.
+- Non usare `isFslPeriod` per derivare lo stato di progressione del blocco — è un flag ortogonale, non altera `getBlockProgressState` né `getBlockPlanningStatus`.
+- Non dimenticare le prop `contentUnits`, `onToggleFslPeriod` quando si passa props a `StrategicDashboardView` — servono per il selettore "Cosa" e il toggle FSL nell'accordion blocco.
+- Non limitare il selettore tipologia a un solo componente — `tipologia` (il "come") è selezionabile sia in `StrategicDashboardView` (accordion blocco) che in `BlockWorkspaceView` / `PlanningView` (laboratorio). I due selettori usano lo stesso handler `handleUpdateBlockTipologia` in `MainApp`.

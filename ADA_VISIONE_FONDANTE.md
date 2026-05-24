@@ -84,7 +84,7 @@ Un modello coerente per quel contesto specifico, ma con tre problemi:
 
 Il concetto rimane valido — sapere in fase di pianificazione se una lezione è teoria, procedura o pratica è utile per bilanciare il corso e guidare l'AI. Il nome e la struttura cambiano.
 
-**Tipologia di lezione** è un tag configurabile per disciplina/corso. Valori di default:
+**Tipologia di lezione** è il "come" — la modalità pedagogica di conduzione della lezione. Valori di default (5 voci stabili):
 
 | Tipologia | Descrizione |
 |---|---|
@@ -93,24 +93,43 @@ Il concetto rimane valido — sapere in fase di pianificazione se una lezione è
 | Laboratorio | Attività pratica guidata, sperimentazione |
 | Verifica | Valutazione formativa o sommativa |
 | Discussione | Dialogo strutturato, debate, confronto |
-| UDA | Unità di Apprendimento multidisciplinare |
-| FSL | Formazione Scuola Lavoro *(vedi §4.1)* |
 
 I valori sono personalizzabili: per il corso di design tornano Sintonizzazione / Operativa / Laboratorio — ma come configurazione di *quel* corso, non come architettura globale.
 
-### 4.1 FSL entra nella Tipologia
+**Nota**: UDA e FSL non sono tipologie di lezione — sono strutture di contenuto del corso *(vedi §4.1)*.
 
-FSL (Formazione Scuola Lavoro) era un pulsante/stato indipendente su `BlockDetails`. Architetturalmente era sbagliato: FSL è una *tipologia di attività*, non uno stato speciale del blocco.
+### Il "cosa" — struttura del contenuto
 
-Conseguenza: il sistema degli stati si semplifica e i due assi diventano ortogonali.
+Separato dalla tipologia ("come"), il campo "cosa" identifica l'unità didattica del Progetto Didattico a cui il blocco si riferisce. Valori riconosciuti dal parser:
 
-**Stati del blocco** — *cosa è successo o può succedere allo slot di calendario*:
-`normale · saltato · da definire · annullato`
+| Tipo | Prefisso nel Progetto Didattico | Descrizione |
+|---|---|---|
+| Modulo | `MODULO N:` | Unità curricolare principale |
+| UDA | `UDA N:` | Unità di Apprendimento multidisciplinare |
+| Educazione Civica | `EDUCAZIONE CIVICA:` | Blocchi dedicati all'educazione civica |
+| FSL | `FSL N:` | Formazione Scuola Lavoro *(vedi §4.1)* |
 
-**Tipologia** — *come è fatta quella lezione*:
-`Frontale teorica · Frontale operativa · Laboratorio · Verifica · Discussione · UDA · FSL · [personalizzabile]`
+Questi quattro tipi sono parsati da `constitutionParser.ts` e resi disponibili come `CourseContentUnit[]` via `ConstitutionCacheContext`.
 
-Un blocco FSL può essere saltato. Un blocco di verifica può essere da definire. Prima questi due assi erano mescolati nello stesso menu — concettualmente sbagliato, ora separati.
+### 4.1 FSL: da tipologia a flag ortogonale + CourseContentType (2026-05-24)
+
+FSL (Formazione Scuola Lavoro) ha attraversato due fasi architetturali:
+
+1. **Prima**: stato speciale del blocco (`status: 'formazione scuola-lavoro'`) — sbagliato perché mescolava calendari e contenuto.
+2. **Poi**: tipologia di lezione (`tipologia: 'fsl'`) — ancora sbagliato perché FSL non è una *modalità pedagogica*, è una struttura istituzionale del periodo.
+
+**Architettura attuale** — tre assi ortogonali:
+
+| Asse | Campo | Valori | Descrizione |
+|---|---|---|---|
+| **Stato** | `status: BlockStatus` | `normale · saltato · da definire · annullato` | Cosa è successo allo slot di calendario |
+| **Tipologia** ("come") | `tipologia?: LessonType` | `frontale_teorica · frontale_operativa · laboratorio · verifica · discussione` | Modalità pedagogica di conduzione |
+| **Unità didattica** ("cosa") | `module?: string` | titolo dell'unità dal Progetto Didattico | A quale contenuto si riferisce il blocco |
+| **Flag FSL** | `isFslPeriod?: boolean` | `true / undefined` | Badge visivo sky ortogonale agli altri tre |
+
+Un blocco FSL può essere saltato, avere qualsiasi tipologia, riferirsi a qualsiasi unità didattica. `isFslPeriod` non altera né lo stato né la tipologia — è esclusivamente informazione istituzionale e visiva.
+
+FSL come **struttura del corso** esiste nel Progetto Didattico con prefisso `FSL N:` ed è parsato come `CourseContentUnit { type: 'fsl' }` dal `constitutionParser`. Appare nel selettore "Cosa" dell'accordion blocco.
 
 ---
 
@@ -276,7 +295,7 @@ Non urgente — ADA delega la parte valutativa a Classroom via link — ma è un
 
 ## 11. Domande ancora aperte (agenda per le prossime sessioni)
 
-> Risolte e rimosse: nome quarto contesto (→ "Gestione del Corso"), tipologie di lezione di default (→ `LESSON_TYPE_LABELS` in `constants.ts`, `tipologia` su `BlockDetails`).
+> Risolte e rimosse: nome quarto contesto (→ "Gestione del Corso"); tipologie di lezione di default (→ `LESSON_TYPE_LABELS` in `constants.ts`, `tipologia` su `BlockDetails`); separazione "cosa/come" e ruolo di FSL (→ §4.1, refactor 2026-05-24: `LessonType` 5 voci, `CourseContentType` 4 voci, `isFslPeriod` flag ortogonale).
 
 - [ ] Definire le dimensioni del radar chart per studente (mappatura EQF vs dimensioni operative)
 - [ ] Progettare il flusso di formazione gruppi AI: quali dati in input, quale formato dell'output
