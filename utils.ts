@@ -229,7 +229,7 @@ export const generateExportContent = (plan: WeekPlan, block: BlockDetails, block
     return { prompt, filename };
 };
 
-export type BlockPlanningStatus = 'da_definire' | 'da_progettare' | 'in_progettazione' | 'in_revisione' | 'concluso' | 'saltato' | 'fsl' | 'annullato' | 'sconosciuto';
+export type BlockPlanningStatus = 'da_definire' | 'da_progettare' | 'in_progettazione' | 'in_revisione' | 'concluso' | 'saltato' | 'annullato' | 'sconosciuto';
 
 export const getBlockPlanningStatus = (block: BlockDetails | undefined): BlockPlanningStatus => {
     if (!block) return 'sconosciuto';

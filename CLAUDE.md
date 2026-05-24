@@ -99,7 +99,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 components/
   MainApp.tsx                — orchestratore centrale, routing, tutti gli handler
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
-  StrategicDashboardView.tsx — "Progettazione del Corso": settimane, blocchi, progressStats
+  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats, selector tipologia per blocco
   InAulaView.tsx             — vista lezione (archivio + in_corso)
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
@@ -122,7 +122,7 @@ services/
 
 types.ts                     — tutti i tipi (fonte della verità)
 constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LOCAL_STORAGE_ROUTE_CALENDAR_KEY, ecc.
-utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, ecc.
+utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, routeCalendarToWeekInfos, formatRouteWeekDates
 ```
 
 > **File orfani (non importati, non rimuovere con rm — solo dead code):**
@@ -316,22 +316,26 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
 ### `BlockDetails` (campi chiave)
 ```ts
 {
-  id, day, status: BlockStatus,     // 'normale'|'saltato'|'formazione scuola-lavoro'|'da definire'|'annullato'
+  id, day, status: BlockStatus,     // 'normale'|'saltato'|'da definire'|'annullato'
+  tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione'|'uda'|'fsl'
   lessonState?: LessonState,        // 'progettata'|'in_corso'|'archiviata'
-  objective?, module?, pillar?,
+  objective?, module?,
   lessonTitle?, lessonSyllabus?,    // pianificazione dettagliata
   contentBlocks?: ContentBlock[],   // popolato dopo "Trasferisci al Master" → stato "completato"
   messages?: Message[],
   isLocked?: boolean,
   isReviewed?: boolean,             // override: forza dot emerald indipendentemente dallo stato
-  reason?: string                   // motivo per blocchi 'saltato'
+  reason?: string,                  // motivo per blocchi 'saltato'
+  moduleId?: string,                // riferimento a CourseModule.id
+  sectionId?: string                // riferimento a ModuleSection.id
 }
 ```
+`BlockStatus` = `'normale' | 'saltato' | 'da definire' | 'annullato'` — FSL non è più uno stato, è una `tipologia`.
 
 ### Stato automatico blocco (derivato, non salvato)
 ```ts
 const getBlockProgressState = (block): 'da_fare'|'in_corso'|'completato'|'speciale' => {
-  if (status === 'saltato'|'formazione scuola-lavoro'|'annullato') return 'speciale';
+  if (status === 'saltato' || status === 'annullato') return 'speciale';
   if (contentBlocks?.length > 0) return 'completato';
   if (objective?.trim() || module?.trim() || messages?.length > 0) return 'in_corso';
   return 'da_fare';
@@ -427,6 +431,19 @@ Il badge "Trasferito" in `MessageView.tsx` compare dopo l'uso di qualsiasi azion
 **Tutti** gli hook (`useState`, `useRef`, `useEffect`, `useMemo`, `useCallback`) devono stare **prima** di qualsiasi `return` condizionale nel componente. Violare questa regola causa errori runtime "rendered more hooks than previous render" / "rendered fewer hooks than during the previous render".
 
 Questo vale anche per hook che referenziano `block`, `weekPlan` o altri dati ricevuti come prop. Se il tipo della prop è non-opzionale nella firma del componente, usare il valore direttamente senza optional chaining aggiuntivo — il guard condizionale (`if (!block) return`) rimane comunque dopo tutti gli hook.
+
+### availableWeeks → routeCalendar (NON routeContext)
+Le settimane visibili in `StrategicDashboardView` derivano da `routeCalendar` (strutturato), non dal legacy `routeContext` (testo libero).
+
+```ts
+// MainApp.tsx — CORRETTO
+const availableWeeks = useMemo(
+    () => routeCalendarToWeekInfos(masterContext.routeCalendar),
+    [masterContext.routeCalendar]
+);
+```
+
+`routeCalendarToWeekInfos` (in `utils.ts`) filtra le `WeekEntry` con `activeBlocks.length > 0` e mappa a `WeekRouteInfo[]`. Le date vengono formattate con `formatRouteWeekDates(mondayIso)` che produce "15-21 set" o "30 set – 6 ott" (cross-month), compatibile con il regex di `getExactDateForBlock`.
 
 ---
 
@@ -542,3 +559,7 @@ progettata → in_corso → archiviata
 - Non spostare `KIT_PROMPTS` dentro il componente — è un array costante definito a livello di modulo in `FoundingDocumentsView.tsx` per evitare ricreazione ad ogni render.
 - Non tentare un'integrazione API con NotebookLM — non ha API pubblica. Il pattern approvato è: link al notebook + kit di prompt da copiare manualmente + incolla nell'editor.
 - Non centralizzare l'autenticazione Google in un pannello dedicato — NotebookLM si apre nel browser (l'utente è già loggato con l'account scuola Workspace), la Gemini API key è statica, Google Classroom è una feature futura con OAuth separato. Un layer di astrazione finto creerebbe confusione senza semplificare nulla.
+- Non usare `parseRouteContext` per derivare `availableWeeks` — la funzione legacy leggeva il testo libero `routeContext`. Usare `routeCalendarToWeekInfos(masterContext.routeCalendar)` che legge il calendario strutturato `WeekEntry[]`.
+- Non aggiungere `'formazione scuola-lavoro'` a `BlockStatus` — FSL è diventato una `tipologia` (`LessonType`), non uno stato del blocco. Lo stato del blocco è `'normale' | 'saltato' | 'da definire' | 'annullato'`.
+- Non dimenticare la prop `onUpdateBlockTipologia` quando si passa props a `StrategicDashboardView` — serve per salvare la tipologia dal selettore nell'accordion blocco.
+- Non limitare il selettore tipologia a un solo componente — `tipologia` è selezionabile sia in `StrategicDashboardView` (accordion blocco) che in `BlockWorkspaceView` / `PlanningView` (laboratorio). I due selettori usano lo stesso handler `handleUpdateBlockTipologia` in `MainApp`.

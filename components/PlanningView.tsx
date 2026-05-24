@@ -25,7 +25,6 @@ const getBlockDotColor = (block: BlockDetails): string => {
             return block.status === 'da definire' ? 'bg-amber-400' : 'bg-slate-500';
         case 'da_definire':     // nessun contenuto, giorno non fissato → neutro come in StrategicDashboard
                                 return 'bg-slate-500';
-        case 'fsl':             return 'bg-sky-500';
         case 'saltato':
         case 'annullato':       return 'bg-gray-500';
         default:                return 'bg-gray-500';

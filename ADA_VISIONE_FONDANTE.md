@@ -1,7 +1,7 @@
 # ADA — Visione Fondante e Architettura Strategica
 
 > Documento di riferimento per lo sviluppo. Aggiornato in modo incrementale man mano che la visione si approfondisce.
-> Ultima revisione: 2026-05-23
+> Ultima revisione: 2026-05-24
 
 ---
 
@@ -242,17 +242,9 @@ Motivazioni:
 
 ## 9. Nodi aperti e terminologia da definire
 
-### 9.1 Il quarto contesto: trovare il nome italiano
+### 9.1 Il quarto contesto ✓ RISOLTO
 
-Il contenuto del quarto contesto (disciplina, documenti fondanti, profilo docente, personalità di Ada, etichette, backup, API key) è l'insieme dei parametri che definiscono il contesto entro cui ADA opera. Non è "gestione del corso" in senso pedagogico — è la cornice.
-
-Candidati:
-- **Cornice** — metaforico, descrive il ruolo (la cornice entro cui tutto funziona)
-- **Fondamenta** — riprende "documenti fondanti", ha coerenza interna
-- **Profilo del Corso** — descrittivo, neutro
-- **Impostazioni** — tecnico, forse troppo informatico
-
-*Da decidere prima della prossima iterazione UI.*
+**Nome definitivo: "Gestione del Corso"** — adottato in sidebar, view id `founding_documents` / `la_rotta` / `ada_personality` raggruppate sotto questa etichetta. La sezione è collassata di default nella sidebar.
 
 ### 9.2 Verifica sommativa
 
@@ -284,13 +276,13 @@ Non urgente — ADA delega la parte valutativa a Classroom via link — ma è un
 
 ## 11. Domande ancora aperte (agenda per le prossime sessioni)
 
-- [ ] Decidere il nome definitivo del quarto contesto
+> Risolte e rimosse: nome quarto contesto (→ "Gestione del Corso"), tipologie di lezione di default (→ `LESSON_TYPE_LABELS` in `constants.ts`, `tipologia` su `BlockDetails`).
+
 - [ ] Definire le dimensioni del radar chart per studente (mappatura EQF vs dimensioni operative)
 - [ ] Progettare il flusso di formazione gruppi AI: quali dati in input, quale formato dell'output
 - [ ] Stabilire quali URL di Classroom sono costruibili a partire dai dati ADA già disponibili
 - [ ] Valutare se introdurre un livello "Modulo" leggero nel dato (contenitore che raggruppa blocchi correlati per il Gantt e il radar didattico)
 - [ ] Definire il formato della `DetachedLesson` nella coda contenuti e il punto di ingresso UI per gestirla
-- [ ] Stabilire le tipologie di lezione di default e il meccanismo di configurazione per-corso
 
 ---
 

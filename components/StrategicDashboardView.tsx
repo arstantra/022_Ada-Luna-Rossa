@@ -510,11 +510,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        {block.tipologia && (
-                                                            <span className="text-[10px] font-mono text-gray-500 flex-shrink-0">
-                                                                {LESSON_TYPE_LABELS[block.tipologia]}
-                                                            </span>
-                                                        )}
                                                         {block.moduleId && (() => {
                                                             const mod = week.modules.find(m => m.id === block.moduleId);
                                                             if (!mod) return null;
