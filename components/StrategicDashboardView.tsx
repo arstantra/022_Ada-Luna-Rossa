@@ -644,10 +644,12 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 </div>
                                             </summary>
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
+                                                {block.lessonTitle && (
                                                 <div>
                                                     <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Estratto dalla Costituzione</label>
-                                                    <EditableTextarea value={block.lessonTitle || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="Verrà popolato selezionando un modulo..." rows={1} disabled={isSpecialStatus || block.isLocked} />
+                                                    <EditableTextarea value={block.lessonTitle} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="" rows={1} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
+                                                )}
                                                 <div>
                                                     <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label><EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
                                                 </div>
