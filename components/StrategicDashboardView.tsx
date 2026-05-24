@@ -312,6 +312,22 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
             .map(([tipologia, count]) => ({ tipologia, count }));
     }, [conversations]);
 
+    // Ideal distribution: sum of estimatedBlocks per lessonType across all modules/sections
+    const idealRadarData = useMemo(() => {
+        const counts: Partial<Record<LessonType, number>> = {};
+        conversations.forEach(conv => {
+            (conv.modules ?? []).forEach(mod => {
+                mod.sections.forEach(sec => {
+                    if (!sec.lessonType || sec.estimatedBlocks <= 0) return;
+                    counts[sec.lessonType] = (counts[sec.lessonType] || 0) + sec.estimatedBlocks;
+                });
+            });
+        });
+        return (Object.entries(counts) as [LessonType, number][])
+            .map(([tipologia, count]) => ({ tipologia, count }))
+            .filter(d => d.count > 0);
+    }, [conversations]);
+
     // ── Attività — raccolta e mappa offset globale ──────────────────────────────
     const allActivities = useMemo(
         () => conversations.flatMap(c => c.activities ?? []) as Activity[],
@@ -383,7 +399,10 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     {radarData.length > 0 && (
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                             <div className="w-px h-3.5 bg-gray-700/60" />
-                            <DidacticRadarChart data={radarData} />
+                            <DidacticRadarChart
+                                data={radarData}
+                                idealData={idealRadarData.length > 0 ? idealRadarData : undefined}
+                            />
                         </div>
                     )}
 

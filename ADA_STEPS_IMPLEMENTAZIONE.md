@@ -631,7 +631,7 @@ function getActivityDueWeek(
 
 ---
 
-## Step 9 — Ragnatela avanzata (doppio poligono ideale vs pianificato)
+## Step 9 — Ragnatela avanzata (doppio poligono ideale vs pianificato) ✅ COMPLETATO
 
 **Obiettivo**: evolvere il radar del Step 6 da mono-poligono a doppio poligono. Il poligono tratteggiato rappresenta la distribuzione *ideale* derivata dalla struttura dei `CourseModule` (Step 7). Il poligono pieno rappresenta la distribuzione *pianificata* derivata dai blocchi tipizzati. Il docente vede la divergenza e riequilibra.
 
@@ -697,6 +697,18 @@ function computeBalanceScore(
 - Score riflette correttamente la divergenza tra ideale e pianificato
 - Con `modules` vuoto: radar mono-poligono, nessun crash, nessuna legenda doppia
 - TypeScript compila senza errori
+
+### Note di implementazione (2026-05-24)
+
+**File modificati**: `components/DidacticRadarChart.tsx` (riscrittura completa) + `components/StrategicDashboardView.tsx` (aggiunta `idealRadarData` useMemo + passaggio prop)
+
+**Scelte implementative**:
+- `computeBalanceScore` usa TVD (Total Variation Distance): `score = 1 - Σ|p_i - q_i| / 2`. Confronta proporzioni, non valori assoluti.
+- Unione dei tipologi: i tipologi del pianificato vengono prima, poi eventuali tipologie extra dell'ideale — garantisce che le assi del radar riflettano prima la realtà pianificata.
+- Entrambi i poligoni normalizzati sullo stesso `maxCount = Math.max(...plannedCounts, ...idealCounts, 1)`.
+- SVG in modalità doppia: `vbH = vbW + 14 = 82` (vs 68 in mono). Legenda in SVG su due righe (y=53 e y=59), entro il viewBox.
+- Degradazione graceful: `data.length === 0 → null`; `data.length < 3 → testo`; `idealData` assente/vuoto → comportamento Step 6 (solo poligono pieno, nessuna legenda, nessun score).
+- `idealData` passato come `undefined` quando `idealRadarData.length === 0` — evita di mostrare la legenda con un poligono ideale degenere.
 
 ---
 
