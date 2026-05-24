@@ -985,4 +985,4 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
     );
 };
 
-export default memo(InAulaView);
+export default InAulaView;
