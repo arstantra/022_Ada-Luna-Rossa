@@ -2,6 +2,8 @@
 
 > Leggi questo file all'inizio di ogni sessione. Contiene tutto il necessario per lavorare su ADA senza dover rileggere il codice da zero.
 
+> ⚠️ **SUBITO DOPO questo file, leggi `CLAUDE_PROTOCOL.md`** — contiene le regole operative anti-troncamento. Ignorarle causa file troncati silenziosamente e spreco di token. È obbligatorio, non opzionale.
+
 ## Cos'è ADA
 
 App React/TypeScript per insegnanti. Aiuta nella **pianificazione del corso**, nella **gestione della classe** e nel lavoro **in aula**, con un assistente AI (Gemini) integrato. Dominio: `ada.nuovadidattica.eu`. Utente: Andrea Poletti (`andrea.poletti@nuovadidattica.eu`).
@@ -97,7 +99,17 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 
 ```
 components/
-  MainApp.tsx                — orchestratore centrale, routing, tutti gli handler
+  MainApp.tsx                — orchestratore centrale (509 righe dopo split 2026-05-25): stato, hook, factory call (useMemo), render
+  handlers/                  — handler estratti da MainApp.tsx (split 2026-05-25):
+    blockHandlers.ts         — pianificazione blocchi: handleSetWeekTheme, handleUpdateBlockObjective, handleGenerateStrategicSuggestions, handleGenerateBlockDetails, ecc.
+    blockHandlers_status.ts  — stato blocco: handleUpdateBlockStatus, handleUpdateBlockTipologia, handleToggleFslPeriod, handleSaltaChoice + createApplyBlockStatus (helper)
+    conversationHandlers.ts  — handleModeChange, handlePlanningModeChange, handleOpenConversaConAda, handleEvaluationMessage, ecc.
+    messagingHandlers.ts     — handleSendMessage, handleGenerateImage, handleSendPlanningMessage
+    lessonHandlers.ts        — handleAvviaLezione, handleChiudiLezione, handleRecordAttendanceForBlock, handleUpdateGroupsForBlock, handleAddActivity, ecc.
+    blockNoteHandlers.ts     — handleSaveLessonNotes, handleGenerateAnalysis, handleAddLinkForBlock, handleUpdateBlockCloudLink, ecc.
+    contentHandlers.ts       — handleUpdateWeekPlan, handleExportContent, handleFormatBlocks
+    dataHandlers.ts          — handleExportData, handleAttemptImport, handleConfirmRestore, handleExportCourseBook, ecc.
+    uiHandlers.ts            — handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
   StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod
   InAulaView.tsx             — vista lezione (archivio + in_corso)
@@ -408,6 +420,57 @@ updateConversation(convoId, conv => ({ ...conv, weekPlan: { ...conv.weekPlan, ..
 conversationsRef.current.forEach(c => { ... });
 ```
 
+### Factory handlers — pattern di split da MainApp.tsx (2026-05-25)
+
+Ogni file in `components/handlers/` esporta una funzione `createXxxHandlers(deps: XxxDeps)` che riceve le dipendenze come oggetto e restituisce un oggetto di handler. In `MainApp.tsx` si usa `useMemo` per istanziarla:
+
+```ts
+// In components/handlers/blockHandlers.ts
+export function createBlockPlanningHandlers(deps: BlockPlanningDeps) {
+  const { conversationsRef, updateConversation, ... } = deps;
+  const handleSetWeekTheme = (...) => { ... };
+  return { handleSetWeekTheme, ... };
+}
+
+// In MainApp.tsx
+const { handleSetWeekTheme, ... } = useMemo(
+  () => createBlockPlanningHandlers({ conversationsRef, updateConversation, ... }),
+  [conversationsRef, updateConversation, ...]  // deps stabili
+);
+```
+
+**Regole deps del useMemo:**
+- I React state setter (`setIsLoading`, `setModalState`, ecc.) sono referenze stabili → **non** vanno nelle deps
+- I React ref (`conversationsRef`, `latestRequestRef`, `pendingSaltaInfoRef`) sono stabili → **non** vanno nelle deps
+- Valori di stato (`fileToImport`, `dataToRestore`, `studentForEvaluationImport`) che cambiano → **sì** nelle deps, perché `useMemo` deve ricreare la factory quando cambiano
+
+**`setViewFn` — wrapper obbligatorio per setView:**
+```ts
+// setView ha un union type stretto ('lobby' | 'chat' | ...) incompatibile con string
+// I factory handler accettano setView: (v: string) => void
+const setViewFn = useCallback((v: string) => setView(v as any), []);
+// Passato ai factory come: setView: setViewFn
+```
+
+**`handleSelectConversation` — definito in MainApp, passato come dep:**
+```ts
+// handleSelectConversation è una dipendenza di più factory (conversationHandlers,
+// lessonHandlers, contentHandlers, uiHandlers). Deve essere definito PRIMA
+// delle factory call che lo usano come dep.
+const handleSelectConversation = useCallback((id: string) => {
+  selectConversationHook(id);
+  setViewFn('chat');
+}, [selectConversationHook, setViewFn]);
+```
+
+**`pendingSaltaInfoRef` — ref sync per evitare stale closure in handleSaltaChoice:**
+```ts
+const pendingSaltaInfoRef = useRef<...>(null);
+useEffect(() => { pendingSaltaInfoRef.current = pendingSaltaInfo; }, [pendingSaltaInfo]);
+// Passato a createBlockStatusHandlers — il handler legge sempre il valore corrente
+// senza che il useMemo debba ricrearsi ad ogni cambio di pendingSaltaInfo
+```
+
 ### Chat fissa ADA
 ```ts
 const ADA_QUICK_CHAT_ID = 'ada-quick-chat'; // ID fisso, non cambia mai
@@ -605,6 +668,12 @@ progettata → in_corso → archiviata
 - Non tentare un'integrazione API con NotebookLM — non ha API pubblica. Il pattern approvato è: link al notebook + kit di prompt da copiare manualmente + incolla nell'editor.
 - Non centralizzare l'autenticazione Google in un pannello dedicato — NotebookLM si apre nel browser (l'utente è già loggato con l'account scuola Workspace), la Gemini API key è statica, Google Classroom è una feature futura con OAuth separato. Un layer di astrazione finto creerebbe confusione senza semplificare nulla.
 - Non usare `parseRouteContext` per derivare `availableWeeks` — la funzione legacy leggeva il testo libero `routeContext`. Usare `routeCalendarToWeekInfos(masterContext.routeCalendar)` che legge il calendario strutturato `WeekEntry[]`.
+- Non usare `Write` sui file in `components/handlers/` — sono file esistenti, usare solo `Edit`. Tutti i file handler sono tra 45 e 228 righe e sono stati creati nel refactor 2026-05-25.
+- Non usare `useState`, `useEffect`, `useCallback` o altri hook React dentro i file `components/handlers/` — sono funzioni pure factory, non componenti React. Ricevono le deps come argomenti e non possono invocare hook.
+- Non passare `setView` direttamente ai factory handler — `setView` ha un union type stretto incompatibile con `(v: string) => void`. Usare sempre il wrapper `setViewFn = useCallback((v: string) => setView(v as any), [])` definito in MainApp.tsx.
+- Non spostare `handleSelectConversation` dentro una factory — deve restare in MainApp.tsx come `useCallback` perché è una dipendenza di più factory (conversationHandlers, lessonHandlers, contentHandlers, uiHandlers) e deve esistere prima di esse.
+- Non includere i React state setter (`setIsLoading`, `setModalState`, `setPendingSaltaInfo`, ecc.) nelle deps array dei `useMemo` factory — React garantisce che i setter siano referenze stabili, includerli è rumore inutile.
+- Non includere i React ref (`conversationsRef`, `latestRequestRef`, `pendingSaltaInfoRef`) nelle deps array dei `useMemo` factory — le ref sono oggetti stabili per definizione.
 - Non aggiungere `'formazione scuola-lavoro'` a `BlockStatus` — lo stato del blocco è `'normale' | 'saltato' | 'da definire' | 'annullato'`. FSL si gestisce con `isFslPeriod: boolean` (flag visivo) o come `CourseContentType` nel selettore "Cosa".
 - Non aggiungere `uda` o `fsl` a `LessonType` — rimossi (2026-05-24). `LessonType` è il "come" (modalità pedagogica), non il "cosa" (struttura del corso). UDA e FSL sono `CourseContentType`, non tipologie di lezione.
 - Non usare `isFslPeriod` per derivare lo stato di progressione del blocco — è un flag ortogonale, non altera `getBlockProgressState` né `getBlockPlanningStatus`.

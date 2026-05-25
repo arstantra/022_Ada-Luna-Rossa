@@ -229,9 +229,9 @@ File di task documentazione presente nella root del progetto. Non è codice, non
 | `react`, `react-dom` | Tutti i componenti |
 | `@google/genai` | `services/gemini.ts` |
 | `marked` | `utils.ts` (generateCourseBookHtml, generateExportContent) |
-| `turndown` | `utils.ts` + `components/MainApp.tsx` |
+| `turndown` | `utils.ts` + `components/handlers/contentHandlers.ts` *(post-split 2026-05-25)* |
 | `idb` | `services/db.ts` |
-| `crypto-js` | `components/MainApp.tsx` (backup cifrato) |
+| `crypto-js` | `components/handlers/dataHandlers.ts` *(post-split 2026-05-25)* |
 | `@dnd-kit/core` | `components/ToolkitView.tsx` |
 | `@dnd-kit/sortable` | `components/ToolkitView.tsx` |
 | `@dnd-kit/utilities` | `components/ToolkitView.tsx`, `components/ShortcutCard.tsx` |

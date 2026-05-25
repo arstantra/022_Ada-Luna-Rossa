@@ -183,3 +183,181 @@ Alla fine dell'audit produci un file `AUDIT_REPORT.md` nella root del progetto c
 7. **Stato finale** — stima qualitativa della salute del codebase (es. "6 file eliminati, 0 any rimasti, 3 problemi aperti")
 
 Ogni voce del report deve citare il file e la riga (dove applicabile).
+
+---
+
+# Prompt — Split di MainApp.tsx in moduli handler
+
+> Usa questo prompt in una sessione **Claude Code (CLI)** nella root del progetto (`022_Ada Luna Rossa/`).
+> NON eseguire in Cowork: lo split richiede verifica del build TypeScript dopo ogni step.
+> Leggi prima `CLAUDE.md` e `CLAUDE_PROTOCOL.md`.
+
+---
+
+## Contesto
+
+`components/MainApp.tsx` è il componente orchestratore dell'app ADA. Attualmente ha **1619 righe e 56 handler** definiti come `useCallback`. Questa dimensione lo rende il file più a rischio troncamento dell'intero progetto — ogni modifica sostanziale rischia di corrompere il file silenziosamente.
+
+L'obiettivo è estrarre i 56 handler in file separati nella cartella `handlers/`, lasciando `MainApp.tsx` con solo: dichiarazioni di stato, hook, routing/navigazione, e il render del componente.
+
+---
+
+## Regola di sicurezza fondamentale (NON derogare)
+
+**Non riscrivere mai `MainApp.tsx` con il tool `Write`.** Qualsiasi modifica a file esistenti usa solo `Edit`. I file nuovi in `handlers/` possono usare `Write` ma solo se < 200 righe ciascuno — altrimenti spezzarli ulteriormente. Dopo ogni `Write` su un file nuovo, eseguire `wc -l <file>` per verificare che non sia troncato.
+
+---
+
+## Struttura target
+
+Creare la cartella `components/handlers/` con questi file:
+
+### `handlers/blockHandlers.ts`
+Handler relativi ai blocchi-lezione (obiettivi, modulo, stato, tipologia, FSL, salto):
+- `handleSetWeekTheme`
+- `handleUpdateWeekTheme`
+- `handleUpdateBlockObjective`
+- `handleGenerateStrategicSuggestions`
+- `handleUpdateStrategicData`
+- `handleGenerateBlockDetails`
+- `handleUpdateWeekDetails`
+- `handleUpdateBlockDetails`
+- `handleUpdateBlockModule`
+- `handleUpdateBlockStatus`
+- `handleUpdateBlockTipologia`
+- `handleToggleFslPeriod`
+- `handleSaltaChoice`
+
+### `handlers/conversationHandlers.ts`
+Handler relativi alle conversazioni e ai messaggi:
+- `handleSelectConversation`
+- `handleOpenConversaConAda`
+- `handleStartPlanningForWeek`
+- `handleEvaluationMessage`
+- `handleSendMessage`
+- `handleSendPlanningMessage`
+- `handleModeChange`
+- `handlePlanningModeChange`
+- `handleNewConversationClick`
+- `handleSaveConversationModules`
+
+### `handlers/lessonHandlers.ts`
+Handler relativi al ciclo vita lezione e all'aula:
+- `handleAvviaLezione`
+- `handleChiudiLezione`
+- `handleRecordAttendanceForBlock`
+- `handleUpdateGroupsForBlock`
+- `handleUpdateGroupNotesForBlock`
+- `handleSaveGroupsForBlock`
+- `handleAddActivity`
+- `handleMarkActivityDelivered`
+- `handleUpdateBlockInConversation`
+- `handleReEditBlock`
+
+### `handlers/contentHandlers.ts`
+Handler relativi al contenuto master, export e generazione immagini:
+- `handleExportContent`
+- `handleFormatBlocks`
+- `handleGenerateImage`
+- `handleUpdateWeekPlan`
+
+### `handlers/uiHandlers.ts`
+Handler di navigazione UI e studenti:
+- `handleSelectStudent`
+- `handleNavigateToBlock`
+- `handleOpenAddNotebookModal`
+
+---
+
+## Procedura step-by-step (da seguire in questo ordine)
+
+### Step 0 — Analisi
+Leggi integralmente `MainApp.tsx` con `Read`. Poi esegui:
+```bash
+wc -l components/MainApp.tsx
+grep -n "const handle" components/MainApp.tsx
+```
+Conferma che i 56 handler corrispondono alla lista sopra. Se ci sono discrepanze, adatta la struttura target.
+
+### Step 1 — Crea la cartella handlers
+```bash
+mkdir -p components/handlers
+```
+
+### Step 2 — Crea i file handler uno alla volta
+Per ogni file in `handlers/`:
+1. Identifica gli handler da spostare leggendo le righe corrispondenti in `MainApp.tsx`
+2. Crea il nuovo file con `Write` — includi tutti gli import necessari in cima
+3. Verifica immediatamente con `wc -l components/handlers/<file>.ts` che il conteggio sia plausibile
+4. Esegui `npx tsc --noEmit` per verificare che TypeScript non abbia errori di tipo nel nuovo file
+
+### Step 3 — Rimuovi gli handler da MainApp.tsx
+Per ogni gruppo di handler spostato:
+1. Usa `Edit` (NON `Write`) per rimuovere il corpo dell'handler da `MainApp.tsx`
+2. Mantieni solo una riga di import che rimanda al file handler
+3. Dopo ogni Edit, esegui `wc -l components/MainApp.tsx` — il numero deve scendere progressivamente
+
+### Step 4 — Aggiorna gli import in MainApp.tsx
+Con `Edit`, aggiungi in cima a `MainApp.tsx` gli import dai nuovi file:
+```typescript
+import { createBlockHandlers } from './handlers/blockHandlers';
+import { createConversationHandlers } from './handlers/conversationHandlers';
+// ecc.
+```
+
+### Step 5 — Verifica finale
+```bash
+npx tsc --noEmit
+npm run build
+wc -l components/MainApp.tsx
+```
+`MainApp.tsx` deve essere < 350 righe dopo lo split. Il build deve passare senza errori.
+
+---
+
+## Pattern di firma per i file handler
+
+Ogni file handler deve esportare una factory function che riceve le dipendenze necessarie e restituisce un oggetto con gli handler:
+
+```typescript
+// Esempio: handlers/blockHandlers.ts
+import type { WeekRouteInfo, BlockDetails, BlockStatus, LessonType } from '../../types';
+import type { UpdateConversationFn } from '../MainApp'; // o dal tipo corretto
+
+interface BlockHandlerDeps {
+  updateConversation: UpdateConversationFn;
+  conversationsRef: React.MutableRefObject<Conversation[]>;
+  showToast: (msg: string, type?: string) => void;
+  // ... altri parametri necessari
+}
+
+export function createBlockHandlers(deps: BlockHandlerDeps) {
+  const { updateConversation, conversationsRef, showToast } = deps;
+
+  const handleUpdateBlockObjective = (weekNumber: number, blockIndex: number, objective: string) => {
+    // ... logica
+  };
+
+  return {
+    handleUpdateBlockObjective,
+    // ... altri handler
+  };
+}
+```
+
+In `MainApp.tsx` si usa così:
+```typescript
+const blockHandlers = createBlockHandlers({
+  updateConversation,
+  conversationsRef,
+  showToast,
+  // ...
+});
+const { handleUpdateBlockObjective, ... } = blockHandlers;
+```
+
+---
+
+## Nota finale
+
+Se durante lo split un file handler supera le 200 righe, spezzarlo ulteriormente (es. `blockHandlers.ts` → `blockHandlers_planning.ts` + `blockHandlers_status.ts`). La priorità è **mai file > 300 righe** — è il limite oltre il quale il rischio troncamento aumenta significativamente.

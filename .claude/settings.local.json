@@ -16,7 +16,19 @@
       "PowerShell(cd \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\"; node --version; \\(Get-Command node -ErrorAction SilentlyContinue\\).Source)",
       "Bash(cd \"/mnt/c/Users/unoav/OneDrive/Etichetta_Rossa/Area_Personale/2026/022_Ada Luna Rossa\" && which npx 2>/dev/null && npx tsc --noEmit 2>&1 | head -80 || echo \"npx not found in bash PATH either\")",
       "PowerShell($env:PATH = $env:PATH + \";C:\\\\Program Files\\\\nodejs\"; cd \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\"; node --version 2>&1)",
-      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; Get-Command tsc -ErrorAction SilentlyContinue; [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) | Select-String -Pattern \"node|npm\")"
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; Get-Command tsc -ErrorAction SilentlyContinue; [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) | Select-String -Pattern \"node|npm\")",
+      "Read(//c/Users/unoav/AppData/Roaming/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(find /c -name \"node.exe\")",
+      "Bash(\"/c/pinokio/bin/miniconda/node.exe\" \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\\\\node_modules\\\\.bin\\\\tsc\" --noEmit --project \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\\\\tsconfig.json\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(python3 \"/c/Users/unoav/AppData/Local/Temp/rebuild_mainapp.py\")",
+      "Bash(command -v python)",
+      "Bash(command -v python3)",
+      "Read(//c/pinokio/bin/miniconda//**)",
+      "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/tsc --noEmit --project tsconfig.json)",
+      "Bash(npm run *)",
+      "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/vite build)"
     ]
   }
 }
