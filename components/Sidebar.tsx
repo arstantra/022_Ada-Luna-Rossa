@@ -196,7 +196,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             />
             <NavItem
               icon={<CalendarDaysIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="Gantt del Corso"
+              label="Analisi del Corso"
               isActive={activeView === 'gantt'}
               onClick={onOpenGantt}
             />

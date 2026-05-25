@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, BlockStatus, Activity, ActivityStatus } from '../types';
+import type { Conversation, BlockStatus, Activity, ActivityStatus, LessonType } from '../types';
 import { XIcon, CalendarDaysIcon } from './Icons';
+import DidacticRadarChart from './DidacticRadarChart';
 
 // ── Tipi interni ──────────────────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number;
   <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-800/50">
     <div className="flex items-center gap-3">
       <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-      <h1 className="text-lg font-display font-semibold text-white">Gantt del Corso</h1>
+      <h1 className="text-lg font-display font-semibold text-white">Analisi del Corso</h1>
       {(count > 0 || activityCount > 0) && (
         <span className="text-xs font-mono text-gray-600">
           {count > 0 && `${count} moduli`}
@@ -252,6 +253,36 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   const weeks = useMemo(() => Array.from({ length: maxWeek }, (_, i) => i + 1), [maxWeek]);
 
+  // ── Radar equilibrio didattico ────────────────────────────────────────────────
+  const radarData = useMemo(() => {
+    const counts: Partial<Record<LessonType, number>> = {};
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach(block => {
+        if (!block.tipologia) return;
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        counts[block.tipologia] = (counts[block.tipologia] || 0) + 1;
+      });
+    });
+    return (Object.entries(counts) as [LessonType, number][])
+      .map(([tipologia, count]) => ({ tipologia, count }));
+  }, [conversations]);
+
+  const idealRadarData = useMemo(() => {
+    const counts: Partial<Record<LessonType, number>> = {};
+    conversations.forEach(conv => {
+      (conv.modules ?? []).forEach(mod => {
+        mod.sections.forEach(sec => {
+          if (!sec.lessonType || sec.estimatedBlocks <= 0) return;
+          counts[sec.lessonType] = (counts[sec.lessonType] || 0) + sec.estimatedBlocks;
+        });
+      });
+    });
+    return (Object.entries(counts) as [LessonType, number][])
+      .map(([tipologia, count]) => ({ tipologia, count }))
+      .filter(d => d.count > 0);
+  }, [conversations]);
+
   // ── Helpers di posizionamento (% relativi all'area timeline) ─────────────────
   // maxWeek è noto qui — questi non sono hook, sono semplici funzioni derivate
 
@@ -282,7 +313,9 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
     <div className="flex flex-col h-full bg-[#0D1117]">
       <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} />
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* ── Colonna sinistra: timeline Gantt ─────────────────────────────── */}
+        <div className="flex-1 overflow-auto min-w-0">
         <div className="p-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
           {/* ── Asse X: numeri settimana ─────────────────────────────────────── */}
@@ -452,7 +485,24 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
           )}
 
         </div>
-      </div>
+        </div>{/* fine colonna gantt */}
+
+        {/* ── Colonna destra: radar equilibrio didattico ───────────────────── */}
+        <div className="flex-shrink-0 lg:w-72 w-full border-t lg:border-t-0 lg:border-l border-gray-800/50 overflow-y-auto p-5">
+          {radarData.length > 0 ? (
+            <DidacticRadarChart
+              data={radarData}
+              idealData={idealRadarData.length > 0 ? idealRadarData : undefined}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full py-10">
+              <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+                Imposta una tipologia di lezione per vedere l'equilibrio didattico
+              </p>
+            </div>
+          )}
+        </div>
+      </div>{/* fine riga a due colonne */}
 
       {/* ── Pannello dettaglio attività ──────────────────────────────────────── */}
       {selectedActivity && (() => {
