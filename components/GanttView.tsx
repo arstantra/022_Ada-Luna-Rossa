@@ -153,13 +153,20 @@ interface GanttViewProps {
 
 // ── Header (definito prima di GanttView per evitare forward reference) ────────
 
-const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number; activityCount: number }> = ({
-  onClose, count, weeks, activityCount,
-}) => (
-  <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-800/50">
-    <div className="flex items-center gap-3">
+const SPLIT_LABELS = ['Gantt', '50/50', 'Radar'] as const;
+
+const GanttHeader: React.FC<{
+  onClose: () => void;
+  count: number;
+  weeks: number;
+  activityCount: number;
+  splitPreset: 0 | 1 | 2;
+  onSetSplit: (p: 0 | 1 | 2) => void;
+}> = ({ onClose, count, weeks, activityCount, splitPreset, onSetSplit }) => (
+  <header className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
+    <div className="flex items-center gap-2.5">
       <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-      <h1 className="text-lg font-display font-semibold text-white">Analisi del Corso</h1>
+      <h1 className="text-base font-display font-semibold text-white">Analisi del Corso</h1>
       {(count > 0 || activityCount > 0) && (
         <span className="text-xs font-mono text-gray-600">
           {count > 0 && `${count} moduli`}
@@ -170,13 +177,32 @@ const GanttHeader: React.FC<{ onClose: () => void; count: number; weeks: number;
       )}
     </div>
 
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
+      {/* Legenda colori */}
       <div className="flex items-center gap-3">
         {LEGEND.map(({ cls, label }) => (
           <span key={label} className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600">
             <span className={`w-2 h-2 rounded-full flex-shrink-0 opacity-80 ${cls}`} />
             {label}
           </span>
+        ))}
+      </div>
+
+      {/* Toggle split — visibile solo su schermi lg+ */}
+      <div className="hidden lg:flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5">
+        {SPLIT_LABELS.map((label, i) => (
+          <button
+            key={label}
+            onClick={() => onSetSplit(i as 0 | 1 | 2)}
+            className={`text-[9px] font-mono px-2 py-0.5 rounded transition-colors ${
+              splitPreset === i
+                ? 'text-gray-200 bg-gray-700/80'
+                : 'text-gray-600 hover:text-gray-400'
+            }`}
+            title={`Layout: ${label}`}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
@@ -197,6 +223,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   // Tutti gli hook prima di qualsiasi return condizionale (regola React)
 
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(0);
 
   const modules = useMemo((): GanttModule[] => {
     const map = new Map<string, GanttModule>();
@@ -268,21 +295,6 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
       .map(([tipologia, count]) => ({ tipologia, count }));
   }, [conversations]);
 
-  const idealRadarData = useMemo(() => {
-    const counts: Partial<Record<LessonType, number>> = {};
-    conversations.forEach(conv => {
-      (conv.modules ?? []).forEach(mod => {
-        mod.sections.forEach(sec => {
-          if (!sec.lessonType || sec.estimatedBlocks <= 0) return;
-          counts[sec.lessonType] = (counts[sec.lessonType] || 0) + sec.estimatedBlocks;
-        });
-      });
-    });
-    return (Object.entries(counts) as [LessonType, number][])
-      .map(([tipologia, count]) => ({ tipologia, count }))
-      .filter(d => d.count > 0);
-  }, [conversations]);
-
   // ── Helpers di posizionamento (% relativi all'area timeline) ─────────────────
   // maxWeek è noto qui — questi non sono hook, sono semplici funzioni derivate
 
@@ -297,7 +309,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   if (maxWeek === 0) {
     return (
       <div className="flex flex-col h-full bg-[#0D1117]">
-        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} />
+        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm font-mono text-gray-600">
             Nessun dato da visualizzare. Pianifica alcune settimane per vedere il Gantt.
@@ -309,13 +321,16 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   // ── Render principale ─────────────────────────────────────────────────────────
 
+  const radarWidthClass = ['lg:w-[35%]', 'lg:w-[50%]', 'lg:w-[65%]'][splitPreset];
+
   return (
     <div className="flex flex-col h-full bg-[#0D1117]">
-      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} />
+      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* ── Colonna sinistra: timeline Gantt ─────────────────────────────── */}
-        <div className="flex-1 overflow-auto min-w-0">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
+        {/* ── Card Gantt (sinistra) ─────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto">
         <div className="p-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
           {/* ── Asse X: numeri settimana ─────────────────────────────────────── */}
@@ -485,14 +500,14 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
           )}
 
         </div>
-        </div>{/* fine colonna gantt */}
+        </div>
+        </div>{/* fine card Gantt */}
 
-        {/* ── Colonna destra: radar equilibrio didattico ───────────────────── */}
-        <div className="flex-shrink-0 lg:w-72 w-full border-t lg:border-t-0 lg:border-l border-gray-800/50 overflow-y-auto p-5">
+        {/* ── Card Radar (destra) ──────────────────────────────────────────── */}
+        <div className={`flex-shrink-0 w-full ${radarWidthClass} rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-y-auto p-5`}>
           {radarData.length > 0 ? (
             <DidacticRadarChart
               data={radarData}
-              idealData={idealRadarData.length > 0 ? idealRadarData : undefined}
             />
           ) : (
             <div className="flex items-center justify-center h-full py-10">
@@ -502,7 +517,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
             </div>
           )}
         </div>
-      </div>{/* fine riga a due colonne */}
+      </div>{/* fine layout a due colonne */}
 
       {/* ── Pannello dettaglio attività ──────────────────────────────────────── */}
       {selectedActivity && (() => {
@@ -539,7 +554,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-300 border border-emerald-500/25 rounded-lg hover:bg-emerald-500/10 hover:border-emerald-400/35 transition-all"
                   >
-                    ✓ Segna consegnata
+                    Segna consegnata
                   </button>
                 )}
                 <button

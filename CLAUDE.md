@@ -111,7 +111,9 @@ components/
     dataHandlers.ts          — handleExportData, handleAttemptImport, handleConfirmRestore, handleExportCourseBook, ecc.
     uiHandlers.ts            — handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
-  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod
+  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod. Il radar NON è più nell'header (spostato in GanttView — 2026-05-25).
+  GanttView.tsx              — "Analisi del Corso" (rinominato da "Gantt del Corso" 2026-05-25): layout a due colonne — Gantt moduli/attività (flex-1, scroll orizzontale) + pannello Radar equilibrio didattico (w-72, destra). Su schermi stretti: flex-col (gantt sopra, radar sotto). Calcola radarData e idealRadarData direttamente dalle conversations.
+  DidacticRadarChart.tsx     — componente panel del radar didattico (2026-05-25): pentagono fisso a 5 assi (ALL_TYPES — tutti i LessonType sempre visibili anche a 0); ideale = idealData se disponibile, altrimenti distribuzione uniforme 20% per tipo; score badge TVD verde/ambra/rosso; bar chart breakdown sotto il radar (indigo = attuale, sky = ideale). Non ha più la versione "compact" per l'header.
   InAulaView.tsx             — vista lezione (archivio + in_corso)
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
@@ -573,7 +575,7 @@ const availableWeeks = useMemo(
 'notebooklm'          — NotebookLMView
 'toolkit'             — ToolkitView
 'groups_archive'      — GroupsArchiveView
-'gantt'               — GanttView (Gantt del Corso)
+'gantt'               — GanttView (Analisi del Corso — Gantt + Radar equilibrio didattico)
 ```
 
 ---
@@ -587,7 +589,7 @@ Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron
 
 ▾ CONTENUTI DEL CORSO          (CollapsibleSectionLabel, default: aperta)
   • Progettazione del Corso        (→ strategic_dashboard)
-  • Gantt del Corso                (→ gantt)
+  • Analisi del Corso              (→ gantt) ← Gantt moduli + pannello Radar equilibrio didattico
   • Laboratori e Strumenti ▾       (CollapsibleSection con icona, sotto-livello)
       ↳ Toolkit                    (→ toolkit)
       ↳ Atelier Visivo             (DISABILITATO — badge "API")
@@ -679,3 +681,9 @@ progettata → in_corso → archiviata
 - Non usare `isFslPeriod` per derivare lo stato di progressione del blocco — è un flag ortogonale, non altera `getBlockProgressState` né `getBlockPlanningStatus`.
 - Non dimenticare le prop `contentUnits`, `onToggleFslPeriod` quando si passa props a `StrategicDashboardView` — servono per il selettore "Cosa" e il toggle FSL nell'accordion blocco.
 - Non limitare il selettore tipologia a un solo componente — `tipologia` (il "come") è selezionabile sia in `StrategicDashboardView` (accordion blocco) che in `BlockWorkspaceView` / `PlanningView` (laboratorio). I due selettori usano lo stesso handler `handleUpdateBlockTipologia` in `MainApp`.
+- Non riportare il radar (`DidacticRadarChart`) nell'header di `StrategicDashboardView` — è stato spostato in `GanttView` (2026-05-25) come pannello laterale dedicato. L'header di Progettazione mostra solo i KPI progressStats e i contenuti in sospeso.
+- Non reintrodurre il guard `data.length < 3` in `DidacticRadarChart` — rimosso (2026-05-25). Il radar ora usa sempre tutti e 5 gli assi fissi (`ALL_TYPES`), così lo squilibrio è visibile anche con un solo tipo compilato.
+- Non ridurre `DidacticRadarChart` alla versione compatta inline — il componente è ora dimensionato per il pannello laterale (`size=130, maxR=50`). Se serve una versione inline futura, creare un componente separato, non modificare questo.
+- Non rimuovere il fallback a distribuzione uniforme in `DidacticRadarChart` — quando `idealData` è assente o vuoto, l'ideale è calcolato su 20% per tipo. Questo rende il radar immediatamente utile anche senza dati di modulo.
+- Non spostare i `useMemo` `radarData` / `idealRadarData` fuori da `GanttView` in un file handler — li calcola direttamente dalle `conversations` come prop già disponibile. Non aggiungono deps esterne e non appartengono ai factory handler.
+- Non rinominare "Analisi del Corso" in "Gantt del Corso" o simili — la view 'gantt' contiene ora sia il Gantt che il Radar, quindi il nome "Gantt del Corso" sarebbe riduttivo (rinominato 2026-05-25).

@@ -1,7 +1,7 @@
 # ADA — Visione Fondante e Architettura Strategica
 
 > Documento di riferimento per lo sviluppo. Aggiornato in modo incrementale man mano che la visione si approfondisce.
-> Ultima revisione: 2026-05-24
+> Ultima revisione: 2026-05-25
 
 ---
 
@@ -174,34 +174,43 @@ Aggiungere `pendingContent?: DetachedLesson[]` sulla `Conversation`. Una `Detach
 
 ## 6. Strumenti visivi di pianificazione
 
-### 6.1 Gantt dei moduli
+### 6.1 "Analisi del Corso" — vista unificata Gantt + Radar (2026-05-25)
 
-Vista temporale dell'intero anno scolastico. Complementare alla vista settimana/blocco — quella è chirurgica (il dettaglio), il Gantt è strategico (il quadro d'insieme).
+I due strumenti visivi principali — Gantt dei moduli e Radar dell'equilibrio didattico — vivono nella stessa view (`'gantt'`, navigazione: "Analisi del Corso"). Layout a due colonne: Gantt a sinistra (flex-1, scroll orizzontale), Radar a destra (pannello fisso w-72, scroll verticale). Su schermi stretti si impilano verticalmente.
+
+Questo posizionamento riflette la complementarità dei due strumenti: il Gantt risponde a *"dove siamo nel tempo?"*, il Radar risponde a *"siamo bilanciati nel metodo?"*. Vederli insieme nello stesso pannello consente una lettura strategica immediata senza navigare tra view diverse.
+
+#### Gantt dei moduli
+
+Vista temporale dell'intero anno scolastico. Complementare alla vista settimana/blocco (chirurgica, il dettaglio) — il Gantt è strategico (il quadro d'insieme).
 
 - **Asse orizzontale**: settimane dall'inizio alla fine dell'anno
-- **Barre orizzontali**: un modulo per barra, colorato per distinguerlo
-- **Punti/segmenti nella barra**: i singoli blocchi-lezione
-- **Settimana corrente**: evidenziata
-- **Buchi nella barra**: lezioni saltate, visibili a colpo d'occhio
+- **Barre orizzontali**: un modulo per barra, estesa tra la prima e l'ultima settimana in cui compare
+- **Dot per settimana**: aggregano i blocchi della stessa settimana, colorati per stato (emerald/amber/slate/gray)
+- **Settimana corrente**: highlight viola
+- **Sezione Attività**: righe separate per le attività lanciate, con barra launch→due e dot di stato
 
-Funzione principale: accorgersi quando un modulo sta sforando, quando ci sono settimane non pianificate, o quando due moduli si sovrappongono più del previsto. È uno strumento di **controllo della coerenza temporale**.
+Funzione: accorgersi quando un modulo sta sforando, quando ci sono settimane non pianificate, o quando due moduli si sovrappongono più del previsto. Strumento di **controllo della coerenza temporale**.
 
-### 6.2 Radar dell'equilibrio didattico
+#### Radar dell'equilibrio didattico (`DidacticRadarChart`)
 
-Applicato al corso o al singolo modulo — non alla singola lezione. Le dimensioni sono le tipologie di lezione configurate per quel corso.
+Implementato come pentagono fisso a **5 assi** — uno per ciascun `LessonType` (`frontale_teorica`, `frontale_operativa`, `laboratorio`, `verifica`, `discussione`). **Tutti e 5 gli assi sono sempre visibili**, anche se un tipo ha count=0, in modo che lo squilibrio sia evidente immediatamente anche con un solo tipo compilato.
 
-Esempio per il laboratorio di design:
-```
-         Teoria
-           ▲
-    ______/|\______
-   /       |       \
-Laboratorio ─── Procedura
-```
+**Due poligoni sovrapposti:**
+- **Indigo** (pieno): distribuzione attuale dei blocchi pianificati
+- **Sky** (tratteggiato): distribuzione ideale
 
-Funzione: il docente vede a colpo d'occhio se il modulo è sbilanciato (troppa teoria, poca pratica) e può riorientare la pianificazione delle settimane successive.
+**Ideale a due livelli:**
+1. Se i moduli hanno sezioni con `lessonType + estimatedBlocks`, l'ideale è la somma di quei blocchi stimati per tipo
+2. Altrimenti (fallback): distribuzione uniforme al 20% per tipo — immediatamente utile anche all'inizio dell'anno
 
-La stessa forma radar usata nel monitoraggio studenti (§7) e nella pianificazione crea coerenza visiva tra i due contesti — un solo tipo di grafico, due scopi diversi.
+**Score badge** (verde ≥80%, ambra ≥55%, rosso <55%) calcolato via Total Variation Distance tra distribuzione attuale e ideale.
+
+**Bar chart sottostante**: una riga per tipo di lezione, due barre sovrapposte (sky = quota ideale, indigo = quota attuale) con percentuale numerica. Mostra il dettaglio che il radar esprime visualmente.
+
+Funzione: il docente vede a colpo d'occhio se il corso è sbilanciato (troppa frontale, poca pratica, nessuna verifica) e può riorientare le tipologie nelle settimane future.
+
+La stessa forma radar usata nel monitoraggio studenti (§7) crea coerenza visiva tra i due contesti — un solo tipo di grafico, due scopi diversi.
 
 ---
 

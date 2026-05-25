@@ -323,11 +323,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     return (
         <>
             <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden print-container strategic-dashboard-print">
-                <div className="flex-shrink-0 flex items-center gap-4 px-5 py-3 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm no-print">
+                <div className="flex-shrink-0 flex items-center gap-4 px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm no-print">
                     {/* Zona A — titolo fisso */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <ClipboardDocumentCheckIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <h1 className="text-sm font-display font-semibold text-white">Progettazione del Corso</h1>
+                    <div className="flex items-center gap-2.5 flex-shrink-0">
+                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <h1 className="text-base font-display font-semibold text-white">Progettazione del Corso</h1>
                     </div>
 
                     {/* Zona B — KPI progressStats (espansi, non nel mezzo del nulla) */}

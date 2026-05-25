@@ -34,11 +34,12 @@ Il tool `Write` riscrive il file intero in un unico stream. Se il file è lungo,
 | `components/MainApp.tsx` | ~509 | ✅ Split completato 2026-05-25 — solo stato, hook, factory call, render |
 | `services/gemini.ts` | 863 | Monolitico ma stabile — modificare solo con `Edit` |
 | `components/InAulaView.tsx` | 988 | Solo `Edit` |
-| `components/StrategicDashboardView.tsx` | 731 | Solo `Edit` |
+| `components/StrategicDashboardView.tsx` | 687 | Solo `Edit` (radar rimosso 2026-05-25) |
 | `components/BlockWorkspaceView.tsx` | 601 | Solo `Edit` |
 | `components/FoundingDocumentsView.tsx` | 578 | Solo `Edit` |
-| `components/GanttView.tsx` | 510 | Solo `Edit` |
+| `components/GanttView.tsx` | 560 | Solo `Edit` (radar panel aggiunto 2026-05-25) |
 | `components/PlanningView.tsx` | 482 | Solo `Edit` |
+| `components/DidacticRadarChart.tsx` | 226 | Solo `Edit` — ridisegnato 2026-05-25 |
 | `hooks/usePlanning.ts` | 462 | Solo `Edit` |
 
 ### File handler (nuovi — da `components/handlers/`)
