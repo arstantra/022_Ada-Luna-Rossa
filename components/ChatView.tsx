@@ -18,6 +18,8 @@ interface ChatViewProps {
   useGoogleSearch?: boolean;
   onGoogleSearchChange?: (value: boolean) => void;
   onOpenImageGenerator?: () => void;
+  pendingFirstMessage?: string | null;
+  onConsumeFirstMessage?: () => void;
 }
 
 // ── Welcome screen per la chat vuota ─────────────────────────────────────────
@@ -46,6 +48,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   conversation, students, onSendMessage, isLoading,
   onShowToast, currentModeId, onModeChange,
   useGoogleSearch, onGoogleSearchChange, onOpenImageGenerator,
+  pendingFirstMessage, onConsumeFirstMessage,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +57,15 @@ const ChatView: React.FC<ChatViewProps> = ({
   const [searchHighlight, setSearchHighlight] = useState('');
 
   const isQuickChat = conversation?.id === ADA_QUICK_CHAT_ID;
+
+  // Auto-invio messaggio in arrivo dalla lobby (chip o input libero)
+  useEffect(() => {
+    if (pendingFirstMessage && conversation) {
+      onSendMessage(pendingFirstMessage);
+      onConsumeFirstMessage?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFirstMessage, conversation?.id]);
 
   const studentForConversation = useMemo(() => {
     if (conversation?.studentId) {

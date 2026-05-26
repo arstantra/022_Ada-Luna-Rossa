@@ -156,9 +156,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onExportCourseBook, onOpenApiSettings,
   onShowToast,
 }) => {
-  const [contenutoOpen, setContenutoOpen] = useState(true);
-  const [inAulaOpen, setInAulaOpen] = useState(true);
-  const [monitoraggioOpen, setMonitoraggioOpen] = useState(true);
+  const [contenutoOpen, setContenutoOpen] = useState(false);
+  const [inAulaOpen, setInAulaOpen] = useState(false);
+  const [monitoraggioOpen, setMonitoraggioOpen] = useState(false);
   const [gestioneOpen, setGestioneOpen] = useState(false);
   const [strumentiOpen, setStrumentiOpen] = useState(false);
 

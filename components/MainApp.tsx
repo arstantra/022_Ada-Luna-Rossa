@@ -112,6 +112,7 @@ const [notebookToEdit, setNotebookToEdit] = useState<Partial<Notebook> | null>(n
   const importFileRef = useRef<HTMLInputElement>(null);
   const [confirmationProps, setConfirmationProps] = useState<Omit<ConfirmationModalProps, 'isOpen' | 'onClose'> | null>(null);
   const [pendingSaltaInfo, setPendingSaltaInfo] = useState<{ weekNumber: number; blockIndex: number; block: BlockDetails } | null>(null);
+  const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null);
 
   const { modules, contentUnits } = useConstitutionCache();
 
@@ -255,6 +256,11 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     masterContext.currentModeId, masterContext.handleSaveMode, showToast, addEvaluationToStudent,
   ]);
 
+  const handleOpenChatFromLobby = useCallback((message: string) => {
+    setPendingFirstMessage(message);
+    handleOpenConversaConAda();
+  }, [handleOpenConversaConAda]);
+
   const {
     handleSendMessage, handleGenerateImage, handleSendPlanningMessage,
   } = useMemo(() => createMessagingHandlers({
@@ -393,7 +399,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
         />
         {
           {
-            'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} />,
+            'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} onStartChat={handleOpenChatFromLobby} />,
             'gantt': <GanttView conversations={conversations} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} onMarkActivityDelivered={handleMarkActivityDelivered} />,
             'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} students={students} onAddStudent={addStructuredStudent} onUpdateStudent={updateStructuredStudent} onDeleteStudent={deleteStructuredStudent} />,
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
@@ -409,7 +415,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
             'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} onSaveModules={handleSaveConversationModules} onAddActivity={handleAddActivity} />,
-            'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} />
+            'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} pendingFirstMessage={pendingFirstMessage} onConsumeFirstMessage={() => setPendingFirstMessage(null)} />
           }[currentView]
         }
       </div>
