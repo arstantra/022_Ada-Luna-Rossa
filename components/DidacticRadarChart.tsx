@@ -147,7 +147,8 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
                     const fillLabel = active ? 'rgba(165,180,252,0.80)' : 'rgba(107,114,128,0.38)';
                     const fillCount = active ? 'rgba(165,180,252,1)'    : 'rgba(107,114,128,0.30)';
                     return (
-                        <text key={i} textAnchor="middle" fontFamily="monospace">
+                        <text key={i} textAnchor="middle" fontFamily="monospace" style={{ cursor: 'default' }}>
+                            <title>{LESSON_TYPE_LABELS[t]}: {count > 0 ? count : 0} blocchi</title>
                             {/* abbreviazione tipo — riga superiore */}
                             <tspan
                                 x={pos.x.toFixed(1)}
@@ -205,7 +206,7 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
                         const idealPct = idealT > 0 ? Math.round((idealC / idealT) * 100) : 0;
                         return (
                             <div key={t} className="flex items-center gap-2">
-                                <span className={`text-[9px] font-mono w-[76px] flex-shrink-0 truncate ${lblCls}`}>
+                                <span className={`text-[9px] font-mono w-[76px] flex-shrink-0 truncate ${lblCls}`} title={LESSON_TYPE_LABELS[t]}>
                                     {LESSON_TYPE_LABELS[t]}
                                 </span>
                                 <div className="relative flex-1 h-1.5 bg-gray-800/70 rounded-full overflow-hidden">

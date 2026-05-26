@@ -328,7 +328,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   // ── Render principale ─────────────────────────────────────────────────────────
 
-  const radarWidthClass = ['lg:w-[35%]', 'lg:w-[50%]', 'lg:w-[65%]'][splitPreset];
+  const radarWidthClass = ['lg:w-[22%]', 'lg:w-[38%]', 'lg:w-[54%]'][splitPreset];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
@@ -337,8 +337,11 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
         {/* ── Card Gantt (sinistra) ─────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-auto">
-        <div className="p-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
+          <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Moduli del Corso</span>
+        </div>
+        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div className="px-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
           {/* ── Asse X: numeri settimana ─────────────────────────────────────── */}
           <div className="flex sticky top-0 z-10 bg-[#0D1117]" style={{ height: HEAD }}>
@@ -511,7 +514,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
         </div>{/* fine card Gantt */}
 
         {/* ── Card Radar (destra) ──────────────────────────────────────────── */}
-        <div className={`flex-shrink-0 w-full ${radarWidthClass} rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-y-auto p-5`}>
+        <div className={`flex-shrink-0 w-full ${radarWidthClass} rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-y-auto custom-scrollbar p-5`}>
           {radarData.length > 0 ? (
             <DidacticRadarChart
               data={radarData}

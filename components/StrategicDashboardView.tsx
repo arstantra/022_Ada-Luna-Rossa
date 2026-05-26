@@ -323,64 +323,63 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     return (
         <>
             <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden print-container strategic-dashboard-print">
-                <div className="flex-shrink-0 flex items-center gap-4 px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm no-print">
-                    {/* Zona A — titolo fisso */}
-                    <div className="flex items-center gap-2.5 flex-shrink-0">
-                        <ClipboardDocumentCheckIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                        <h1 className="text-base font-display font-semibold text-white">Progettazione del Corso</h1>
+                <header className="flex-shrink-0 flex flex-col border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm no-print">
+                    {/* Riga 1 — titolo + azioni */}
+                    <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
+                        <div className="flex items-center gap-2.5">
+                            <ClipboardDocumentCheckIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            <h1 className="text-base font-display font-semibold text-white">Progettazione del Corso</h1>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={handleToggleAll}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-800/60"
+                            >
+                                <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`} />
+                                {allExpanded ? 'Comprimi' : 'Espandi'}
+                            </button>
+                            <div className="w-px h-4 bg-gray-700/60 mx-0.5" />
+                            <button onClick={handleExportHtml} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-400 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-gray-200 transition-all">
+                                <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                                Esporta
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Zona B — KPI progressStats (espansi, non nel mezzo del nulla) */}
-                    {progressStats.total > 0 && (
-                        <div className="flex items-center gap-2.5 flex-shrink-0" title="Stato blocchi: completati · in corso · da fare">
-                            <div className="w-px h-3.5 bg-gray-700/60" />
-                            {progressStats.completate > 0 && (
-                                <span className="flex items-center gap-1 text-[11px] text-emerald-400/80 font-mono">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                                    {progressStats.completate}
+                    {/* Riga 2 — KPI + contenuti in sospeso */}
+                    <div className="flex items-center gap-3 px-6 pb-2.5 flex-wrap">
+                        {progressStats.total > 0 && (
+                            <div className="flex items-center gap-2.5" title="Stato settimane: completate · in corso · da fare">
+                                {progressStats.completate > 0 && (
+                                    <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400/80 whitespace-nowrap">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500" />
+                                        completata{progressStats.completate !== 1 ? 'e' : ''}
+                                    </span>
+                                )}
+                                {progressStats.inCorso > 0 && (
+                                    <span className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/80 whitespace-nowrap">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" />
+                                        in corso
+                                    </span>
+                                )}
+                                <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400/80 whitespace-nowrap">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0 bg-slate-500" />
+                                    da fare
                                 </span>
-                            )}
-                            {progressStats.inCorso > 0 && (
-                                <span className="flex items-center gap-1 text-[11px] text-amber-400/80 font-mono">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                                    {progressStats.inCorso}
+                                <span className="text-[10px] text-gray-600 font-mono">{progressStats.completate + progressStats.inCorso + progressStats.daFare} / {progressStats.total}</span>
+                            </div>
+                        )}
+                        {pendingContentCount > 0 && (
+                            <>
+                                <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
+                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-mono text-amber-400/90 whitespace-nowrap" title="Contenuti distaccati da blocchi saltati, in attesa di collocazione">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                                    {pendingContentCount} {pendingContentCount === 1 ? 'contenuto in sospeso' : 'contenuti in sospeso'}
                                 </span>
-                            )}
-                            <span className="flex items-center gap-1 text-[11px] text-slate-400/80 font-mono">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500 flex-shrink-0" />
-                                {progressStats.daFare}
-                            </span>
-                            <span className="text-[10px] text-gray-600 font-mono">/ {progressStats.total}</span>
-                        </div>
-                    )}
-
-                    {/* Zona B2 — contenuti in sospeso */}
-                    {pendingContentCount > 0 && (
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="w-px h-3.5 bg-gray-700/60" />
-                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[11px] font-mono text-amber-400/90" title="Contenuti distaccati da blocchi saltati, in attesa di collocazione">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                                {pendingContentCount} {pendingContentCount === 1 ? 'contenuto in sospeso' : 'contenuti in sospeso'}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Zona C — azioni (sempre a destra) */}
-                    <div className="flex items-center gap-1 ml-auto">
-                        <button
-                            onClick={handleToggleAll}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors rounded-md hover:bg-gray-800/60"
-                        >
-                            <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform duration-200 ${allExpanded ? 'rotate-180' : ''}`} />
-                            {allExpanded ? 'Comprimi' : 'Espandi'}
-                        </button>
-                        <div className="w-px h-4 bg-gray-700/60 mx-0.5" />
-                        <button onClick={handleExportHtml} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-400 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-gray-200 transition-all">
-                            <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-                            Esporta
-                        </button>
+                            </>
+                        )}
                     </div>
-                </div>
+                </header>
 
                 <div className="print-header hidden">
                      <h1>Quadro Sinottico di Progettazione</h1>
