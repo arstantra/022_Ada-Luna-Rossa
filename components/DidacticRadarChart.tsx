@@ -8,6 +8,15 @@ export type RadarDataPoint = { tipologia: LessonType; count: number };
 const ALL_TYPES: LessonType[] = [
     'frontale_teorica', 'frontale_operativa', 'laboratorio', 'verifica', 'discussione',
 ];
+
+/** Abbreviazioni brevi per gli assi del radar (leggibili anche su SVG scalato). */
+const AXIS_LABELS: Record<LessonType, string> = {
+    frontale_teorica:   'Fr.T.',
+    frontale_operativa: 'Fr.O.',
+    laboratorio:        'Lab.',
+    verifica:           'Verif.',
+    discussione:        'Disc.',
+};
 const N = ALL_TYPES.length;
 
 /**
@@ -49,9 +58,9 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
     const size    = 130;
     const cx      = size / 2;
     const cy      = size / 2;
-    const maxR    = 50;
-    const pad     = 16;
-    const vbPad   = 22;
+    const maxR    = 46;
+    const pad     = 28;   // più spazio per le label degli assi
+    const vbPad   = 42;   // margine esterno più ampio per non tagliare le label
     const vbW     = size + vbPad * 2;
     const legendH = hasIdeal ? 20 : 12;
     const vbH     = vbW + legendH;
@@ -102,7 +111,6 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
             <svg
                 width="100%"
                 viewBox={`${-vbPad} ${-vbPad} ${vbW} ${vbH}`}
-                style={{ maxWidth: vbW }}
                 aria-label="Radar equilibrio didattico"
             >
                 {refCircles.map((r, i) => (
@@ -132,20 +140,36 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
                             fill="#818cf8" fillOpacity="0.9" />
                     ) : null
                 )}
-                {ALL_TYPES.map((_, i) => (
-                    <text
-                        key={i}
-                        x={labelPositions[i].x.toFixed(1)}
-                        y={labelPositions[i].y.toFixed(1)}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fill={plannedCounts[i] > 0 ? 'rgba(165,180,252,0.85)' : 'rgba(107,114,128,0.4)'}
-                        fontSize="6.5"
-                        fontFamily="monospace"
-                    >
-                        {plannedCounts[i]}
-                    </text>
-                ))}
+                {ALL_TYPES.map((t, i) => {
+                    const pos    = labelPositions[i];
+                    const count  = plannedCounts[i];
+                    const active = count > 0;
+                    const fillLabel = active ? 'rgba(165,180,252,0.80)' : 'rgba(107,114,128,0.38)';
+                    const fillCount = active ? 'rgba(165,180,252,1)'    : 'rgba(107,114,128,0.30)';
+                    return (
+                        <text key={i} textAnchor="middle" fontFamily="monospace">
+                            {/* abbreviazione tipo — riga superiore */}
+                            <tspan
+                                x={pos.x.toFixed(1)}
+                                y={(pos.y - 5.5).toFixed(1)}
+                                fontSize="6"
+                                fill={fillLabel}
+                            >
+                                {AXIS_LABELS[t]}
+                            </tspan>
+                            {/* contatore — riga inferiore, più grande */}
+                            <tspan
+                                x={pos.x.toFixed(1)}
+                                y={(pos.y + 5.5).toFixed(1)}
+                                fontSize="8.5"
+                                fontWeight={active ? '600' : '400'}
+                                fill={fillCount}
+                            >
+                                {count > 0 ? count : '–'}
+                            </tspan>
+                        </text>
+                    );
+                })}
                 {hasIdeal ? (
                     <g>
                         <line x1={0} y1={legendY1} x2={lineTo} y2={legendY1}
@@ -181,7 +205,7 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
                         const idealPct = idealT > 0 ? Math.round((idealC / idealT) * 100) : 0;
                         return (
                             <div key={t} className="flex items-center gap-2">
-                                <span className={`text-[9px] font-mono w-[62px] flex-shrink-0 truncate ${lblCls}`}>
+                                <span className={`text-[9px] font-mono w-[76px] flex-shrink-0 truncate ${lblCls}`}>
                                     {LESSON_TYPE_LABELS[t]}
                                 </span>
                                 <div className="relative flex-1 h-1.5 bg-gray-800/70 rounded-full overflow-hidden">
@@ -199,7 +223,7 @@ const DidacticRadarChart: React.FC<Props> = ({ data, idealData }) => {
 
                     return (
                         <div key={t} className="flex items-center gap-2">
-                            <span className={`text-[9px] font-mono w-[62px] flex-shrink-0 truncate ${lblCls}`}>
+                            <span className={`text-[9px] font-mono w-[76px] flex-shrink-0 truncate ${lblCls}`}>
                                 {LESSON_TYPE_LABELS[t]}
                             </span>
                             <div className="relative flex-1 h-1.5 bg-gray-800/70 rounded-full overflow-hidden">

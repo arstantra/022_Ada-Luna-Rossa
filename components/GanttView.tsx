@@ -163,55 +163,62 @@ const GanttHeader: React.FC<{
   splitPreset: 0 | 1 | 2;
   onSetSplit: (p: 0 | 1 | 2) => void;
 }> = ({ onClose, count, weeks, activityCount, splitPreset, onSetSplit }) => (
-  <header className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
-    <div className="flex items-center gap-2.5">
-      <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-      <h1 className="text-base font-display font-semibold text-white">Analisi del Corso</h1>
-      {(count > 0 || activityCount > 0) && (
-        <span className="text-xs font-mono text-gray-600">
-          {count > 0 && `${count} moduli`}
-          {count > 0 && activityCount > 0 && ' · '}
-          {activityCount > 0 && <span className="text-rose-500/70">{activityCount} attività</span>}
-          {weeks > 0 && ` · ${weeks} settimane`}
-        </span>
-      )}
+  <header className="flex-shrink-0 flex flex-col border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
+    {/* Riga 1 — titolo + controlli */}
+    <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
+      <div className="flex items-center gap-2.5">
+        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+        <h1 className="text-base font-display font-semibold text-white">Analisi del Corso</h1>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* Toggle split — visibile solo su schermi lg+ */}
+        <div className="hidden lg:flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5">
+          {SPLIT_LABELS.map((label, i) => (
+            <button
+              key={label}
+              onClick={() => onSetSplit(i as 0 | 1 | 2)}
+              className={`text-[9px] font-mono px-2 py-0.5 rounded transition-colors ${
+                splitPreset === i
+                  ? 'text-gray-200 bg-gray-700/80'
+                  : 'text-gray-600 hover:text-gray-400'
+              }`}
+              title={`Layout: ${label}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-md text-gray-600 hover:text-white hover:bg-gray-800/60 transition-colors"
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
+      </div>
     </div>
 
-    <div className="flex items-center gap-3">
-      {/* Legenda colori */}
-      <div className="flex items-center gap-3">
+    {/* Riga 2 — info + legenda colori */}
+    <div className="flex items-center gap-3 px-6 pb-2.5 flex-wrap">
+      {(count > 0 || activityCount > 0 || weeks > 0) && (
+        <span className="text-[10px] font-mono text-gray-600">
+          {count > 0 && `${count} moduli`}
+          {weeks > 0 && ` · ${weeks} settimane`}
+          {activityCount > 0 && (
+            <> · <span className="text-rose-500/70">{activityCount} attività</span></>
+          )}
+        </span>
+      )}
+      <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
+      <div className="flex items-center gap-3 flex-wrap">
         {LEGEND.map(({ cls, label }) => (
-          <span key={label} className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600">
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 opacity-80 ${cls}`} />
+          <span key={label} className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600 whitespace-nowrap">
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cls}`} />
             {label}
           </span>
         ))}
       </div>
-
-      {/* Toggle split — visibile solo su schermi lg+ */}
-      <div className="hidden lg:flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5">
-        {SPLIT_LABELS.map((label, i) => (
-          <button
-            key={label}
-            onClick={() => onSetSplit(i as 0 | 1 | 2)}
-            className={`text-[9px] font-mono px-2 py-0.5 rounded transition-colors ${
-              splitPreset === i
-                ? 'text-gray-200 bg-gray-700/80'
-                : 'text-gray-600 hover:text-gray-400'
-            }`}
-            title={`Layout: ${label}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <button
-        onClick={onClose}
-        className="p-1.5 rounded-md text-gray-600 hover:text-white hover:bg-gray-800/60 transition-colors"
-      >
-        <XIcon className="h-4 w-4" />
-      </button>
     </div>
   </header>
 );
@@ -308,7 +315,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   if (maxWeek === 0) {
     return (
-      <div className="flex flex-col h-full bg-[#0D1117]">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
         <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm font-mono text-gray-600">
@@ -324,7 +331,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   const radarWidthClass = ['lg:w-[35%]', 'lg:w-[50%]', 'lg:w-[65%]'][splitPreset];
 
   return (
-    <div className="flex flex-col h-full bg-[#0D1117]">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
       <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
