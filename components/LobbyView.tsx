@@ -67,9 +67,9 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
 
       {/* ── Pattern stelline sfondo ──────────────────────────────────────── */}
       {SPARKLE_PATTERN.map((s, i) => (
-        <SparklesIcon
+        <div
           key={i}
-          className="absolute text-purple-400 animate-pulse pointer-events-none select-none"
+          className="absolute animate-pulse pointer-events-none select-none"
           style={{
             top: s.top,
             left: s.left,
@@ -79,7 +79,9 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
             animationDelay: s.delay,
             animationDuration: '6s',
           }}
-        />
+        >
+          <SparklesIcon className="w-full h-full text-purple-400" />
+        </div>
       ))}
 
       {/* ── Contenuto centrale ───────────────────────────────────────────── */}

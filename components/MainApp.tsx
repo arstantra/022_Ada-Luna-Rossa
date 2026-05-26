@@ -91,7 +91,7 @@ const { students, syncStudentsWithContext, addEvaluationToStudent, recordAttenda
   const { processPlanningMessage, handleReEditBlock: reEditBlockHandler } = usePlanning(updateConversation, showToast);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt'>('lobby');
+  const [view, setView] = useState<'lobby' | 'chat' | 'roster' | 'notebooklm' | 'lezione_in_corso' | 'archivio_lezioni' | 'student_profile' | 'classroom_trend' | 'founding_documents' | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt' | 'la_rotta' | 'ada_personality'>('lobby');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [initialPlanningTab, setInitialPlanningTab] = useState<'laboratorio' | 'contenutoMaster' | null>(null);
   const [analysisLoadingBlockId, setAnalysisLoadingBlockId] = useState<string | null>(null);
