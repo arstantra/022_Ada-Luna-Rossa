@@ -40,12 +40,6 @@ const BAR_CLASS: Record<BlockProgressState, string> = {
   speciale:   'bg-gray-800/60',
 };
 
-const LEGEND: { cls: string; label: string }[] = [
-  { cls: 'bg-emerald-500', label: 'completato' },
-  { cls: 'bg-amber-400',   label: 'in corso'   },
-  { cls: 'bg-slate-500',   label: 'da fare'     },
-  { cls: 'bg-gray-500',    label: 'speciale'    },
-];
 
 // ── Logica stato ──────────────────────────────────────────────────────────────
 
@@ -155,14 +149,17 @@ interface GanttViewProps {
 
 const SPLIT_LABELS = ['Gantt', '50/50', 'Radar'] as const;
 
-const GanttHeader: React.FC<{
+interface GanttHeaderProps {
   onClose: () => void;
   count: number;
   weeks: number;
   activityCount: number;
   splitPreset: 0 | 1 | 2;
   onSetSplit: (p: 0 | 1 | 2) => void;
-}> = ({ onClose, count, weeks, activityCount, splitPreset, onSetSplit }) => (
+  blockStats: { completato: number; inCorso: number; daFare: number; speciale: number; total: number };
+}
+
+const GanttHeader: React.FC<GanttHeaderProps> = ({ onClose, count, weeks, activityCount, splitPreset, onSetSplit, blockStats }) => (
   <header className="flex-shrink-0 flex flex-col border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
     {/* Riga 1 — titolo + controlli */}
     <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
@@ -199,7 +196,7 @@ const GanttHeader: React.FC<{
       </div>
     </div>
 
-    {/* Riga 2 — info + legenda colori */}
+    {/* Riga 2 — info + KPI dinamici blocchi */}
     <div className="flex items-center gap-3 px-6 pb-2.5 flex-wrap">
       {(count > 0 || activityCount > 0 || weeks > 0) && (
         <span className="text-[10px] font-mono text-gray-600">
@@ -210,15 +207,40 @@ const GanttHeader: React.FC<{
           )}
         </span>
       )}
-      <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
-      <div className="flex items-center gap-3 flex-wrap">
-        {LEGEND.map(({ cls, label }) => (
-          <span key={label} className="flex items-center gap-1.5 text-[10px] font-mono text-gray-600 whitespace-nowrap">
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cls}`} />
-            {label}
-          </span>
-        ))}
-      </div>
+      {blockStats.total > 0 && (
+        <>
+          <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
+          <div className="flex items-center gap-2.5 flex-wrap" title="Stato blocchi: completati · in corso · da fare · speciali">
+            {blockStats.completato > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400/80 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500" />
+                completat{blockStats.completato !== 1 ? 'i' : 'o'}
+              </span>
+            )}
+            {blockStats.inCorso > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/80 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" />
+                in corso
+              </span>
+            )}
+            {blockStats.daFare > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400/80 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-slate-500" />
+                da fare
+              </span>
+            )}
+            {blockStats.speciale > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-500/80 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-500" />
+                speciale
+              </span>
+            )}
+            <span className="text-[10px] text-gray-600 font-mono">
+              {blockStats.completato + blockStats.inCorso + blockStats.daFare + blockStats.speciale} / {blockStats.total}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   </header>
 );
@@ -287,6 +309,22 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   const weeks = useMemo(() => Array.from({ length: maxWeek }, (_, i) => i + 1), [maxWeek]);
 
+  // ── KPI dinamici blocchi (per header) ────────────────────────────────────────
+  const blockStats = useMemo(() => {
+    let completato = 0, inCorso = 0, daFare = 0, speciale = 0, total = 0;
+    for (const mod of modules) {
+      for (const b of mod.blocks) {
+        total++;
+        const s = getBlockState(b);
+        if (s === 'completato') completato++;
+        else if (s === 'in_corso') inCorso++;
+        else if (s === 'da_fare') daFare++;
+        else speciale++;
+      }
+    }
+    return { completato, inCorso, daFare, speciale, total };
+  }, [modules]);
+
   // ── Radar equilibrio didattico ────────────────────────────────────────────────
   const radarData = useMemo(() => {
     const counts: Partial<Record<LessonType, number>> = {};
@@ -316,7 +354,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   if (maxWeek === 0) {
     return (
       <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
-        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
+        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} splitPreset={splitPreset} onSetSplit={setSplitPreset} blockStats={{ completato: 0, inCorso: 0, daFare: 0, speciale: 0, total: 0 }} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm font-mono text-gray-600">
             Nessun dato da visualizzare. Pianifica alcune settimane per vedere il Gantt.
@@ -332,7 +370,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
-      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset} />
+      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset} blockStats={blockStats} />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
         {/* ── Card Gantt (sinistra) ─────────────────────────────────────────── */}
