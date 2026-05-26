@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADA — Schema Architettura</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0D1117;
+    color: #e5e7eb;
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 13px;
+    font-family: monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  h1 span { color: #9ca3af; }
+
+  /* ── FLUSSO ORIZZONTALE ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 32px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 110px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .flow-step.highlight {
+    background: #1e293b;
+    border-color: #3b82f6;
+  }
+  .flow-step.active {
+    background: #1a1a2e;
+    border-color: #6366f1;
+  }
+  .flow-step.monitor {
+    background: #0f1f0f;
+    border-color: #10b981;
+  }
+  .flow-step .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    margin-bottom: 4px;
+  }
+  .flow-step.highlight .label { color: #93c5fd; }
+  .flow-step.active .label { color: #a5b4fc; }
+  .flow-step.monitor .label { color: #6ee7b7; }
+  .flow-step .sub {
+    font-size: 9px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+  .flow-arrow {
+    color: #374151;
+    font-size: 18px;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── GRIGLIA SEZIONI ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .section {
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid;
+  }
+  .section-blue { background: #0f172a; border-color: #3b82f6; }
+  .section-purple { background: #0f0f1f; border-color: #6366f1; }
+  .section-sky { background: #0a1a2a; border-color: #0ea5e9; }
+  .section-green { background: #0f1f0f; border-color: #10b981; }
+  .section-gray { background: #111827; border-color: #374151; }
+
+  .section-title {
+    font-size: 10px;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .section-blue .section-title { color: #60a5fa; }
+  .section-purple .section-title { color: #a5b4fc; }
+  .section-sky .section-title { color: #38bdf8; }
+  .section-green .section-title { color: #34d399; }
+  .section-gray .section-title { color: #9ca3af; }
+
+  .item {
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 10px;
+    line-height: 1.5;
+    border: 1px solid;
+  }
+  .item-blue { background: #1e3a5f; border-color: #3b82f650; color: #93c5fd; }
+  .item-purple { background: #1e1e3f; border-color: #6366f150; color: #a5b4fc; }
+  .item-sky { background: #0c2a3a; border-color: #0ea5e950; color: #38bdf8; }
+  .item-green { background: #0d2a1f; border-color: #10b98150; color: #34d399; }
+  .item-gray { background: #1a2030; border-color: #37415150; color: #9ca3af; }
+  .item-yellow { background: #1f1a00; border-color: #eab30850; color: #fbbf24; }
+
+  .item .item-title { font-weight: 600; margin-bottom: 2px; }
+  .item .item-sub { color: #6b7280; font-size: 9px; }
+
+  /* ── SIDEBAR ── */
+  .sidebar-section {
+    margin-bottom: 20px;
+  }
+  .sidebar-label {
+    font-size: 9px;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+  .sidebar-item {
+    font-size: 10px;
+    color: #9ca3af;
+    padding: 3px 0 3px 12px;
+    border-left: 2px solid #374151;
+    margin-bottom: 2px;
+  }
+  .sidebar-item.active { border-left-color: #8b5cf6; color: #e5e7eb; }
+  .sidebar-item.sub { padding-left: 24px; color: #6b7280; border-left-color: transparent; font-size: 9px; }
+  .sidebar-item.sub::before { content: "↳ "; }
+
+  /* ── DATA FLOW ── */
+  .flow-data {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 10px;
+    color: #6b7280;
+  }
+  .flow-data .source { color: #9ca3af; }
+  .flow-data .arrow { color: #374151; }
+  .flow-data .dest { color: #34d399; }
+
+  /* ── TIPI DATI ── */
+  .types-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .type-block {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .type-name {
+    font-family: monospace;
+    font-size: 11px;
+    color: #60a5fa;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .type-field {
+    font-family: monospace;
+    font-size: 9px;
+    color: #6b7280;
+    padding: 2px 0;
+    line-height: 1.6;
+  }
+  .type-field .fname { color: #93c5fd; }
+  .type-field .ftype { color: #34d399; }
+  .type-field .fcomment { color: #4b5563; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    font-size: 8px;
+    font-family: monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-new { background: #1e3a5f; color: #60a5fa; border: 1px solid #3b82f640; }
+  .badge-changed { background: #1f1a00; color: #f59e0b; border: 1px solid #eab30840; }
+  .badge-existing { background: #1a2030; color: #6b7280; border: 1px solid #37415140; }
+
+  hr { border: none; border-top: 1px solid #1f2937; margin: 20px 0; }
+  .section-sub-title {
+    font-size: 9px;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6b7280;
+    margin-bottom: 12px;
+    margin-top: 20px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 9px;
+    font-family: monospace;
+    color: #374151;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid #1f2937;
+  }
+</style>
+</head>
+<body>
+
+<h1>ADA — <span>Architettura Applicazione</span> · ada.nuovadidattica.eu · 2026-05-27</h1>
+
+<!-- ── FLUSSO DOCENTE ── -->
+<div class="section-sub-title">Flusso completo del docente</div>
+<div class="flow">
+  <div class="flow-step">
+    <div class="label">Gestione Corso</div>
+    <div class="sub">profilo · rotta · alunni · personalità Ada</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="label">Progettazione</div>
+    <div class="sub">COSA (master content) · COME (tipologia)</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step highlight">
+    <div class="label">Preparazione <span class="badge badge-new">NUOVO</span></div>
+    <div class="sub">formato materiali · gruppi · tool</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step active">
+    <div class="label">In Corso</div>
+    <div class="sub">presenze · materiali · note · valutazioni</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="label">Archivio</div>
+    <div class="sub">storico · consulta · riapri</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step monitor">
+    <div class="label">Monitoraggio</div>
+    <div class="sub">trend · alert · temperatura</div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── TRE SEZIONI PRINCIPALI ── -->
+<div class="section-sub-title">IN AULA — tre tab con ciclo di vita</div>
+<div class="grid">
+
+  <!-- TAB PREPARAZIONE -->
+  <div class="section section-blue">
+    <div class="section-title">Tab Preparazione <span class="badge badge-new">NUOVO</span></div>
+
+    <div class="item item-blue">
+      <div class="item-title">📐 Formato materiali</div>
+      <div class="item-sub">Dal master content → slide / video / paper / ricerca / stampa</div>
+    </div>
+    <div class="item item-blue">
+      <div class="item-title">🔗 Repository lezione</div>
+      <div class="item-sub">Card link (Drive, Canva, Gamma…) + tipo + note<br>Target: classe · gruppo · studente</div>
+    </div>
+    <div class="item item-blue">
+      <div class="item-title">👥 Composizione gruppi</div>
+      <div class="item-sub">N persone/gruppo · criteri bilanciamento<br>Ada suggerisce · modifica manuale</div>
+    </div>
+    <div class="item item-yellow">
+      <div class="item-title">🤖 Ada consiglia tool</div>
+      <div class="item-sub">Analizza master → suggerisce tool + link Toolkit</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-sub">Attivo quando: lessonState = 'progettata'</div>
+    </div>
+  </div>
+
+  <!-- TAB IN CORSO -->
+  <div class="section section-purple">
+    <div class="section-title">Tab In Corso <span class="badge badge-changed">POTENZIATO</span></div>
+
+    <div class="item item-purple">
+      <div class="item-title">✅ Registro presenze</div>
+      <div class="item-sub">Toggle P/A/R per studente · salvataggio immediato</div>
+    </div>
+    <div class="item item-purple">
+      <div class="item-title">📁 Materiali attivi</div>
+      <div class="item-sub">Materiali preparati come card · click apre URL</div>
+    </div>
+    <div class="item item-purple">
+      <div class="item-title">📊 Valutazioni</div>
+      <div class="item-sub">Inserimento manuale · orale / scritto / pratico / formativo<br>Non necessariamente da Classroom</div>
+    </div>
+    <div class="item item-purple">
+      <div class="item-title">📝 Note libere → Ada analisi</div>
+      <div class="item-sub">Textarea autosave · Ada estrae: engagement · segnali studenti · note gruppi</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-sub">Attivo quando: lessonState = 'in_corso'</div>
+    </div>
+  </div>
+
+  <!-- TAB ARCHIVIO -->
+  <div class="section section-gray">
+    <div class="section-title">Tab Archivio <span class="badge badge-changed">UNIFICATO</span></div>
+
+    <div class="item item-gray">
+      <div class="item-title">📋 Lista lezioni archiviate</div>
+      <div class="item-sub">Ordinata per data · card riassuntiva</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-title">Card: data · tipologia · tema</div>
+      <div class="item-sub">Presenze summary · nota snippet</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-title">Azioni</div>
+      <div class="item-sub">Riapri lezione (→ in_corso) · Vai al blocco (→ Planning)</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-sub">Attivo quando: lessonState = 'archiviata'</div>
+    </div>
+  </div>
+
+</div>
+
+<hr>
+
+<!-- ── LABORATORI E STRUMENTI ── -->
+<div class="section-sub-title">Laboratori e Strumenti — spostati in IN AULA <span class="badge badge-changed">SPOSTATO</span></div>
+<div class="grid">
+  <div class="section section-sky">
+    <div class="section-title">🧰 Toolkit</div>
+    <div class="item item-sky">
+      <div class="item-title">Card link per argomento</div>
+      <div class="item-sub">Gemini apps · Microsoft · registro elettronico<br>libro digitale adottato · risorse disciplinari</div>
+    </div>
+  </div>
+  <div class="section section-sky">
+    <div class="section-title">📓 I Miei Notebook · 🎓 Classroom</div>
+    <div class="item item-sky">
+      <div class="item-title">NotebookLM gallery</div>
+      <div class="item-sub">Card per notebook · apri nel browser</div>
+    </div>
+    <div class="item item-sky">
+      <div class="item-title">Google Classroom</div>
+      <div class="item-sub">Link diretto al corso · inserimento voti manuale</div>
+    </div>
+  </div>
+  <div class="section section-sky">
+    <div class="section-title">👥 Gestione Gruppi</div>
+    <div class="item item-sky">
+      <div class="item-title">Criteri bilanciamento</div>
+      <div class="item-sub">Livello · stile · dinamiche · casuale<br>Ada suggerisce · modifica manuale</div>
+    </div>
+    <div class="item item-sky">
+      <div class="item-title">Archivio composizioni</div>
+      <div class="item-sub">Storico per lezione → feed Monitoraggio Gruppi</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── MONITORAGGIO ── -->
+<div class="section-sub-title">Monitoraggio — cruscotto consuntivo</div>
+<div class="grid">
+  <div class="section section-green">
+    <div class="section-title">Andamento Aula <span class="badge badge-changed">POTENZIATO</span></div>
+    <div class="item item-green">
+      <div class="item-title">Gantt consuntivo vs progetto</div>
+      <div class="item-sub">Tipologie effettive vs pianificate</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Radar equilibrio consuntivo</div>
+      <div class="item-sub">Distribuzione reale vs ideale del progetto</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Heatmap presenze</div>
+      <div class="item-sub">Studenti × settimane · % per studente e lezione</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Engagement trend + Alert</div>
+      <div class="item-sub">Da analisi note Ada · segnali ripetuti</div>
+    </div>
+  </div>
+  <div class="section section-green">
+    <div class="section-title">Gruppi</div>
+    <div class="item item-green">
+      <div class="item-title">Storico composizioni</div>
+      <div class="item-sub">Chi ha lavorato con chi · quante volte</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Efficacia percepita</div>
+      <div class="item-sub">Da note docente → Ada identifica pattern</div>
+    </div>
+    <div class="item item-yellow">
+      <div class="item-title">🤖 Ada suggerisce</div>
+      <div class="item-sub">Composizione ottimale per la prossima lezione</div>
+    </div>
+  </div>
+  <div class="section section-green">
+    <div class="section-title">Studentesse / Studenti</div>
+    <div class="item item-green">
+      <div class="item-title">Profilo individuale</div>
+      <div class="item-sub">Presenze % · valutazioni trend · segnali Ada</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Confronto classe</div>
+      <div class="item-sub">Posizionamento vs media (senza ranking esplicito)</div>
+    </div>
+    <div class="item item-green">
+      <div class="item-title">Flag attenzione</div>
+      <div class="item-sub">3+ assenze · calo engagement · segnali Ada ripetuti</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── PIPELINE DATI ── -->
+<div class="section-sub-title">Pipeline dati → Monitoraggio</div>
+<div class="flow-data"><span class="source">📝 Note libere docente</span><span class="arrow"> → Ada estrae strutturato → </span><span class="dest">Engagement · segnali · note gruppi</span></div>
+<div class="flow-data"><span class="source">✅ Presenze (per blocco)</span><span class="arrow"> → aggregazione useMemo → </span><span class="dest">Heatmap · % per studente</span></div>
+<div class="flow-data"><span class="source">📊 Valutazioni manuali</span><span class="arrow"> → IndexedDB → </span><span class="dest">Trend per studente · media classe</span></div>
+<div class="flow-data"><span class="source">👥 Composizioni gruppi</span><span class="arrow"> → storico → </span><span class="dest">Pattern efficacia · suggerimenti Ada</span></div>
+<div class="flow-data"><span class="source">📐 Tipologie lezione usate</span><span class="arrow"> → confronto con progetto → </span><span class="dest">Gantt e Radar consuntivi</span></div>
+
+<hr>
+
+<!-- ── STRUTTURA SIDEBAR ── -->
+<div class="section-sub-title">Struttura Sidebar aggiornata</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+  <div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Contenuti del Corso</div>
+      <div class="sidebar-item">Progettazione del Corso</div>
+      <div class="sidebar-item">Analisi del Corso <span class="badge badge-existing">Gantt + Radar PROGETTO</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">In Aula <span class="badge badge-changed">RIORGANIZZATA</span></div>
+      <div class="sidebar-item active">Lezione <span class="badge badge-changed">tab: Prep · In Corso · Archivio</span></div>
+      <div class="sidebar-item">↳ Laboratori e Strumenti <span class="badge badge-changed">SPOSTATO QUI</span></div>
+      <div class="sidebar-item sub">Toolkit</div>
+      <div class="sidebar-item sub">I Miei Notebook</div>
+      <div class="sidebar-item sub">Classroom</div>
+      <div class="sidebar-item sub">Gruppi</div>
+    </div>
+  </div>
+  <div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Monitoraggio <span class="badge badge-changed">POTENZIATO</span></div>
+      <div class="sidebar-item">Andamento Aula <span class="badge badge-changed">Gantt + Radar CONSUNTIVI</span></div>
+      <div class="sidebar-item">Gruppi</div>
+      <div class="sidebar-item">Studentesse</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Gestione del Corso</div>
+      <div class="sidebar-item">Documenti Fondanti</div>
+      <div class="sidebar-item">La Rotta</div>
+      <div class="sidebar-item">Personalità di Ada</div>
+      <div class="sidebar-item">Backup, API Key</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ── NUOVI TIPI ── -->
+<div class="section-sub-title">Nuovi tipi in types.ts</div>
+<div class="types-grid">
+  <div class="type-block">
+    <div class="type-name">LessonMaterial <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-field"><span class="fname">id</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">title</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">url</span>: <span class="ftype">string</span> <span class="fcomment">// Drive, Canva, Gamma…</span></div>
+    <div class="type-field"><span class="fname">type</span>: <span class="ftype">'slide'|'video'|'pdf'|'paper'|'ricerca'|'stampa'|'altro'</span></div>
+    <div class="type-field"><span class="fname">targetAudience</span>: <span class="ftype">'classe'|'gruppo'|'studente'</span></div>
+    <div class="type-field"><span class="fname">targetId?</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">notes?</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">addedAt</span>: <span class="ftype">string</span> <span class="fcomment">// ISO</span></div>
+  </div>
+  <div class="type-block">
+    <div class="type-name">LessonEvaluation <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-field"><span class="fname">id</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">studentId</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">value</span>: <span class="ftype">string</span> <span class="fcomment">// "7" o "ottimo"</span></div>
+    <div class="type-field"><span class="fname">type</span>: <span class="ftype">'orale'|'scritto'|'pratico'|'formativo'|'altro'</span></div>
+    <div class="type-field"><span class="fname">notes?</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">date</span>: <span class="ftype">string</span> <span class="fcomment">// ISO</span></div>
+  </div>
+  <div class="type-block">
+    <div class="type-name">LessonNoteAnalysis <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-field"><span class="fname">engagementLevel</span>: <span class="ftype">'basso'|'medio'|'alto'</span></div>
+    <div class="type-field"><span class="fname">studentSignals</span>: <span class="ftype">Array&lt;{studentId, signal, type}&gt;</span></div>
+    <div class="type-field"><span class="fname">groupNotes</span>: <span class="ftype">Array&lt;{groupId?, note}&gt;</span></div>
+    <div class="type-field"><span class="fname">classNotes</span>: <span class="ftype">string[]</span></div>
+    <div class="type-field"><span class="fname">rawNotes</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">analyzedAt</span>: <span class="ftype">string</span></div>
+  </div>
+  <div class="type-block">
+    <div class="type-name">BlockDetails — aggiunte <span class="badge badge-changed">AGGIORNATO</span></div>
+    <div class="type-field"><span class="fname">lessonMaterials?</span>: <span class="ftype">LessonMaterial[]</span></div>
+    <div class="type-field"><span class="fname">lessonEvaluations?</span>: <span class="ftype">LessonEvaluation[]</span></div>
+    <div class="type-field"><span class="fname">lessonNoteAnalysis?</span>: <span class="ftype">LessonNoteAnalysis</span></div>
+    <div class="type-field"><span class="fname">lessonGroups?</span>: <span class="ftype">StudentGroup[]</span> <span class="fcomment">// per questa lezione</span></div>
+  </div>
+</div>
+
+<footer>
+  ADA · ada.nuovadidattica.eu · andrea.poletti@nuovadidattica.eu · Schema generato 2026-05-27
+  <br>Leggi anche: CLAUDE.md · ADA_INAULA_ARCHITETTURA.md · ADA_INAULA_IMPLEMENTAZIONE_STEPS.md
+</footer>
+
+</body>
+</html>
