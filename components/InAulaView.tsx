@@ -1,6 +1,7 @@
 import React, { useState, useMemo, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial, LessonEvaluation } from '../types';
 import LessonPreparationTab from './LessonPreparationTab';
+import LessonInCorsoTab from './LessonInCorsoTab';
 import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon } from './Icons';
 import AttendanceModal from './AttendanceModal';
 import GroupCreationModal from './GroupCreationModal';
@@ -580,9 +581,14 @@ interface InAulaViewProps {
     onChiudiLezione?: (convoId: string, blockIndex: number) => void;
     onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
     onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
+    onSetAttendance: (convoId: string, blockIndex: number, presentIds: string[], lateIds: string[]) => void;
+    onAddEvaluation: (convoId: string, blockIndex: number, evaluation: Omit<LessonEvaluation, 'id' | 'date'>) => void;
+    onRemoveEvaluation: (convoId: string, blockIndex: number, evaluationId: string) => void;
+    onAutoSaveNotes: (convoId: string, blockIndex: number, notes: string) => void;
+    onGenerateLessonNoteAnalysis: (convoId: string, blockIndex: number) => Promise<void>;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -741,82 +747,21 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 )}
 
                 {/* ── IN CORSO: lezione attiva ───────────────────────────────── */}
-                {activeTab === 'in_corso' && (() => {
-                  const planningConvos = conversations.filter(c => c.weekPlan);
-                  const activeBlock = planningConvos.flatMap(convo =>
-                    (convo.weekPlan?.blocks || []).map((block, index) => ({
-                      ...block, weekPlan: convo.weekPlan!, convoId: convo.id, blockIndex: index,
-                      uniqueId: `${convo.id}-${index}`,
-                    }))
-                  ).find(b => b.lessonState === 'in_corso');
-
-                  if (!activeBlock) {
-                    return (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-20 gap-4">
-                        <BriefcaseIcon className="h-14 w-14 text-gray-700" />
-                        <p className="text-gray-400 font-semibold">Nessuna lezione in corso</p>
-                        <p className="text-gray-600 text-sm max-w-xs">
-                          Vai all'<strong className="text-gray-500">Archivio Lezioni</strong>, scegli un blocco pianificato e clicca <strong className="text-gray-500">Avvia Lezione</strong>.
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                      <div className="max-w-4xl mx-auto space-y-4">
-                        {/* Banner lezione attiva */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-900/20 border border-emerald-700/40">
-                          <div>
-                            <p className="text-xs text-emerald-500 font-mono uppercase tracking-wider mb-1">
-                              Settimana {activeBlock.weekPlan.weekNumber} · {activeBlock.weekPlan.dates}
-                            </p>
-                            <p className="text-white font-semibold">
-                              {activeBlock.lessonTitle || activeBlock.objective || `Blocco ${activeBlock.blockIndex + 1}`}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => onChiudiLezione?.(activeBlock.convoId, activeBlock.blockIndex)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium hover:bg-gray-600 transition-colors border border-gray-600"
-                          >
-                            Chiudi Lezione
-                          </button>
-                        </div>
-                        {/* Contenuto del blocco */}
-                        <InAulaBlockItem
-                          key={activeBlock.uniqueId}
-                          block={activeBlock}
-                          isSelected={false}
-                          isGeneratingAnalysis={analysisLoadingBlockId === `${activeBlock.convoId}-${activeBlock.blockIndex}`}
-                          onToggleSelection={() => {}}
-                          onNavigate={() => onNavigateToBlock(activeBlock.convoId, activeBlock.blockIndex)}
-                          onOpenAttendance={() => setAttendanceModalBlock(activeBlock)}
-                          onOpenGroups={() => setGroupModalBlock(activeBlock)}
-                          onOpenArtifactModal={() => setArtifactModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
-                          onDeleteArtifact={(i) => onDeleteArtifact(activeBlock.convoId, activeBlock.blockIndex, i)}
-                          onOpenLessonNotesModal={() => onOpenLessonNotesModal({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex, initialNotes: activeBlock.lessonNotes || '' })}
-                          onDeleteLessonNotes={() => onDeleteLessonNotes(activeBlock.convoId, activeBlock.blockIndex)}
-                          onGenerateAnalysis={() => onGenerateAnalysis(activeBlock.convoId, activeBlock.blockIndex)}
-                          onUpdateGroups={(groups) => onUpdateGroups(activeBlock.convoId, activeBlock.blockIndex, groups)}
-                          onUpdateGroupNotes={(gi, notes) => onUpdateGroupNotes(activeBlock.convoId, activeBlock.blockIndex, gi, notes)}
-                          onOpenLinkModal={() => setLinkModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
-                          onDeleteLink={(linkId) => onDeleteLink(activeBlock.convoId, activeBlock.blockIndex, linkId)}
-                          onOpenCloudLinkModal={() => setCloudLinkModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex, initialUrl: activeBlock.materialsCloudLink || '' })}
-                          onScollegaCloudLink={() => setUnlinkConfirmInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
-                          showToast={showToast}
-                          masterContext={masterContext}
-                          onUpdateBlockStatus={onUpdateBlockStatus}
-                          onOpenNotebookModal={() => setNotebookModalInfo({ convoId: activeBlock.convoId, blockIndex: activeBlock.blockIndex })}
-                          notebooks={notebooks}
-                          onUnlinkNotebook={(notebookId) => {
-                            const newLinks = (activeBlock.linkedNotebookIds || []).filter(id => id !== notebookId);
-                            onUpdateLinkedNotebooks(activeBlock.convoId, activeBlock.blockIndex, newLinks);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
+                {activeTab === 'in_corso' && (
+                  <LessonInCorsoTab
+                    conversations={conversations}
+                    students={students}
+                    onSetAttendance={onSetAttendance}
+                    onAddEvaluation={onAddEvaluation}
+                    onRemoveEvaluation={onRemoveEvaluation}
+                    onAutoSaveNotes={onAutoSaveNotes}
+                    onGenerateLessonNoteAnalysis={onGenerateLessonNoteAnalysis}
+                    analysisLoadingBlockId={analysisLoadingBlockId}
+                    onAddMaterial={onAddMaterial}
+                    onChiudiLezione={onChiudiLezione}
+                    showToast={showToast}
+                  />
+                )}
 
                 {/* ── ARCHIVIO: vista completa ──────────────────────────────── */}
                 {activeTab === 'archivio' && <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">

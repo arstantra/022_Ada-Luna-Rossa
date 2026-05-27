@@ -282,7 +282,7 @@ const groupSuggestionSchema: FunctionDeclaration = {
 export const generateGroupSuggestions = async (students: Student[], objective: string, maxGroupSize: number): Promise<{ groups: GroupDefinition[] }> => {
     const studentList = students.map(s => `- ${s.name} (ID: ${s.id})`).join('\n');
     const prompt = `Obiettivo: ${objective}\nLista Studentesse:\n${studentList}\n\nCrea gruppi di lavoro bilanciati. Considera possibili dinamiche di gruppo e crea combinazioni eterogenee o omogenee a seconda dell'obiettivo, fornendo una motivazione per ogni gruppo. Ogni gruppo deve avere un massimo di ${maxGroupSize} studentesse. Se il numero totale di studentesse non è divisibile equamente, crea gruppi di dimensioni il più possibile simili, rispettando questo limite massimo (ad esempio, alcuni gruppi potrebbero avere una studentessa in più o in meno).`;
-    
+
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -297,6 +297,51 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
     if (call?.name === 'create_student_groups') {
         const args = extractArgs<{ groups?: GroupDefinition[] }>(call.args);
         if (args.groups) return { groups: args.groups };
+    }
+    throw new Error("La risposta dell'AI non conteneva una struttura di gruppi valida.");
+};
+
+export const generateGroupSuggestionWithCriteria = async (
+    students: Student[],
+    criteria: string[],
+    groupSize: number
+): Promise<GroupDefinition[]> => {
+    const criteriaMap: Record<string, string> = {
+        'Livello competenza': 'bilancia i livelli di competenza (mescola studenti forti e deboli)',
+        'Stile apprendimento': 'considera gli stili di apprendimento diversi (es. visivo, pratico, teorico) indicati nelle note',
+        'Dinamiche relazionali': 'considera le dinamiche relazionali segnalate nelle note del docente per evitare conflitti e favorire collaborazione',
+        'Mix casuale': 'crea composizioni casuali senza criteri specifici',
+    };
+    const criteriaDesc = criteria.map(c => criteriaMap[c] ?? c).join('; ');
+    const studentList = students
+        .map(s => {
+            const notes = [s.notes, s.besNotes, s.dsaNotes].filter(Boolean).join(' — ');
+            return `- ${s.name} (ID: ${s.id})${notes ? `: ${notes}` : ''}`;
+        })
+        .join('\n');
+    const prompt = `Sei un assistente per un insegnante. Crea gruppi di lavoro per la classe, ${groupSize} studenti per gruppo.
+Criteri di bilanciamento: ${criteriaDesc}.
+Usa ESATTAMENTE gli ID forniti nella lista. Ogni studente deve comparire in un solo gruppo.
+
+Lista studenti:
+${studentList}
+
+Crea gruppi di circa ${groupSize} persone (alcuni possono avere ±1 se il totale non è divisibile). Fornisci un nome creativo per ogni gruppo e una motivazione breve sulla composizione.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+            tools: [{ functionDeclarations: [groupSuggestionSchema] }],
+            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            thinkingConfig: { thinkingBudget: 0 }
+        }
+    });
+
+    const call = response.functionCalls?.[0];
+    if (call?.name === 'create_student_groups') {
+        const args = extractArgs<{ groups?: GroupDefinition[] }>(call.args);
+        if (args.groups) return args.groups;
     }
     throw new Error("La risposta dell'AI non conteneva una struttura di gruppi valida.");
 };
@@ -830,6 +875,58 @@ ${teacherProfile}`;
     }
 };
 
+
+export const generateLessonNoteAnalysis = async (
+    notes: string,
+    students: { id: string; name: string }[]
+): Promise<{ engagementLevel: 'basso' | 'medio' | 'alto'; studentSignals: Array<{ studentId: string; signal: string; type: 'positivo' | 'attenzione' }>; groupNotes: Array<{ note: string }>; classNotes: string[] }> => {
+    const studentList = students.length > 0
+        ? students.map(s => `- ${s.name} (id: ${s.id})`).join('\n')
+        : '(nessuna lista studenti fornita)';
+
+    const prompt = `Sei Ada, assistente AI per un insegnante. Analizza queste note di lezione e restituisci un'analisi strutturata in JSON puro (senza markdown).
+
+NOTE DEL DOCENTE:
+${notes}
+
+STUDENTI (usa gli ID nei campi studentId):
+${studentList}
+
+Rispondi SOLO con un oggetto JSON con questa struttura:
+{
+  "engagementLevel": "basso" | "medio" | "alto",
+  "studentSignals": [{ "studentId": "<id esatto>", "signal": "<10-15 parole>", "type": "positivo" | "attenzione" }],
+  "groupNotes": [{ "note": "<osservazione breve sul gruppo>" }],
+  "classNotes": ["<osservazione generale 1>", "<osservazione 2>"]
+}
+
+Regole:
+- Includi in studentSignals SOLO studenti esplicitamente menzionati nelle note, usando l'ID corretto dalla lista
+- Se nessuno studente è menzionato, usa studentSignals=[]
+- classNotes: max 3 osservazioni generali sulla classe
+- Sii conciso e fattuale`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } }
+    });
+
+    try {
+        const cleaned = response.text
+            .replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+            engagementLevel: (['basso', 'medio', 'alto'] as const).includes(parsed.engagementLevel)
+                ? parsed.engagementLevel : 'medio',
+            studentSignals: Array.isArray(parsed.studentSignals) ? parsed.studentSignals : [],
+            groupNotes: Array.isArray(parsed.groupNotes) ? parsed.groupNotes : [],
+            classNotes: Array.isArray(parsed.classNotes) ? parsed.classNotes : [],
+        };
+    } catch {
+        throw new Error("L'AI non ha restituito un'analisi strutturata valida.");
+    }
+};
 
 export const generateToolSuggestion = async (question: string, masterContentSnippet?: string): Promise<string> => {
     const contextPart = masterContentSnippet?.trim()

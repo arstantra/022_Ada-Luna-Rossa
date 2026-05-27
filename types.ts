@@ -271,6 +271,7 @@ export interface BlockDetails {
     messages?: Message[]; // Each block has its own chat history
     allocations?: BlockAllocation; // For group/individual work
     presentStudentIds?: string[];
+    lateStudentIds?: string[];
     isReviewed?: boolean; // For tracking consuntivo
     artifacts?: string[]; // For tracking generated outputs in "In Aula" view
     lessonNotes?: string; // Qualitative notes about the lesson

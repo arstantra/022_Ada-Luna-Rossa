@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
-import type { Student, Evaluation } from '../types';
+import type { Student, Evaluation, Conversation } from '../types';
 import { XIcon, UserIcon, ChevronDownIcon, CheckCircleIcon, XCircleIcon, SparklesIcon, ClipboardDocumentCheckIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -11,6 +11,7 @@ interface StudentProfileViewProps {
     onUpdateNotes: (studentId: string, notes: string) => void;
     onUpdateSummary: (studentId: string, summary: { content: string; date: string; }) => void;
     onOpenImportModal: (student: Student) => void;
+    conversations?: Conversation[];
 }
 
 interface LogbookEntry extends Evaluation {
@@ -56,7 +57,7 @@ const LogbookAccordion: React.FC<{ weekNumber: number; blocks: LogbookEntry[] }>
     );
 });
 
-const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onUpdateNotes, onUpdateSummary, onOpenImportModal }) => {
+const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onUpdateNotes, onUpdateSummary, onOpenImportModal, conversations = [] }) => {
     const [currentNotes, setCurrentNotes] = useState(student.notes || '');
     const autosaveTimeoutRef = useRef<number | null>(null);
     const [isSummarizing, setIsSummarizing] = useState(false);
@@ -116,6 +117,76 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
     }, [student.evaluations]);
 
     const sortedWeeks = useMemo(() => Object.keys(logbookData).sort((a, b) => parseInt(a) - parseInt(b)), [logbookData]);
+
+    // ── Data from archived blocks (Step 8) ───────────────────────────────────
+
+    const presenzaStats = useMemo(() => {
+        let total = 0, present = 0, late = 0, absent = 0;
+        const absenceDates: string[] = [];
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const [i, block] of convo.weekPlan.blocks.entries()) {
+                if (block.lessonState !== 'archiviata') continue;
+                const presentIds = block.presentStudentIds ?? [];
+                const lateIds = block.lateStudentIds ?? [];
+                if (presentIds.length === 0 && lateIds.length === 0) continue;
+                total++;
+                if (lateIds.includes(student.id)) { present++; late++; }
+                else if (presentIds.includes(student.id)) { present++; }
+                else {
+                    absent++;
+                    absenceDates.push(`S${convo.weekPlan.weekNumber} · ${block.day || `BL${i + 1}`}`);
+                }
+            }
+        }
+        return { total, present, late, absent, absenceDates, pct: total > 0 ? Math.round((present / total) * 100) : null };
+    }, [conversations, student.id]);
+
+    const lessonEvaluations = useMemo(() => {
+        const evals: { weekNumber: number; day: string; value: string; type: string; notes?: string; date: string }[] = [];
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const block of convo.weekPlan.blocks) {
+                if (!block.lessonEvaluations) continue;
+                for (const ev of block.lessonEvaluations) {
+                    if (ev.studentId === student.id) {
+                        evals.push({
+                            weekNumber: convo.weekPlan.weekNumber,
+                            day: block.day || '',
+                            value: ev.value,
+                            type: ev.type,
+                            notes: ev.notes,
+                            date: ev.date,
+                        });
+                    }
+                }
+            }
+        }
+        return evals.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [conversations, student.id]);
+
+    const adaSignals = useMemo(() => {
+        const signals: { weekNumber: number; day: string; signal: string; type: 'positivo' | 'attenzione'; analyzedAt: string }[] = [];
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const block of convo.weekPlan.blocks) {
+                const analysis = block.lessonNoteAnalysis;
+                if (!analysis) continue;
+                for (const sig of analysis.studentSignals) {
+                    if (sig.studentId === student.id) {
+                        signals.push({
+                            weekNumber: convo.weekPlan.weekNumber,
+                            day: block.day || '',
+                            signal: sig.signal,
+                            type: sig.type,
+                            analyzedAt: analysis.analyzedAt,
+                        });
+                    }
+                }
+            }
+        }
+        return signals.sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime());
+    }, [conversations, student.id]);
 
     return (
         <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
@@ -202,6 +273,87 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* ── Sezioni consuntive (Step 8) ──────────────────────────── */}
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* Presenze */}
+                    <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/40">
+                        <h3 className="text-sm font-semibold text-white mb-3">Presenze</h3>
+                        {presenzaStats.total === 0 ? (
+                            <p className="text-xs text-gray-500">Nessuna lezione archiviata con presenze registrate.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl font-bold text-white">{presenzaStats.pct}%</span>
+                                    <span className="text-xs text-gray-400">{presenzaStats.present}/{presenzaStats.total} lezioni</span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all ${presenzaStats.pct! >= 80 ? 'bg-emerald-500' : presenzaStats.pct! >= 60 ? 'bg-amber-400' : 'bg-red-500'}`}
+                                        style={{ width: `${presenzaStats.pct}%` }}
+                                    />
+                                </div>
+                                <div className="flex gap-3 text-xs text-gray-400">
+                                    <span className="text-emerald-400">{presenzaStats.present - presenzaStats.late} P</span>
+                                    {presenzaStats.late > 0 && <span className="text-amber-400">{presenzaStats.late} R</span>}
+                                    {presenzaStats.absent > 0 && <span className="text-red-400">{presenzaStats.absent} A</span>}
+                                </div>
+                                {presenzaStats.absenceDates.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Assenze</p>
+                                        <ul className="space-y-0.5">
+                                            {presenzaStats.absenceDates.map((d, i) => (
+                                                <li key={i} className="text-xs text-red-400/80">{d}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Valutazioni in aula */}
+                    <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/40">
+                        <h3 className="text-sm font-semibold text-white mb-3">Valutazioni in Aula</h3>
+                        {lessonEvaluations.length === 0 ? (
+                            <p className="text-xs text-gray-500">Nessuna valutazione inserita durante le lezioni.</p>
+                        ) : (
+                            <ul className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                {lessonEvaluations.map((ev, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-xs">
+                                        <span className="flex-shrink-0 mt-0.5 font-mono text-gray-500">S{ev.weekNumber}</span>
+                                        <div>
+                                            <span className="text-white font-semibold">{ev.value}</span>
+                                            <span className="text-gray-500 ml-1">({ev.type})</span>
+                                            {ev.notes && <p className="text-gray-400 text-[11px] mt-0.5">{ev.notes}</p>}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* Segnali Ada */}
+                    <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/40">
+                        <h3 className="text-sm font-semibold text-white mb-3">Segnali Ada</h3>
+                        {adaSignals.length === 0 ? (
+                            <p className="text-xs text-gray-500">Nessun segnale Ada registrato per questo studente.</p>
+                        ) : (
+                            <ul className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                                {adaSignals.map((sig, i) => (
+                                    <li key={i} className={`flex items-start gap-2 text-xs px-2 py-1.5 rounded-md ${sig.type === 'positivo' ? 'bg-emerald-900/20 border border-emerald-700/30' : 'bg-amber-900/20 border border-amber-700/30'}`}>
+                                        <span className="flex-shrink-0 mt-0.5">{sig.type === 'positivo' ? '✓' : '⚠'}</span>
+                                        <div>
+                                            <span className={`font-mono text-[9px] uppercase tracking-wider ${sig.type === 'positivo' ? 'text-emerald-400' : 'text-amber-400'}`}>S{sig.weekNumber} · {sig.day}</span>
+                                            <p className={`mt-0.5 ${sig.type === 'positivo' ? 'text-emerald-200' : 'text-amber-200'}`}>{sig.signal}</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </div>
             </div>

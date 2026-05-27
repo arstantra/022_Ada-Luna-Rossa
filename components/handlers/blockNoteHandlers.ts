@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Student, LessonMaterial } from '../../types';
+import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis } from '../../types';
 import * as GeminiService from '../../services/gemini';
 
 export interface BlockNoteHandlerDeps {
@@ -139,6 +139,88 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     });
   };
 
+  // Silent autosave — no toast, for debounced textarea in in-corso tab
+  const handleAutoSaveLessonNotes = (convoId: string, blockIndex: number, notes: string) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonNotes: notes };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
+  const handleUpdateLiveAttendance = (convoId: string, blockIndex: number, presentIds: string[], lateIds: string[]) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], presentStudentIds: presentIds, lateStudentIds: lateIds };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
+  const handleAddLessonEvaluation = (convoId: string, blockIndex: number, evaluation: Omit<LessonEvaluation, 'id' | 'date'>) => {
+    const newEval: LessonEvaluation = {
+      ...evaluation,
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+    };
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonEvaluations ?? [];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonEvaluations: [...current, newEval] };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+    showToast('Valutazione aggiunta.', 'success');
+  };
+
+  const handleRemoveLessonEvaluation = (convoId: string, blockIndex: number, evaluationId: string) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonEvaluations ?? [];
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        lessonEvaluations: current.filter(e => e.id !== evaluationId),
+      };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
+  const handleGenerateLessonNoteAnalysis = async (convoId: string, blockIndex: number): Promise<void> => {
+    const convo = conversationsRef.current.find(c => c.id === convoId);
+    if (!convo?.weekPlan) return;
+    const block = convo.weekPlan.blocks[blockIndex];
+    if (!block.lessonNotes?.trim()) {
+      showToast('Scrivi prima alcune note sulla lezione.', 'error');
+      return;
+    }
+
+    const blockUniqueId = `${convoId}-${blockIndex}`;
+    setAnalysisLoadingBlockId(blockUniqueId);
+    try {
+      const studentList = students.map(s => ({ id: s.id, name: s.name }));
+      const partial = await GeminiService.generateLessonNoteAnalysis(block.lessonNotes, studentList);
+      const analysis: LessonNoteAnalysis = {
+        ...partial,
+        rawNotes: block.lessonNotes,
+        analyzedAt: new Date().toISOString(),
+      };
+      updateConversation(convoId, c => {
+        if (!c.weekPlan) return c;
+        const newBlocks = [...c.weekPlan.blocks];
+        newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonNoteAnalysis: analysis };
+        return { ...c, weekPlan: { ...c.weekPlan, blocks: newBlocks } };
+      });
+      showToast('Analisi note completata!', 'success');
+    } catch (error) {
+      console.error('Note analysis failed:', error);
+      showToast(error instanceof Error ? error.message : "Errore durante l'analisi.", 'error');
+    } finally {
+      setAnalysisLoadingBlockId(null);
+    }
+  };
+
   return {
     handleSaveLessonNotes,
     handleDeleteLessonNotes,
@@ -149,5 +231,10 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleUpdateBlockLinkedNotebooks,
     handleAddLessonMaterial,
     handleRemoveLessonMaterial,
+    handleAutoSaveLessonNotes,
+    handleUpdateLiveAttendance,
+    handleAddLessonEvaluation,
+    handleRemoveLessonEvaluation,
+    handleGenerateLessonNoteAnalysis,
   };
 }
