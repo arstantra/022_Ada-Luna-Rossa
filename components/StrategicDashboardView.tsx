@@ -21,7 +21,7 @@ interface StrategicDashboardViewProps {
     onSaveStrategicData: (weekNumber: number, theme: string, objectives: string[]) => void;
     onGenerateBlockDetails: (weekNumber: number, blockIndex: number) => Promise<void>;
     onUpdateWeekDetails: (weekNumber: number, details: Partial<Pick<WeekPlan, 'notes'>>) => void;
-    onUpdateBlockDetails: (weekNumber: number, blockIndex: number, details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonMaterials' | 'isLocked'>>) => void;
+    onUpdateBlockDetails: (weekNumber: number, blockIndex: number, details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonPlanMaterials' | 'isLocked'>>) => void;
     onStartPlanning: (weekInfo: WeekRouteInfo) => void;
     onUpdateBlockModule: (weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;

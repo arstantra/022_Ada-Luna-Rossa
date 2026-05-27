@@ -661,9 +661,9 @@ const blockDetailsSchema: FunctionDeclaration = {
         properties: {
             lessonTitle: { type: Type.STRING, description: "Un titolo creativo e accattivante per la lezione, formattato in Markdown (es. **Titolo**\\n*Sottotitolo*)." },
             lessonSyllabus: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Una lista di 3-5 punti chiave che verranno trattati durante la lezione (syllabus)." },
-            lessonMaterials: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Una lista di materiali necessari per la lezione (es. 'Proiettore', 'Post-it', 'PC con software X')." }
+            lessonPlanMaterials: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Una lista di materiali necessari per la lezione (es. 'Proiettore', 'Post-it', 'PC con software X')." }
         },
-        required: ["lessonTitle", "lessonSyllabus", "lessonMaterials"]
+        required: ["lessonTitle", "lessonSyllabus", "lessonPlanMaterials"]
     }
 };
 export type DocumentContentType = 'costituzione' | 'regole' | 'personalita';
@@ -831,7 +831,7 @@ ${teacherProfile}`;
 };
 
 
-export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonMaterials: string; }> => {
+export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonPlanMaterials: string; }> => {
     const prompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera i dettagli per un blocco di lezione di 2 ore.
 
 **Contesto:**
@@ -852,11 +852,11 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
 
     const call = response.functionCalls?.[0];
     if (call?.name === 'generate_block_details' && call.args) {
-        const { lessonTitle, lessonSyllabus, lessonMaterials } = extractArgs<{ lessonTitle?: string; lessonSyllabus?: string[]; lessonMaterials?: string[] }>(call.args);
+        const { lessonTitle, lessonSyllabus, lessonPlanMaterials } = extractArgs<{ lessonTitle?: string; lessonSyllabus?: string[]; lessonPlanMaterials?: string[] }>(call.args);
         return {
             lessonTitle: lessonTitle || '',
             lessonSyllabus: (lessonSyllabus || []).map((s: string) => `- ${s}`).join('\n'),
-            lessonMaterials: (lessonMaterials || []).map((m: string) => `- ${m}`).join('\n'),
+            lessonPlanMaterials: (lessonPlanMaterials || []).map((m: string) => `- ${m}`).join('\n'),
         };
     }
     throw new Error("L'AI non ha fornito i dettagli del blocco in un formato valido.");

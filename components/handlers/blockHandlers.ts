@@ -146,7 +146,7 @@ export function createBlockPlanningHandlers(deps: BlockPlanningDeps) {
   const handleUpdateBlockDetails = (
     weekNumber: number,
     blockIndex: number,
-    details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonMaterials' | 'isLocked'>>,
+    details: Partial<Pick<BlockDetails, 'lessonTitle' | 'lessonSyllabus' | 'lessonPlanMaterials' | 'isLocked'>>,
   ) => {
     let conversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
     if (!conversation) {

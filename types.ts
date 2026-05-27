@@ -196,6 +196,41 @@ export interface ContentBlock {
     content: string;
 }
 
+// --- TIPI IN AULA ---
+
+export interface LessonMaterial {
+    id: string;
+    title: string;
+    url: string;
+    type: 'slide' | 'video' | 'pdf' | 'paper' | 'ricerca' | 'stampa' | 'altro';
+    notes?: string;
+    targetAudience: 'classe' | 'gruppo' | 'studente';
+    targetId?: string;
+    addedAt: string;
+}
+
+export interface LessonEvaluation {
+    id: string;
+    studentId: string;
+    value: string;
+    type: 'orale' | 'scritto' | 'pratico' | 'formativo' | 'altro';
+    notes?: string;
+    date: string;
+}
+
+export interface LessonNoteAnalysis {
+    engagementLevel: 'basso' | 'medio' | 'alto';
+    studentSignals: Array<{
+        studentId: string;
+        signal: string;
+        type: 'positivo' | 'attenzione';
+    }>;
+    groupNotes: Array<{ groupId?: string; note: string }>;
+    classNotes: string[];
+    rawNotes: string;
+    analyzedAt: string;
+}
+
 export interface AdaAnalysis {
     performance: string;
     highlightedStudents: string[];
@@ -246,8 +281,13 @@ export interface BlockDetails {
     // Campi per la pianificazione dettagliata nel cruscotto
     lessonTitle?: string;
     lessonSyllabus?: string;
-    lessonMaterials?: string;
+    lessonPlanMaterials?: string;
     isLocked?: boolean;
+    // Campi strutturati per Tab In Aula
+    lessonMaterials?: LessonMaterial[];
+    lessonEvaluations?: LessonEvaluation[];
+    lessonNoteAnalysis?: LessonNoteAnalysis;
+    lessonGroups?: GroupDefinition[];
     projectDeadline?: string; // ISO String for group project deadlines
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
