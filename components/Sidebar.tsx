@@ -200,28 +200,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               isActive={activeView === 'gantt'}
               onClick={onOpenGantt}
             />
-            <CollapsibleSection
-              title="Laboratori e Strumenti"
-              icon={<ToolboxIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              isOpen={strumentiOpen}
-              onToggle={() => setStrumentiOpen(o => !o)}
-            >
-              <NavItem
-                icon={<WandIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-                label="Toolkit"
-                isActive={activeView === 'toolkit'}
-                onClick={onOpenToolkit}
-                indent
-              />
-              <NavItem
-                icon={<ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-                label="Atelier Visivo"
-                isActive={false}
-                onClick={onOpenImageGenerator}
-                indent
-                disabled
-              />
-            </CollapsibleSection>
           </div>
         </CollapsibleContent>
 
@@ -248,12 +226,35 @@ const Sidebar: React.FC<SidebarProps> = ({
               isActive={activeView === 'archivio_lezioni'}
               onClick={onOpenArchivioLezioni}
             />
-            <NavItem
-              icon={<BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="I Miei Notebook"
-              isActive={activeView === 'notebooklm'}
-              onClick={onOpenNotebookLM}
-            />
+            <CollapsibleSection
+              title="Laboratori e Strumenti"
+              icon={<ToolboxIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+              isOpen={strumentiOpen}
+              onToggle={() => setStrumentiOpen(o => !o)}
+            >
+              <NavItem
+                icon={<WandIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                label="Toolkit"
+                isActive={activeView === 'toolkit'}
+                onClick={onOpenToolkit}
+                indent
+              />
+              <NavItem
+                icon={<BookOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                label="I Miei Notebook"
+                isActive={activeView === 'notebooklm'}
+                onClick={onOpenNotebookLM}
+                indent
+              />
+              <NavItem
+                icon={<ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                label="Atelier Visivo"
+                isActive={false}
+                onClick={onOpenImageGenerator}
+                indent
+                disabled
+              />
+            </CollapsibleSection>
           </div>
         </CollapsibleContent>
 
