@@ -92,13 +92,13 @@ const NotebookLMView: React.FC<NotebookLMViewProps> = ({ notebooks, onClose, onA
     };
     
     return (
-        <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
-            <div className="flex-shrink-0 flex items-center justify-between p-3.5 pl-6 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
+        <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
+            <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                    <BookOpenIcon className="h-6 w-6 text-blue-400" />
+                    <BookOpenIcon className="h-5 w-5 text-gray-400" />
                     <div>
-                        <h2 className="text-lg font-semibold truncate">I Tuoi NotebookLM</h2>
-                        <p className="text-xs text-gray-400">Gestisci i collegamenti ai tuoi notebook didattici</p>
+                        <h2 className="text-base font-display font-semibold text-white">I Tuoi NotebookLM</h2>
+                        <p className="text-xs text-gray-500">Gestisci i collegamenti ai tuoi notebook didattici</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">

@@ -703,11 +703,11 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
         <>
             <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
                 {/* Header */}
-                <div className="flex-shrink-0 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
-                    <div className="flex items-center justify-between p-3.5 pl-6">
+                <div className="flex-shrink-0 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
+                    <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
                         <div className="flex items-center gap-3">
-                            <BriefcaseIcon className={`h-6 w-6 ${activeTab === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
-                            <h2 className="text-lg font-semibold">In Aula</h2>
+                            <BriefcaseIcon className={`h-5 w-5 ${activeTab === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
+                            <h2 className="text-base font-display font-semibold text-white">In Aula</h2>
                             {hasActiveLessons && activeTab !== 'in_corso' && (
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
                             )}

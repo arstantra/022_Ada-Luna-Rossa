@@ -164,10 +164,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex flex-col w-72 bg-gray-900 border-r border-gray-600/55 flex-shrink-0 shadow-[4px_0_32px_rgba(0,0,0,0.75)]">
       {/* ── Conversa con Ada ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-600/40 bg-gray-900/80 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="flex-shrink-0 px-3 pt-1.5 pb-3 border-b border-gray-600/40 bg-gray-900/80 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
         <button
           onClick={onOpenConversaConAda}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150
             ${activeView === 'chat'
               ? 'bg-gradient-to-r from-purple-900/60 to-purple-900/25 text-white border border-purple-600/40 shadow-sm shadow-purple-900/30'
               : 'text-gray-300 hover:bg-gray-800/70 hover:text-white border border-gray-700/40 hover:border-gray-600/50'

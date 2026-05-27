@@ -148,7 +148,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm focus:outline-none"
           />
         ) : (
-          <h1 className="flex-1 font-display font-semibold text-white truncate text-sm">
+          <h1 className="flex-1 font-display font-semibold text-white truncate text-base">
             {isQuickChat ? 'Conversazione con Ada' : conversation.title}
           </h1>
         )}

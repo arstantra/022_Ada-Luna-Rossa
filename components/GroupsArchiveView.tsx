@@ -123,10 +123,10 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
 
     return (
         <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
-            <div className="flex-shrink-0 flex items-center justify-between p-3.5 pl-6 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
+            <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                    <UsersIcon className="h-6 w-6 text-indigo-400" />
-                    <h2 className="text-lg font-semibold truncate">Archivio Gruppi di Lavoro</h2>
+                    <UsersIcon className="h-5 w-5 text-gray-400" />
+                    <h2 className="text-base font-display font-semibold text-white">Archivio Gruppi di Lavoro</h2>
                 </div>
                 <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Chiudi">
                     <XIcon className="h-5 w-5" />
