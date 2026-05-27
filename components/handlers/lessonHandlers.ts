@@ -86,7 +86,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
         },
       };
     });
-    setView('lezione_in_corso');
+    setView('lezione');
   };
 
   const handleChiudiLezione = (convoId: string, blockIndex: number) => {
@@ -102,7 +102,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
         },
       };
     });
-    setView('archivio_lezioni');
+    setView('lezione');
   };
 
   const handleRecordAttendanceForBlock = (convoId: string, blockIndex: number, presentStudentIds: string[]) => {

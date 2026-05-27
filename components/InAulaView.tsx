@@ -547,6 +547,8 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
 });
 
 
+export type InAulaTab = 'preparazione' | 'in_corso' | 'archivio';
+
 // --- IN AULA VIEW (MAIN COMPONENT) ---
 interface InAulaViewProps {
     conversations: Conversation[];
@@ -573,13 +575,11 @@ interface InAulaViewProps {
     notebooks: Notebook[];
     onAddNotebook: (title: string, url: string, notes: string) => Promise<Notebook | undefined>;
     onUpdateLinkedNotebooks: (convoId: string, blockIndex: number, notebookIds: string[]) => void;
-    /** 'in_corso' = mostra solo la lezione attiva; 'archivio' = lista completa con Avvia */
-    viewMode?: 'in_corso' | 'archivio';
     onAvviaLezione?: (convoId: string, blockIndex: number) => void;
     onChiudiLezione?: (convoId: string, blockIndex: number) => void;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, viewMode = 'archivio', onAvviaLezione, onChiudiLezione }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -593,6 +593,16 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
     const [cloudLinkModalInfo, setCloudLinkModalInfo] = useState<{ convoId: string; blockIndex: number; initialUrl: string } | null>(null);
     const [unlinkConfirmInfo, setUnlinkConfirmInfo] = useState<{ convoId: string; blockIndex: number } | null>(null);
     const [notebookModalInfo, setNotebookModalInfo] = useState<{ convoId: string; blockIndex: number } | null>(null);
+
+    const hasActiveLessons = useMemo(
+        () => conversations.some(c => c.weekPlan?.blocks.some(b => b.lessonState === 'in_corso')),
+        [conversations]
+    );
+
+    const [activeTab, setActiveTab] = useState<InAulaTab>(() => {
+        const hasInCorso = conversations.some(c => c.weekPlan?.blocks.some(b => b.lessonState === 'in_corso'));
+        return hasInCorso ? 'in_corso' : 'archivio';
+    });
 
     const { archivedWeeks, availableWeeks, availableModules } = useMemo(() => {
         const planningConvos = conversations.filter(c => c.weekPlan);
@@ -683,23 +693,52 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
         <>
             <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
                 {/* Header */}
-                <div className="flex-shrink-0 flex items-center justify-between p-3.5 pl-6 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-3">
-                        <BriefcaseIcon className={`h-6 w-6 ${viewMode === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
-                        <h2 className="text-lg font-semibold truncate">
-                          {viewMode === 'in_corso' ? 'Lezione in Corso' : 'Archivio Lezioni'}
-                        </h2>
-                        {viewMode === 'in_corso' && (
-                          <span className="ml-2 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-                        )}
+                <div className="flex-shrink-0 border-b border-gray-700/50 bg-gray-800/80 backdrop-blur-sm">
+                    <div className="flex items-center justify-between p-3.5 pl-6">
+                        <div className="flex items-center gap-3">
+                            <BriefcaseIcon className={`h-6 w-6 ${activeTab === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
+                            <h2 className="text-lg font-semibold">In Aula</h2>
+                            {hasActiveLessons && activeTab !== 'in_corso' && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+                            )}
+                        </div>
+                        <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Chiudi">
+                            <XIcon className="h-5 w-5" />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Chiudi">
-                        <XIcon className="h-5 w-5" />
-                    </button>
+                    <div className="flex items-center gap-1 px-6 pb-2">
+                        {(['preparazione', 'in_corso', 'archivio'] as InAulaTab[]).map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                    activeTab === tab
+                                        ? 'bg-gray-700/70 text-white'
+                                        : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                                }`}
+                            >
+                                {tab === 'preparazione' ? 'Preparazione' : tab === 'in_corso' ? 'In Corso' : 'Archivio'}
+                                {tab === 'in_corso' && hasActiveLessons && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* ── LEZIONE IN CORSO: vista dedicata ───────────────────────── */}
-                {viewMode === 'in_corso' && (() => {
+                {/* ── PREPARAZIONE ──────────────────────────────────────────── */}
+                {activeTab === 'preparazione' && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-20 gap-4">
+                        <BookOpenIcon className="h-14 w-14 text-gray-700" />
+                        <p className="text-gray-400 font-semibold">Preparazione Lezione</p>
+                        <p className="text-gray-600 text-sm max-w-xs">
+                            Organizza i materiali, il formato e i gruppi per la tua prossima lezione.
+                        </p>
+                    </div>
+                )}
+
+                {/* ── IN CORSO: lezione attiva ───────────────────────────────── */}
+                {activeTab === 'in_corso' && (() => {
                   const planningConvos = conversations.filter(c => c.weekPlan);
                   const activeBlock = planningConvos.flatMap(convo =>
                     (convo.weekPlan?.blocks || []).map((block, index) => ({
@@ -777,7 +816,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 })()}
 
                 {/* ── ARCHIVIO: vista completa ──────────────────────────────── */}
-                {viewMode === 'archivio' && <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {activeTab === 'archivio' && <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div className="max-w-6xl mx-auto space-y-6">
                         {/* Filters and Actions */}
                         <div className="p-4 bg-gray-800 rounded-lg border border-gray-700/50 flex flex-col md:flex-row items-center gap-4">

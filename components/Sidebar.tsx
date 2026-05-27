@@ -5,14 +5,14 @@ import {
   BriefcaseIcon, PresentationChartBarIcon, ToolboxIcon,
   ImageIcon, DocumentTextIcon, SparklesIcon,
   ArrowDownTrayIcon, ArrowUpTrayIcon, CalendarDaysIcon,
-  ChevronDownIcon, FolderOpenIcon, WandIcon,
+  ChevronDownIcon, WandIcon,
 } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
 // ── tipi ──────────────────────────────────────────────────────────────────────
 export type ActiveView =
   | 'lobby' | 'chat' | 'planning' | 'roster' | 'notebooklm'
-  | 'lezione_in_corso' | 'archivio_lezioni'
+  | 'lezione'
   | 'student_profile' | 'classroom_trend' | 'founding_documents'
   | 'toolkit' | 'strategic_dashboard' | 'groups_archive' | 'gantt'
   | 'la_rotta' | 'ada_personality';
@@ -30,8 +30,7 @@ interface SidebarProps {
   onOpenImageGenerator: () => void;
 
   // In Aula
-  onOpenLezioneinCorso: () => void;
-  onOpenArchivioLezioni: () => void;
+  onOpenLezione: () => void;
   onOpenNotebookLM: () => void;
   hasActiveLessons: boolean;
 
@@ -149,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onOpenConversaConAda,
   onOpenStrategicDashboard, onOpenGantt, onOpenToolkit, onOpenImageGenerator,
-  onOpenLezioneinCorso, onOpenArchivioLezioni, onOpenNotebookLM, hasActiveLessons,
+  onOpenLezione, onOpenNotebookLM, hasActiveLessons,
   onOpenClassroomTrend, onOpenGroupsArchive, onOpenStudentRoster,
   onOpenFoundingDocuments, onOpenLaRotta, onOpenAdaPersonality,
   onExportData, onImportData,
@@ -211,20 +210,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-0.5">
             <NavItem
               icon={<BriefcaseIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="Lezione in Corso"
-              isActive={activeView === 'lezione_in_corso'}
-              onClick={onOpenLezioneinCorso}
+              label="Lezione"
+              isActive={activeView === 'lezione'}
+              onClick={onOpenLezione}
               badge={
                 hasActiveLessons
                   ? <span className="flex-shrink-0 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
                   : undefined
               }
-            />
-            <NavItem
-              icon={<FolderOpenIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="Archivio Lezioni"
-              isActive={activeView === 'archivio_lezioni'}
-              onClick={onOpenArchivioLezioni}
             />
             <CollapsibleSection
               title="Laboratori e Strumenti"
