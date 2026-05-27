@@ -31,7 +31,8 @@
       "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/vite build)",
       "Bash(which node *)",
       "Bash(ls \"/c/Program Files/nodejs/\" 2>/dev/null || ls \"/c/Users/unoav/AppData/Local/Programs/\" 2>/dev/null | grep -i node)",
-      "PowerShell(Get-Command node, tsc -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Command node, tsc -ErrorAction SilentlyContinue)",
+      "Bash(del \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\\\\ADA_INAULA_IMPLEMENTAZIONE_STEPS.md\")"
     ]
   }
 }

@@ -106,7 +106,7 @@ components/
     conversationHandlers.ts  — handleModeChange, handlePlanningModeChange, handleOpenConversaConAda, handleEvaluationMessage, ecc.
     messagingHandlers.ts     — handleSendMessage, handleGenerateImage, handleSendPlanningMessage
     lessonHandlers.ts        — handleAvviaLezione, handleChiudiLezione, handleRecordAttendanceForBlock, handleUpdateGroupsForBlock, handleAddActivity, ecc.
-    blockNoteHandlers.ts     — handleSaveLessonNotes, handleGenerateAnalysis, handleAddLinkForBlock, handleUpdateBlockCloudLink, ecc.
+    blockNoteHandlers.ts     — handleSaveLessonNotes, handleDeleteLessonNotes, handleGenerateAnalysis, handleAddLinkForBlock, handleDeleteLinkForBlock, handleUpdateBlockCloudLink, handleUpdateBlockLinkedNotebooks, handleAddLessonMaterial, handleRemoveLessonMaterial, handleAutoSaveLessonNotes (silent, no toast), handleUpdateLiveAttendance, handleAddLessonEvaluation, handleRemoveLessonEvaluation, handleGenerateLessonNoteAnalysis
     contentHandlers.ts       — handleUpdateWeekPlan, handleExportContent, handleFormatBlocks
     dataHandlers.ts          — handleExportData, handleAttemptImport, handleConfirmRestore, handleExportCourseBook, ecc.
     uiHandlers.ts            — handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal
@@ -114,7 +114,9 @@ components/
   StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod. Il radar NON è più nell'header (spostato in GanttView — 2026-05-25).
   GanttView.tsx              — "Analisi del Corso" (rinominato da "Gantt del Corso" 2026-05-25): layout a due colonne — Gantt moduli/attività (flex-1, scroll orizzontale) + pannello Radar equilibrio didattico (w-72, destra). Su schermi stretti: flex-col (gantt sopra, radar sotto). Calcola radarData e idealRadarData direttamente dalle conversations.
   DidacticRadarChart.tsx     — componente panel del radar didattico (2026-05-25): pentagono fisso a 5 assi (ALL_TYPES — tutti i LessonType sempre visibili anche a 0); ideale = idealData se disponibile, altrimenti distribuzione uniforme 20% per tipo; score badge TVD verde/ambra/rosso; bar chart breakdown sotto il radar (indigo = attuale, sky = ideale). Non ha più la versione "compact" per l'header.
-  InAulaView.tsx             — vista lezione (archivio + in_corso)
+  InAulaView.tsx             — vista lezione unificata (view id: 'lezione'): tre tab Preparazione | In Corso | Archivio. Tab attivo di default segue lessonState. Il tab In Corso delega a LessonInCorsoTab; il tab Preparazione a LessonPreparationTab.
+  LessonPreparationTab.tsx   — tab Preparazione: selector blocco, preview master content (collassabile), lista LessonMaterial + AddMaterialModal, sezione "Ada consiglia tool" collassabile (generateToolSuggestion). Default: blocco in_corso se presente.
+  LessonInCorsoTab.tsx       — tab In Corso: banner lezione attiva, grid presenze P/R/A (salvataggio immediato), lista materiali attivi + form rapido, valutazioni (AddEvaluation form inline + lista), note libere (autosave 1.5s debounce + flush-on-unmount come DocumentEditor), analisi Ada delle note (generateLessonNoteAnalysis), CloseModal con opzione "Analizza prima di archiviare".
   ChatView.tsx               — chat con Ada
   PlanningView.tsx           — laboratorio tattico settimanale (vedi sezione dedicata)
   BlockWorkspaceView.tsx     — workspace per-blocco: laboratorio AI + contenuto master
@@ -132,7 +134,7 @@ hooks/
 
 services/
   db.ts                      — IndexedDB (idb)
-  gemini.ts                  — wrapper Gemini API; include generateDocumentContent(docType, teacherProfile) per generare Progetto Didattico, Patto Formativo, Personalità di Ada a partire dal Profilo del Corso; VALID_LESSON_TYPES set (5 voci, senza uda/fsl)
+  gemini.ts                  — wrapper Gemini API; include generateDocumentContent, generateToolSuggestion(question, masterSnippet?), generateLessonNoteAnalysis(notes, students), generateGroupSuggestionWithCriteria(students, criteria, groupSize) oltre alle funzioni storiche. VALID_LESSON_TYPES set (5 voci, senza uda/fsl).
   constitutionParser.ts      — parseConstitution(): splitta il Progetto Didattico in sezioni MODULO/UDA/EDUCAZIONE CIVICA/FSL, restituisce { modules, moduleMap, contentUnits: CourseContentUnit[] }. File CRITICO — importato da ConstitutionCacheContext.tsx.
 
 types.ts                     — tutti i tipi (fonte della verità)
@@ -340,9 +342,22 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
   isReviewed?: boolean,             // override: forza dot emerald indipendentemente dallo stato
   reason?: string,                  // motivo per blocchi 'saltato'
   moduleId?: string,                // riferimento a CourseModule.id
-  sectionId?: string                // riferimento a ModuleSection.id
+  sectionId?: string,               // riferimento a ModuleSection.id
+  // ── Campi IN AULA (aggiunti 2026-05-27, tutti opzionali → zero-migration DB) ──
+  presentStudentIds?: string[],     // presenze: ID studenti presenti (include chi è in ritardo)
+  lateStudentIds?: string[],        // presenze: ID studenti in ritardo (subset di presentStudentIds)
+  lessonMaterials?: LessonMaterial[], // materiali preparati/usati nella lezione
+  lessonEvaluations?: LessonEvaluation[], // valutazioni inserite in aula per singolo studente
+  lessonNoteAnalysis?: LessonNoteAnalysis, // analisi strutturata Ada delle note libere
 }
 ```
+
+**Logica presenze P/A/R** (da `handleUpdateLiveAttendance`):
+- **Presente (P)**: in `presentStudentIds`, NON in `lateStudentIds`
+- **Ritardo (R)**: in ENTRAMBI `presentStudentIds` e `lateStudentIds`  
+- **Assente (A)**: non in `presentStudentIds`
+
+I due array separati consentono statistiche di presenza (contare R come presenti) e tracking separato dei ritardi.
 `BlockStatus` = `'normale' | 'saltato' | 'da definire' | 'annullato'`.
 `LessonType` = modalità pedagogica ("come"), **5 voci**: `frontale_teorica · frontale_operativa · laboratorio · verifica · discussione`. UDA e FSL sono stati rimossi — non sono modalità di conduzione della lezione.
 `isFslPeriod` = flag ortogonale allo stato e alla tipologia: indica che il blocco è in un periodo FSL (badge `sky`), ma il blocco può avere qualsiasi status e qualsiasi tipologia.
@@ -564,17 +579,17 @@ const availableWeeks = useMemo(
 'chat'                — ChatView (conversazione con Ada)
 'planning'            — PlanningView (laboratorio tattico)
 'strategic_dashboard' — StrategicDashboardView (Progettazione del Corso)
-'lezione_in_corso'    — InAulaView mode='in_corso'
-'archivio_lezioni'    — InAulaView mode='archivio'
+'lezione'             — InAulaView unificata: tre tab Preparazione | In Corso | Archivio
+                        (sostituisce 'lezione_in_corso' + 'archivio_lezioni' rimossi in Step 3 — 2026-05-27)
 'students'            — StudentRosterView
-'student_profile'     — StudentProfileView
-'classroom_trend'     — ClassroomTrendView
+'student_profile'     — StudentProfileView (include sezioni presenze/valutazioni/segnali Ada)
+'classroom_trend'     — ClassroomTrendView (Andamento Aula: cruscotto qualitativo + sezione Monitoraggio Consuntivo)
 'founding_documents'  — FoundingDocumentsView (Documenti Fondanti)
 'la_rotta'            — RouteView (La Rotta — calendario settimane e giorni blocchi)
 'ada_personality'     — AdaPersonalityView (Personalità di Ada — istruzioni di sistema)
 'notebooklm'          — NotebookLMView
 'toolkit'             — ToolkitView
-'groups_archive'      — GroupsArchiveView
+'groups_archive'      — GroupsArchiveView (archivio + composer "Crea Nuovi Gruppi con Ada")
 'gantt'               — GanttView (Analisi del Corso — Gantt + Radar equilibrio didattico)
 ```
 
@@ -585,22 +600,23 @@ const availableWeeks = useMemo(
 Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron, stile monospace) + `CollapsibleContent`. Stato default: CONTENUTI, IN AULA, MONITORAGGIO aperte; GESTIONE chiusa.
 
 ```
-[Conversa con Ada]  — button gradient viola (nessun sottotitolo disciplina — rimosso)
+[Conversa con Ada]  — button gradient viola
 
 ▾ CONTENUTI DEL CORSO          (CollapsibleSectionLabel, default: aperta)
   • Progettazione del Corso        (→ strategic_dashboard)
-  • Analisi del Corso              (→ gantt) ← Gantt moduli + pannello Radar equilibrio didattico
-  • Laboratori e Strumenti ▾       (CollapsibleSection con icona, sotto-livello)
-      ↳ Toolkit                    (→ toolkit)
-      ↳ Atelier Visivo             (DISABILITATO — badge "API")
+  • Analisi del Corso              (→ gantt) ← Gantt moduli + pannello Radar equilibrio PROGETTO
 
 ▾ IN AULA                      (CollapsibleSectionLabel, default: aperta)
-  • Lezione in Corso               (→ lezione_in_corso, badge verde se attiva)
-  • Archivio Lezioni               (→ archivio_lezioni)
-  • I Miei Notebook                (→ notebooklm)
+  • Lezione                        (→ lezione, badge verde se lezione in_corso attiva)
+                                     Tab interni: Preparazione | In Corso | Archivio
+  ▾ Laboratori e Strumenti         (CollapsibleSection con icona, sotto-livello)
+      ↳ Toolkit                    (→ toolkit)
+      ↳ I Miei Notebook            (→ notebooklm)
+      ↳ Gruppi                     (→ groups_archive) ← composer Ada + archivio
+      ↳ Atelier Visivo             (DISABILITATO — badge "API")
 
 ▾ MONITORAGGIO                 (CollapsibleSectionLabel, default: aperta)
-  • Andamento Aula                 (→ classroom_trend)
+  • Andamento Aula                 (→ classroom_trend) ← cruscotto qualitativo + consuntivo
   • Gruppi                         (→ groups_archive)
   • Studentesse                    (→ students / student_profile)
 
@@ -611,7 +627,7 @@ Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron
   • Backup, API Key
 ```
 
-> **Rimosso definitivamente**: widget Disciplina/Corso in sidebar, NavItem "Etichette", NavItem "Profilo Docente" (inglobato in Profilo del Corso nei Documenti Fondanti).
+> **Rimosso definitivamente**: widget Disciplina/Corso in sidebar, NavItem "Etichette", NavItem "Profilo Docente" (inglobato in Profilo del Corso nei Documenti Fondanti), NavItem separati "Lezione in Corso" e "Archivio Lezioni" (unificati in "Lezione" — Step 3 2026-05-27).
 
 `NavItem` ha prop `disabled?: boolean` → badge "API", `opacity-30 cursor-not-allowed`.
 
@@ -623,9 +639,10 @@ Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron
 progettata → in_corso → archiviata
 ```
 
-- **Avvia Lezione** (`handleAvviaLezione`): `lessonState='in_corso'` sul blocco, 'progettata' sugli altri eventuali in_corso, naviga a `lezione_in_corso`.
-- **Chiudi Lezione** (`handleChiudiLezione`): `lessonState='archiviata'`, naviga a `archivio_lezioni`.
+- **Avvia Lezione** (`handleAvviaLezione`): `lessonState='in_corso'` sul blocco, 'progettata' sugli altri eventuali in_corso, naviga a `'lezione'`.
+- **Chiudi Lezione** (`handleChiudiLezione`): `lessonState='archiviata'`, naviga a `'lezione'` (tab Archivio si apre automaticamente).
 - Una sola lezione `in_corso` alla volta.
+- Il tab attivo di default in `InAulaView` segue `lessonState`: `progettata` → Preparazione, `in_corso` → In Corso, `archiviata` → Archivio.
 
 ---
 
@@ -687,3 +704,12 @@ progettata → in_corso → archiviata
 - Non rimuovere il fallback a distribuzione uniforme in `DidacticRadarChart` — quando `idealData` è assente o vuoto, l'ideale è calcolato su 20% per tipo. Questo rende il radar immediatamente utile anche senza dati di modulo.
 - Non spostare i `useMemo` `radarData` / `idealRadarData` fuori da `GanttView` in un file handler — li calcola direttamente dalle `conversations` come prop già disponibile. Non aggiungono deps esterne e non appartengono ai factory handler.
 - Non rinominare "Analisi del Corso" in "Gantt del Corso" o simili — la view 'gantt' contiene ora sia il Gantt che il Radar, quindi il nome "Gantt del Corso" sarebbe riduttivo (rinominato 2026-05-25).
+- Non usare view id `'lezione_in_corso'` o `'archivio_lezioni'` — sostituiti definitivamente da `'lezione'` (Step 3 — 2026-05-27). Qualsiasi `setView('lezione_in_corso')` o `setView('archivio_lezioni')` nel codice è un bug.
+- Non ricostruire l'IIFE nel tab In Corso di `InAulaView` — il tab `in_corso` delega completamente a `<LessonInCorsoTab>`. L'IIFE è stato rimosso intenzionalmente.
+- Non chiamare `handleSaveLessonNotes` per l'autosave durante la lezione — usare `handleAutoSaveLessonNotes` (silent, senza toast). `handleSaveLessonNotes` con toast è riservato al modal nell'archivio.
+- Non usare `handleRecordAttendanceForBlock` (vecchio) per aggiornare le presenze live — usa `handleUpdateLiveAttendance` che gestisce anche `lateStudentIds`. Il vecchio handler aggiorna solo `presentStudentIds` e chiama `recordAttendanceForBlock` (hook per logbook studenti).
+- Non confondere `presentStudentIds` con la presenza effettiva — un ritardatario è in **entrambi** `presentStudentIds` e `lateStudentIds`. "Assente" = non in `presentStudentIds`. Non invertire questa logica.
+- Non aggiungere `generateGroupSuggestions` (vecchia firma, prende `objective: string`) alla UI del nuovo composer — usare `generateGroupSuggestionWithCriteria(students, criteria, groupSize)` che incorpora i 4 criteri di bilanciamento.
+- Non passare `conversations` come prop obbligatoria a `StudentProfileView` — la prop è opzionale (`conversations?: Conversation[]`, default `[]`) per retrocompatibilità con i punti di chiamata che non la passano ancora.
+- Non rimuovere la sezione "Monitoraggio Consuntivo" da `ClassroomTrendView` — è separata e complementare al cruscotto qualitativo AI esistente. La sezione consuntiva usa dati strutturati (presenze, tipologie, engagement); il cruscotto qualitativo usa testo libero analizzato da Ada.
+- Non mettere il Radar consuntivo in `GanttView` — `GanttView` mostra il radar di **progetto** (cosa ho pianificato); `ClassroomTrendView` mostra il radar **consuntivo** (cosa ho effettivamente fatto). Non invertire i due contesti.
