@@ -586,9 +586,10 @@ interface InAulaViewProps {
     onRemoveEvaluation: (convoId: string, blockIndex: number, evaluationId: string) => void;
     onAutoSaveNotes: (convoId: string, blockIndex: number, notes: string) => void;
     onGenerateLessonNoteAnalysis: (convoId: string, blockIndex: number) => Promise<void>;
+    onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -742,6 +743,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         students={students}
                         onAddMaterial={onAddMaterial}
                         onRemoveMaterial={onRemoveMaterial}
+                        onSaveGroups={onSaveGroups}
+                        onSaveClassroomUrl={onSaveClassroomUrl}
+                        masterContext={masterContext}
                         showToast={showToast}
                     />
                 )}

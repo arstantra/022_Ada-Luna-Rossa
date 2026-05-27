@@ -102,6 +102,18 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     showToast(url ? 'Cartella materiali collegata!' : 'Collegamento rimosso.', 'success');
   };
 
+  const handleSaveClassroomUrl = (convoId: string, blockIndex: number, url: string) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan!.blocks];
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        classroomUrl: url || undefined,
+      };
+      return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks } };
+    });
+  };
+
   const handleUpdateBlockLinkedNotebooks = (convoId: string, blockIndex: number, notebookIds: string[]) => {
     updateConversation(convoId, convo => {
       if (!convo.weekPlan) return convo;
@@ -236,5 +248,6 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleAddLessonEvaluation,
     handleRemoveLessonEvaluation,
     handleGenerateLessonNoteAnalysis,
+    handleSaveClassroomUrl,
   };
 }

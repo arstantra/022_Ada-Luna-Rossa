@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial } from '../types';
-import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon } from './Icons';
+import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition } from '../types';
+import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import MarkdownRenderer from './MarkdownRenderer';
 import Modal from './Modal';
+import type { useMasterContext } from '../hooks/useMasterContext';
 
 // ── AddMaterialModal ──────────────────────────────────────────────────────────
 
@@ -128,16 +129,26 @@ interface BlockOption {
 
 // ── LessonPreparationTab ──────────────────────────────────────────────────────
 
+const CRITERIA_OPTIONS = [
+    { id: 'Livello competenza', label: 'Livello competenza' },
+    { id: 'Stile apprendimento', label: 'Stile apprendimento' },
+    { id: 'Dinamiche relazionali', label: 'Dinamiche relazionali' },
+    { id: 'Mix casuale', label: 'Mix casuale' },
+];
+
 interface LessonPreparationTabProps {
     conversations: Conversation[];
     students: Student[];
     onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
     onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
+    onSaveGroups: (convoId: string, blockIndex: number, groups: GroupDefinition[]) => void;
+    onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
+    masterContext: ReturnType<typeof useMasterContext>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
 }
 
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
-    conversations, onAddMaterial, onRemoveMaterial, showToast,
+    conversations, students, onAddMaterial, onRemoveMaterial, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
 }) => {
     const blockOptions = useMemo<BlockOption[]>(() => {
         return conversations
@@ -178,6 +189,16 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     const [adaResponse, setAdaResponse] = useState<string | null>(null);
     const [isAdaLoading, setIsAdaLoading] = useState(false);
 
+    // ── Gruppi state ──────────────────────────────────────────────────────────
+    const [isGroupsOpen, setIsGroupsOpen] = useState(false);
+    const [groupSize, setGroupSize] = useState(3);
+    const [selectedCriteria, setSelectedCriteria] = useState<string[]>(['Livello competenza']);
+    const [proposedGroups, setProposedGroups] = useState<GroupDefinition[]>([]);
+    const [isLoadingGroupSuggestion, setIsLoadingGroupSuggestion] = useState(false);
+
+    // ── Classroom URL state ───────────────────────────────────────────────────
+    const [classroomDraft, setClassroomDraft] = useState('');
+
     const selectedOption = useMemo(
         () => blockOptions.find(o => o.key === selectedKey) ?? blockOptions[0] ?? null,
         [blockOptions, selectedKey]
@@ -197,6 +218,67 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
         } finally {
             setIsAdaLoading(false);
         }
+    };
+
+    // Sync classroomDraft when selected block changes
+    const currentClassroomUrl = selectedOption?.block.classroomUrl ?? '';
+    React.useEffect(() => {
+        setClassroomDraft(currentClassroomUrl);
+    }, [selectedOption?.key, currentClassroomUrl]);
+
+    const getStudentNameById = (id: string) => students.find(s => s.id === id)?.name ?? 'Sconosciuto';
+
+    const toggleCriteria = (criterionId: string) => {
+        setSelectedCriteria(prev =>
+            prev.includes(criterionId)
+                ? prev.filter(c => c !== criterionId)
+                : [...prev, criterionId]
+        );
+        setProposedGroups([]);
+    };
+
+    const handleGenerateGroups = async () => {
+        if (!selectedOption) return;
+        if (selectedCriteria.length === 0) {
+            showToast('Seleziona almeno un criterio.', 'error');
+            return;
+        }
+        if (selectedCriteria.length === 1 && selectedCriteria[0] === 'Mix casuale') {
+            const shuffled = [...students].sort(() => Math.random() - 0.5);
+            const groups: GroupDefinition[] = [];
+            let i = 0; let groupNum = 1;
+            while (i < shuffled.length) {
+                groups.push({ name: `Gruppo ${groupNum}`, studentIds: shuffled.slice(i, i + groupSize).map(s => s.id), justification: 'Composizione casuale.' });
+                i += groupSize; groupNum++;
+            }
+            setProposedGroups(groups);
+            return;
+        }
+        setIsLoadingGroupSuggestion(true);
+        try {
+            const groups = await GeminiService.generateGroupSuggestionWithCriteria(students, selectedCriteria, groupSize);
+            setProposedGroups(groups);
+        } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Errore durante la generazione dei gruppi.', 'error');
+        } finally {
+            setIsLoadingGroupSuggestion(false);
+        }
+    };
+
+    const handleSaveGroups = () => {
+        if (!selectedOption || proposedGroups.length === 0) return;
+        onSaveGroups(selectedOption.convoId, selectedOption.blockIndex, proposedGroups);
+        showToast('Gruppi salvati!', 'success');
+        setProposedGroups([]);
+        setIsGroupsOpen(false);
+    };
+
+    const handleRemoveStudentFromGroup = (groupIndex: number, studentId: string) => {
+        setProposedGroups(prev => {
+            const next = [...prev];
+            next[groupIndex] = { ...next[groupIndex], studentIds: next[groupIndex].studentIds.filter(id => id !== studentId) };
+            return next;
+        });
     };
 
     if (blockOptions.length === 0) {
@@ -336,6 +418,124 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Classroom URL */}
+                            <div>
+                                <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
+                                    Link Classroom
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="url"
+                                        value={classroomDraft}
+                                        onChange={e => setClassroomDraft(e.target.value)}
+                                        onBlur={() => {
+                                            if (!selectedOption) return;
+                                            const trimmed = classroomDraft.trim();
+                                            if (trimmed !== (selectedOption.block.classroomUrl ?? '')) {
+                                                onSaveClassroomUrl(selectedOption.convoId, selectedOption.blockIndex, trimmed);
+                                            }
+                                        }}
+                                        placeholder="https://classroom.google.com/..."
+                                        className="flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50"
+                                    />
+                                    {classroomDraft && (
+                                        <a
+                                            href={classroomDraft}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
+                                        >
+                                            <LinkIcon className="h-3.5 w-3.5" />
+                                            Apri
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Crea Gruppi con Ada */}
+                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+                                <button
+                                    onClick={() => setIsGroupsOpen(o => !o)}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                                    aria-expanded={isGroupsOpen}
+                                >
+                                    <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                        <UsersIcon className="h-4 w-4 text-indigo-400" />
+                                        Crea Gruppi con Ada
+                                    </span>
+                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isGroupsOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isGroupsOpen && (
+                                    <div className="px-4 pb-4 border-t border-gray-700/40 space-y-4 pt-3">
+                                        {students.length === 0 ? (
+                                            <p className="text-sm text-gray-600">Nessuno studente nel registro. Aggiungili prima in "L'Equipaggio".</p>
+                                        ) : (
+                                            <>
+                                                {/* Group size */}
+                                                <div>
+                                                    <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-1.5">Persone per gruppo</label>
+                                                    <div className="flex gap-2">
+                                                        {[2, 3, 4, 5].map(n => (
+                                                            <button key={n} onClick={() => { setGroupSize(n); setProposedGroups([]); }}
+                                                                className={`w-10 h-10 rounded-lg text-sm font-semibold border transition-colors ${groupSize === n ? 'bg-purple-600/80 border-purple-500 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}>
+                                                                {n}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {/* Criteria chips */}
+                                                <div>
+                                                    <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-1.5">Criteri di bilanciamento</label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {CRITERIA_OPTIONS.map(c => (
+                                                            <button key={c.id} onClick={() => toggleCriteria(c.id)}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${selectedCriteria.includes(c.id) ? 'bg-indigo-600/60 border-indigo-500/60 text-indigo-200' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}>
+                                                                {selectedCriteria.includes(c.id) ? '✓ ' : ''}{c.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {/* Generate button */}
+                                                <button onClick={handleGenerateGroups}
+                                                    disabled={isLoadingGroupSuggestion || selectedCriteria.length === 0}
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    {isLoadingGroupSuggestion
+                                                        ? <><span className="h-3.5 w-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione...</>
+                                                        : <><SparklesIcon className="h-3.5 w-3.5" />{selectedCriteria.length === 1 && selectedCriteria[0] === 'Mix casuale' ? 'Genera Casuale' : 'Suggerisci con Ada'}</>
+                                                    }
+                                                </button>
+                                                {/* Proposed groups */}
+                                                {proposedGroups.length > 0 && (
+                                                    <div className="space-y-3">
+                                                        <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Proposta Ada</p>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {proposedGroups.map((group, gi) => (
+                                                                <div key={gi} className="bg-gray-900/60 rounded-lg border border-gray-700/50 p-3">
+                                                                    <p className="text-xs font-semibold text-white mb-1">{group.name}</p>
+                                                                    {group.justification && <p className="text-[11px] text-gray-500 mb-2 italic">{group.justification}</p>}
+                                                                    <ul className="space-y-0.5">
+                                                                        {group.studentIds.map(sid => (
+                                                                            <li key={sid} className="flex items-center justify-between text-xs text-gray-300">
+                                                                                <span>{getStudentNameById(sid)}</span>
+                                                                                <button onClick={() => handleRemoveStudentFromGroup(gi, sid)} className="text-gray-600 hover:text-red-400 ml-2"><XIcon className="h-3 w-3" /></button>
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <button onClick={handleSaveGroups}
+                                                            className="px-4 py-2 rounded-lg bg-blue-600/80 text-white text-xs font-semibold hover:bg-blue-500 shadow-sm shadow-blue-900/40 transition-colors">
+                                                            Salva composizione
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>

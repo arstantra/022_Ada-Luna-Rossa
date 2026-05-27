@@ -271,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             />
             <NavItem
               icon={<ClipboardListIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="Studentesse"
+              label="Studenti"
               isActive={activeView === 'roster' || activeView === 'student_profile'}
               onClick={onOpenStudentRoster}
             />

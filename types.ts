@@ -290,6 +290,7 @@ export interface BlockDetails {
     lessonNoteAnalysis?: LessonNoteAnalysis;
     lessonGroups?: GroupDefinition[];
     projectDeadline?: string; // ISO String for group project deadlines
+    classroomUrl?: string;   // Link diretto all'attività/compito su Google Classroom
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
     tipologia?: LessonType;
