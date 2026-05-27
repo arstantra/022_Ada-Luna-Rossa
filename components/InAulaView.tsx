@@ -1,5 +1,6 @@
 import React, { useState, useMemo, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial } from '../types';
+import LessonPreparationTab from './LessonPreparationTab';
 import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon } from './Icons';
 import AttendanceModal from './AttendanceModal';
 import GroupCreationModal from './GroupCreationModal';
@@ -577,9 +578,11 @@ interface InAulaViewProps {
     onUpdateLinkedNotebooks: (convoId: string, blockIndex: number, notebookIds: string[]) => void;
     onAvviaLezione?: (convoId: string, blockIndex: number) => void;
     onChiudiLezione?: (convoId: string, blockIndex: number) => void;
+    onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
+    onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -728,13 +731,13 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
 
                 {/* ── PREPARAZIONE ──────────────────────────────────────────── */}
                 {activeTab === 'preparazione' && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-20 gap-4">
-                        <BookOpenIcon className="h-14 w-14 text-gray-700" />
-                        <p className="text-gray-400 font-semibold">Preparazione Lezione</p>
-                        <p className="text-gray-600 text-sm max-w-xs">
-                            Organizza i materiali, il formato e i gruppi per la tua prossima lezione.
-                        </p>
-                    </div>
+                    <LessonPreparationTab
+                        conversations={conversations}
+                        students={students}
+                        onAddMaterial={onAddMaterial}
+                        onRemoveMaterial={onRemoveMaterial}
+                        showToast={showToast}
+                    />
                 )}
 
                 {/* ── IN CORSO: lezione attiva ───────────────────────────────── */}

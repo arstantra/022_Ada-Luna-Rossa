@@ -831,6 +831,24 @@ ${teacherProfile}`;
 };
 
 
+export const generateToolSuggestion = async (question: string, masterContentSnippet?: string): Promise<string> => {
+    const contextPart = masterContentSnippet?.trim()
+        ? `\n\n**Contesto del blocco di lezione:**\n${masterContentSnippet.slice(0, 800)}`
+        : '';
+    const prompt = `Sei Ada, assistente AI specializzata nella didattica. Un insegnante ti chiede consiglio su strumenti e materiali per la sua lezione.${contextPart}
+
+**Domanda:** ${question}
+
+Rispondi in 2-4 frasi. Suggerisci strumenti digitali concreti (Canva, Padlet, Mentimeter, Gamma, Kahoot, Google Slides, YouTube, ecc.) adatti al contesto didattico. Usa Markdown.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } }
+    });
+    return response.text.trim();
+};
+
 export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonPlanMaterials: string; }> => {
     const prompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera i dettagli per un blocco di lezione di 2 ore.
 

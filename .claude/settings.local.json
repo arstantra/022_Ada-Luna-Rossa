@@ -28,7 +28,9 @@
       "Read(//c/pinokio/bin/miniconda//**)",
       "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/tsc --noEmit --project tsconfig.json)",
       "Bash(npm run *)",
-      "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/vite build)"
+      "Bash(/c/pinokio/bin/miniconda/node.exe node_modules/.bin/vite build)",
+      "Bash(which node *)",
+      "Bash(ls \"/c/Program Files/nodejs/\" 2>/dev/null || ls \"/c/Users/unoav/AppData/Local/Programs/\" 2>/dev/null | grep -i node)"
     ]
   }
 }

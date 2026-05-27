@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Student } from '../../types';
+import type { Conversation, Student, LessonMaterial } from '../../types';
 import * as GeminiService from '../../services/gemini';
 
 export interface BlockNoteHandlerDeps {
@@ -111,6 +111,34 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     });
   };
 
+  const handleAddLessonMaterial = (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => {
+    const newMaterial: LessonMaterial = {
+      ...material,
+      id: crypto.randomUUID(),
+      addedAt: new Date().toISOString(),
+    };
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonMaterials ?? [];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonMaterials: [...current, newMaterial] };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
+  const handleRemoveLessonMaterial = (convoId: string, blockIndex: number, materialId: string) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonMaterials ?? [];
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        lessonMaterials: current.filter(m => m.id !== materialId),
+      };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
   return {
     handleSaveLessonNotes,
     handleDeleteLessonNotes,
@@ -119,5 +147,7 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleDeleteLinkForBlock,
     handleUpdateBlockCloudLink,
     handleUpdateBlockLinkedNotebooks,
+    handleAddLessonMaterial,
+    handleRemoveLessonMaterial,
   };
 }
