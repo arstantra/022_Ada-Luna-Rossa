@@ -101,7 +101,7 @@ Esistono **due funzioni di derivazione stato** con granularità diversa ma color
 components/
   MainApp.tsx                — orchestratore centrale (509 righe dopo split 2026-05-25): stato, hook, factory call (useMemo), render
   handlers/                  — handler estratti da MainApp.tsx (split 2026-05-25):
-    blockHandlers.ts         — pianificazione blocchi: handleSetWeekTheme, handleUpdateBlockObjective, handleGenerateStrategicSuggestions, handleGenerateBlockDetails, ecc.
+    blockHandlers.ts         — pianificazione blocchi: handleSetWeekTheme, handleUpdateBlockObjective, handleUpdateBlockTitle, handleGenerateStrategicSuggestions, handleGenerateBlockDetails, ecc.
     blockHandlers_status.ts  — stato blocco: handleUpdateBlockStatus, handleUpdateBlockTipologia, handleToggleFslPeriod, handleSaltaChoice + createApplyBlockStatus (helper)
     conversationHandlers.ts  — handleModeChange, handlePlanningModeChange, handleOpenConversaConAda, handleEvaluationMessage, ecc.
     messagingHandlers.ts     — handleSendMessage, handleGenerateImage, handleSendPlanningMessage
@@ -111,7 +111,9 @@ components/
     dataHandlers.ts          — handleExportData, handleAttemptImport, handleConfirmRestore, handleExportCourseBook, ecc.
     uiHandlers.ts            — handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
-  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" (CourseContentUnit grouped by type) + "Come" (LessonType, 5 voci) + toggle isFslPeriod. Il radar NON è più nell'header (spostato in GanttView — 2026-05-25).
+  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" + "Come" + toggle isFslPeriod + campo "Obiettivo Didattico" (istituzionale, `block.objective`) + "Titolo" nell'header (`block.blockTitle`). Due pulsanti AI separati: ✦ nell'header → TitleSuggestionModal (Diretto/Narrativo/Evocativo); "Suggerisci obiettivo" nella sezione espansa → ObjectiveSuggestionModal (Sintetico/Bilanciato/Articolato). Il radar NON è più nell'header (spostato in GanttView — 2026-05-25).
+  TitleSuggestionModal.tsx   — modal per generare titoli accattivanti del blocco (per gli studenti): tre varianti Diretto/Narrativo/Evocativo da `generateBlockTitleSuggestions`. Richiede `block.objective` compilato.
+  ObjectiveSuggestionModal.tsx — modal per generare l'obiettivo didattico istituzionale: tre varianti Sintetico/Bilanciato/Articolato da `generateObjectiveSuggestions`. Richiede `block.module` selezionato.
   GanttView.tsx              — "Analisi del Corso" (rinominato da "Gantt del Corso" 2026-05-25): layout a due colonne — Gantt moduli/attività (flex-1, scroll orizzontale) + pannello Radar equilibrio didattico (w-72, destra). Su schermi stretti: flex-col (gantt sopra, radar sotto). Calcola radarData e idealRadarData direttamente dalle conversations.
   DidacticRadarChart.tsx     — componente panel del radar didattico (2026-05-25): pentagono fisso a 5 assi (ALL_TYPES — tutti i LessonType sempre visibili anche a 0); ideale = idealData se disponibile, altrimenti distribuzione uniforme 20% per tipo; score badge TVD verde/ambra/rosso; bar chart breakdown sotto il radar (indigo = attuale, sky = ideale). Non ha più la versione "compact" per l'header.
   InAulaView.tsx             — vista lezione unificata (view id: 'lezione'): tre tab Preparazione | In Corso | Archivio. Tab attivo di default segue lessonState. Il tab In Corso delega a LessonInCorsoTab; il tab Preparazione a LessonPreparationTab.
@@ -334,8 +336,10 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
   tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione' — SOLO modalità pedagogica ("come")
   isFslPeriod?: boolean,            // flag visivo ortogonale: badge sky "FSL" sul blocco, non altera status né tipologia
   lessonState?: LessonState,        // 'progettata'|'in_corso'|'archiviata'
-  objective?, module?,
-  lessonTitle?, lessonSyllabus?,    // pianificazione dettagliata
+  objective?,                       // Obiettivo didattico istituzionale (il "perché" formale, per documentazione)
+  blockTitle?,                      // Titolo accattivante per gli studenti (generato da Ada, mostrato nell'header)
+  module?,
+  lessonTitle?, lessonSyllabus?,    // pianificazione dettagliata (usati nel Laboratorio, non più in StrategicDashboard)
   contentBlocks?: ContentBlock[],   // popolato dopo "Trasferisci al Master" → stato "completato"
   messages?: Message[],
   isLocked?: boolean,
@@ -404,14 +408,26 @@ interface ParsedConstitution {
 `COURSE_CONTENT_TYPE_LABELS: Record<CourseContentType, string>` in `constants.ts`:
 `{ modulo: 'Modulo', uda: 'UDA', educazione_civica: 'Educazione Civica', fsl: 'FSL' }`
 
-In `StrategicDashboardView` l'accordion blocco mostra due select separati:
-- **Cosa** (primo select): opzioni raggruppate per `CourseContentType` via `<optgroup>`, deriva da `contentUnits` (fallback a `modules` se vuoto). Placeholder: `— unità didattica —`
+In `StrategicDashboardView` l'accordion blocco ha questa struttura (2026-05-28):
+
+**Header blocco (sempre visibile):**
+- `EditableField` → mostra `block.blockTitle || block.objective` (fallback per dati pre-refactoring)
+- Pulsante ✦ AI → apre `TitleSuggestionModal` (richiede `block.objective` compilato)
+
+**Riga select (header, seconda riga):**
+- **Cosa** (primo select): opzioni raggruppate per `CourseContentType` via `<optgroup>`. Placeholder: `— unità didattica —`
 - **Come** (secondo select): `LessonType` 5 voci. Placeholder: `— tipologia di lezione —`
-- **Toggle FSL**: button `text-sky-400` che imposta `isFslPeriod` (ortogonale ai due select)
+- **Toggle FSL**: button `text-sky-400` che imposta `isFslPeriod`
+
+**Sezione espansa:**
+- **Obiettivo Didattico** (`block.objective`): `EditableTextarea` + pulsante "Suggerisci obiettivo" → `ObjectiveSuggestionModal` (richiede `block.module`)
+- NON mostrare più "Estratto dalla Costituzione" né "Idea / Prompt per Ada" — rimossi (2026-05-28). Il `block.lessonTitle` continua a essere salvato silenziosamente da `handleModuleChange` per il contesto Ada, ma non va esposto in UI.
 
 Handler in `MainApp`:
 - `handleUpdateBlockTipologia` — salva la `LessonType` selezionata (il "come")
-- `handleUpdateBlockModule` — salva il titolo dell'unità didattica (il "cosa") in `block.module`
+- `handleUpdateBlockModule` — salva il titolo dell'unità didattica in `block.module` + estrae `block.lessonTitle` dal Progetto Didattico (contesto silenzioso per Ada)
+- `handleUpdateBlockObjective` — salva l'obiettivo istituzionale in `block.objective`
+- `handleUpdateBlockTitle` — salva il titolo accattivante in `block.blockTitle`
 - `handleToggleFslPeriod` — imposta/rimuove `isFslPeriod` sul blocco
 
 Migrazione one-shot (useEffect in MainApp): vecchio `tipologia: 'fsl'` → `isFslPeriod: true, tipologia: undefined`.
@@ -718,3 +734,9 @@ progettata → in_corso → archiviata
 - Non usare "Studentesse" come label — rinominato definitivamente in "Studenti" (2026-05-27). Aggiornare `StudentRosterView`, `Sidebar`, testi UI correlati.
 - Non aggiungere `classroomUrl` in altri componenti oltre `LessonPreparationTab` — il campo `classroomUrl?: string` su `BlockDetails` viene salvato tramite `handleSaveClassroomUrl` in `blockNoteHandlers.ts` e mostrato nel tab Preparazione. Il campo si salva `onBlur` (no toast, nessun pulsante separato).
 - Non aggiungere il link Classroom in `GroupsArchiveView` né in Toolkit — il punto di ingresso è esclusivamente `LessonPreparationTab`, contestuale alla preparazione della lezione.
+- Non reintrodurre "Estratto dalla Costituzione" né "Idea / Prompt per Ada" nell'accordion blocco di `StrategicDashboardView` — rimossi definitivamente (2026-05-28). Il `block.lessonTitle` estratto dal Progetto Didattico vive come contesto silenzioso per Ada, non come campo UI.
+- Non unificare `ObjectiveSuggestionModal` e `TitleSuggestionModal` in un unico componente — i due modal hanno scopi opposti (istituzionale vs. accattivante), prompt Gemini diversi e temperature diverse. Tenerli separati è architetturalmente corretto.
+- Non usare `block.blockTitle` come base per `getBlockProgressState` — il titolo è un campo presentazione, non semantico. Lo stato dipende da `objective`, `module`, `messages` e `contentBlocks`.
+- Non mostrare `block.objective` nell'header del blocco — dall'header si mostra `block.blockTitle || block.objective` (il titolo accattivante, con fallback per retrocompatibilità). L'obiettivo istituzionale vive solo nella sezione espansa.
+- Non generare il titolo del blocco (`TitleSuggestionModal`) se `block.objective` è vuoto — il titolo deve essere radicato nell'obiettivo pedagogico, non essere marketing vuoto. Il guard è obbligatorio.
+- Non dimenticare `onUpdateBlockTitle` quando si passa props a `StrategicDashboardView` — aggiunta (2026-05-28) insieme a `onUpdateBlockObjective`.
