@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType } from '../types';
-import { ACTIVITY_TYPE_LABELS } from '../constants';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ModuleDetails } from '../types';
+import { ACTIVITY_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
+import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
@@ -43,6 +44,9 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
     const [activityDescription, setActivityDescription] = useState('');
     const editorRef = useRef<HTMLDivElement>(null);
+    const [isModuleExpanded, setIsModuleExpanded] = useState(false);
+
+    const { contentUnits, moduleMap } = useProgettazioneCache();
 
     const prevMsgCountRef = useRef(0);
 
@@ -73,6 +77,20 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         });
         return Array.from(uris);
     }, [block?.messages]);
+
+    // Trova l'unità didattica del Progetto Didattico corrispondente al blocco corrente
+    const matchingUnit = useMemo(() =>
+        contentUnits?.find(u => u.title === block?.module),
+        [contentUnits, block?.module]
+    );
+
+    // Trova i dettagli completi del modulo (Concetti Chiave, Competenze, Attività Chiave)
+    // disponibili solo per i MODULI (non UDA/FSL/EC) tramite moduleMap
+    const matchingModule = useMemo((): ModuleDetails | null => {
+        if (!block?.module || !moduleMap) return null;
+        const entry = [...moduleMap.entries()].find(([key]) => key.includes(block.module!));
+        return entry?.[1] ?? null;
+    }, [moduleMap, block?.module]);
 
     const mergedContentHtml = useMemo(() => {
         return (block.contentBlocks || [])
@@ -189,15 +207,20 @@ ${htmlContent}
 
             {activeTab === 'laboratorio' && (
                 <>
-                    {/* Pannello info blocco: accordion aperto di default con titolo, modulo e obiettivo */}
-                    {(block.blockTitle || block.module || block.objective || onAddFonte) && (
+                    {/* Pannello info blocco: accordion aperto di default con modulo e obiettivo */}
+                    {(block.module || block.objective || onAddFonte) && (
                         <details className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] group" open>
                             <summary className="list-none flex items-center gap-2 px-4 py-1.5 cursor-pointer select-none hover:bg-gray-800/30 transition-colors">
-                                <div className="flex-1 min-w-0">
-                                    {(block.blockTitle || block.objective) ? (
-                                        <span className="text-xs text-gray-300 truncate block">
-                                            {block.blockTitle || block.objective}
-                                        </span>
+                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                    {matchingUnit ? (
+                                        <>
+                                            <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 flex-shrink-0">
+                                                {COURSE_CONTENT_TYPE_LABELS[matchingUnit.type]} {matchingUnit.order}
+                                            </span>
+                                            <span className="text-[10px] font-mono text-sky-400/60 truncate">{matchingUnit.title}</span>
+                                        </>
+                                    ) : block.module ? (
+                                        <span className="text-[10px] font-mono text-sky-400/60 truncate">{block.module}</span>
                                     ) : (
                                         <span className="text-[11px] text-gray-600 italic">Dettagli blocco</span>
                                     )}
@@ -223,17 +246,90 @@ ${htmlContent}
                                     </svg>
                                 </div>
                             </summary>
-                            <div className="px-4 pb-2.5 pt-1 flex flex-col gap-1">
-                                {block.module && (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 flex-shrink-0">Riferimento modulo</span>
-                                        <span className="text-[10px] font-mono text-sky-400/70 truncate">{block.module}</span>
+
+                            <div className="px-4 pb-2.5 pt-1 flex flex-col gap-2">
+
+                                {/* Contesto modulo — espandibile con un click */}
+                                {matchingUnit && (matchingModule || matchingUnit.role || matchingUnit.significance) && (
+                                    <div>
+                                        <button
+                                            onClick={() => setIsModuleExpanded(v => !v)}
+                                            className="flex items-center gap-1.5 text-left w-full hover:opacity-80 transition-opacity"
+                                        >
+                                            <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500">
+                                                {COURSE_CONTENT_TYPE_LABELS[matchingUnit.type]} {matchingUnit.order} — Contesto
+                                            </span>
+                                            <svg
+                                                className={`h-2.5 w-2.5 text-gray-600 transition-transform flex-shrink-0 ${isModuleExpanded ? 'rotate-180' : ''}`}
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+
+                                        {isModuleExpanded && (
+                                            <div className="mt-2 flex flex-col gap-2 border-l border-gray-700/40 pl-3 ml-0.5">
+                                                {matchingUnit.role && (
+                                                    <div>
+                                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Ruolo</p>
+                                                        <p className="text-[11px] text-gray-400 leading-relaxed">{matchingUnit.role}</p>
+                                                    </div>
+                                                )}
+                                                {matchingUnit.significance && (
+                                                    <div>
+                                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Significato</p>
+                                                        <p className="text-[11px] text-gray-400 leading-relaxed">{matchingUnit.significance}</p>
+                                                    </div>
+                                                )}
+                                                {matchingModule && matchingModule.sintonizzazione.length > 0 && (
+                                                    <div>
+                                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-1">Concetti Chiave</p>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {matchingModule.sintonizzazione.map((p, i) => (
+                                                                <span key={i} className="text-[9px] font-mono bg-gray-800/60 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40">
+                                                                    {p.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {matchingModule && matchingModule.operativi.length > 0 && (
+                                                    <div>
+                                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Competenze Operative</p>
+                                                        <ul className="space-y-0.5">
+                                                            {matchingModule.operativi.map((p, i) => (
+                                                                <li key={i} className="text-[11px] text-gray-400 leading-relaxed flex gap-1.5">
+                                                                    <span className="text-gray-600 flex-shrink-0 mt-0.5">·</span>
+                                                                    <span>{p.name}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                                {matchingModule && matchingModule.attivitaChiave.length > 0 && (
+                                                    <div>
+                                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Attività Chiave</p>
+                                                        <ul className="space-y-0.5">
+                                                            {matchingModule.attivitaChiave.map((a, i) => (
+                                                                <li key={i} className="text-[11px] text-gray-400 leading-relaxed flex gap-1.5">
+                                                                    <span className="text-gray-600 flex-shrink-0 mt-0.5">·</span>
+                                                                    <span>{a}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+
+                                {/* Obiettivo didattico */}
                                 {block.objective && (
-                                    <p className="text-[11px] text-gray-400 leading-relaxed">
-                                        <span className="text-gray-500">Obiettivo: </span>{block.objective}
-                                    </p>
+                                    <div>
+                                        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Obiettivo</p>
+                                        <p className="text-[11px] text-gray-400 leading-relaxed">{block.objective}</p>
+                                    </div>
                                 )}
                             </div>
                         </details>
