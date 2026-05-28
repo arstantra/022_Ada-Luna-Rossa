@@ -6,7 +6,7 @@
  */
 export interface MasterContextData {
     systemInstruction: string;
-    constitution: string;
+    progettazione: string;
     crewContext: string;
     rulesContext: string;
     teacherProfile: string;
@@ -166,7 +166,7 @@ export interface ModuleDetails {
     attivitaChiave: string[];
 }
 
-export interface ParsedConstitution {
+export interface ParsedProgettazione {
     modules: ModuleDetails[];           // mantenuto per retrocompatibilità
     moduleMap: Map<string, ModuleDetails>;
     contentUnits: CourseContentUnit[];  // lista flat di tutte le unità (moduli, UDA, EC, FSL)
@@ -266,8 +266,6 @@ export interface BlockDetails {
     module?: string;
     objective?: string;      // Obiettivo didattico istituzionale (il "perché" formale)
     blockTitle?: string;     // Titolo accattivante per gli studenti (generato da Ada)
-    constitutionSummary?: string; // For export headers
-    moduleDetails?: ModuleDetails;
     contentBlocks?: ContentBlock[];
     messages?: Message[]; // Each block has its own chat history
     allocations?: BlockAllocation; // For group/individual work
@@ -443,50 +441,3 @@ export interface ToolkitShortcut {
   order: number;
 }
 
-// --- NUOVI TIPI PER IL CRUSCOTTO QUALITATIVO ---
-
-export type EnergyLevel = 'Bassa Frequenza' | 'Ritmo di Crociera' | 'Scintilla Creativa';
-export type GrowthLevel = 'Da Potenziare' | 'Stabile' | 'Punto di Forza';
-export type MasteryLevel = 'Compreso' | 'In Difficoltà';
-export type PillarType = 'Sintonizzazione' | 'Operativo' | 'Attività Chiave' | 'Sconosciuto';
-
-export interface InferredClassEnergy {
-    weekNumber: number;
-    energyLevel: EnergyLevel;
-}
-
-export interface InferredStudentGrowth {
-    studentName: string;
-    criteria: {
-        QualitàElaborati: GrowthLevel;
-        Partecipazione: GrowthLevel;
-        Collaborazione: GrowthLevel;
-        ResilienzaCreativa: GrowthLevel;
-    };
-}
-
-export interface InferredConceptMastery {
-    concept: string;
-    mastery: MasteryLevel;
-    pillarType: PillarType;
-}
-
-export interface InferredMastery {
-    pillar: string;
-    pillarType: PillarType;
-    masteryLevel: MasteryLevel;
-    evidence: string;
-}
-
-export interface InferredWeekAnalysis {
-    weekNumber: number;
-    classEnergy: EnergyLevel;
-    studentGrowth: InferredStudentGrowth[];
-    masteryMap: InferredMastery[];
-}
-
-export interface QualitativeAnalysisData {
-    classEnergy: InferredClassEnergy[];
-    studentGrowth: InferredStudentGrowth[];
-    conceptMastery: InferredConceptMastery[];
-}

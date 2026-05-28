@@ -1,5 +1,5 @@
-// services/constitutionParser.ts
-import type { Pillar, ModuleDetails, ParsedConstitution, CourseContentType, CourseContentUnit } from '../types';
+// services/progettazioneParser.ts
+import type { Pillar, ModuleDetails, ParsedProgettazione, CourseContentType, CourseContentUnit } from '../types';
 
 const parsePillarsOrActivities = (text: string): string[] => {
     if (!text) return [];
@@ -27,7 +27,7 @@ const prefixToType = (prefix: string): CourseContentType => {
 
 /**
  * Se il testo è HTML (salvato dall'editor rich-text), estrae il testo piano
- * preservando le newline tra blocchi. Il constitutionParser usa regex sui prefissi
+ * preservando le newline tra blocchi. Il progettazioneParser usa regex sui prefissi
  * MODULO/UDA/FSL/EDUCAZIONE CIVICA che devono apparire come testo, non come tag.
  */
 const stripHtmlToText = (input: string): string => {
@@ -46,10 +46,10 @@ const stripHtmlToText = (input: string): string => {
     return input.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim();
 };
 
-export const parseConstitution = (constitutionText: string): ParsedConstitution => {
+export const parseProgettazione = (progettazioneText: string): ParsedProgettazione => {
     // Normalizza: se il testo è HTML (dall'editor), estraiamo il testo piano
     // in modo che le regex sui prefissi MODULO/UDA/ecc. funzionino correttamente.
-    constitutionText = stripHtmlToText(constitutionText);
+    progettazioneText = stripHtmlToText(progettazioneText);
     const modules: ModuleDetails[] = [];
     const moduleMap = new Map<string, ModuleDetails>();
     const contentUnits: CourseContentUnit[] = [];
@@ -63,7 +63,7 @@ export const parseConstitution = (constitutionText: string): ParsedConstitution 
     };
 
     // Split in sezioni usando il lookahead sul pattern di header.
-    const allSections = constitutionText
+    const allSections = progettazioneText
         .split(/(?=^(?:MODULO|UDA|EDUCAZIONE CIVICA|FSL)\s*(?:\d+)?\s*:)/gim)
         .filter(s => SECTION_HEADER_RE.test(s));
 
@@ -86,8 +86,8 @@ export const parseConstitution = (constitutionText: string): ParsedConstitution 
         const title = rawTitleRest || `${rawPrefix} ${order}`;
         const id = `${type}-${order}`;
 
-        const roleMatch = section.match(/Ruolo:\s*([\s\S]*?)(?=Significato:|⦁\s*Pilastri|Attività Chiave:|$)/i);
-        const significanceMatch = section.match(/Significato:\s*([\s\S]*?)(?=⦁\s*Pilastri|Attività Chiave:|$)/i);
+        const roleMatch = section.match(/Ruolo:\s*([\s\S]*?)(?=Significato:|⦁\s*Concetti Chiave|⦁\s*Competenze Operative|⦁\s*Attività Chiave:|$)/i);
+        const significanceMatch = section.match(/Significato:\s*([\s\S]*?)(?=⦁\s*Concetti Chiave|⦁\s*Competenze Operative|⦁\s*Attività Chiave:|$)/i);
 
         const unit: CourseContentUnit = {
             id,
@@ -112,15 +112,15 @@ export const parseConstitution = (constitutionText: string): ParsedConstitution 
             let attivitaChiaveItems: string[] = [];
 
             if (!isSpecialModule) {
-                const sintonizzazioneMatch = section.match(/⦁\s*Pilastri di Sintonizzazione(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Pilastri Operativi|⦁\s*Attività Chiave:|$)/i);
-                const operativiMatch = section.match(/⦁\s*Pilastri Operativi(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Attività Chiave:|$)/i);
+                const concettiChiaveMatch = section.match(/⦁\s*Concetti Chiave(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Competenze Operative|⦁\s*Attività Chiave:|$)/i);
+                const competenzeMatch = section.match(/⦁\s*Competenze Operative(?:.*)?:\s*([\s\S]*?)(?=⦁\s*Attività Chiave:|$)/i);
                 const attivitaChiaveMatch = section.match(/⦁\s*Attività Chiave(?:.*)?:\s*([\s\S]*?)(?=\n(?:MODULO|UDA|EDUCAZIONE CIVICA|FSL)|$)/i);
 
-                sintonizzazionePillars = sintonizzazioneMatch
-                    ? parsePillarsOrActivities(sintonizzazioneMatch[1]).map(n => ({ name: n }))
+                sintonizzazionePillars = concettiChiaveMatch
+                    ? parsePillarsOrActivities(concettiChiaveMatch[1]).map(n => ({ name: n }))
                     : [];
-                operativiPillars = operativiMatch
-                    ? parsePillarsOrActivities(operativiMatch[1]).map(n => ({ name: n }))
+                operativiPillars = competenzeMatch
+                    ? parsePillarsOrActivities(competenzeMatch[1]).map(n => ({ name: n }))
                     : [];
                 attivitaChiaveItems = attivitaChiaveMatch
                     ? parsePillarsOrActivities(attivitaChiaveMatch[1])

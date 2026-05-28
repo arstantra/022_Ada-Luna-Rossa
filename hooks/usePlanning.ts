@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
-import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ModuleDetails, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
+import type { Conversation, Message, BlockDetails, PlanningActionPayload, WeekPlan, Mode, Action, Student, ContentBlock, ValidateAndArchivePayload, WeekRouteInfo } from '../types';
 import type { useMasterContext } from './useMasterContext';
 import { fileToAttachment } from '../utils';
 import * as GeminiService from '../services/gemini';
 import { marked } from 'marked';
-import { useConstitutionCache } from '../contexts/ConstitutionCacheContext';
+import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import { GEMINI_API_ERROR_MESSAGE } from '../constants';
 
 type UpdateConversationFunction = (convoId: string, updater: Partial<Conversation> | ((convo: Conversation) => Conversation)) => void;
@@ -70,7 +70,7 @@ const createMasterContentHeader = async (block: BlockDetails, weekPlan: WeekPlan
 
 
 export const usePlanning = (updateConversation: UpdateConversationFunction, showToast: ShowToastFunction) => {
-    const { moduleMap } = useConstitutionCache();
+    const { moduleMap } = useProgettazioneCache();
     
     const processPlanningMessage = useCallback(async (params: PlanningMessageParams) => {
         const { content, file, actionPayload, activeConversation, masterContext, currentModeId, students, useGoogleSearch, conversations, availableWeeks } = params;
@@ -94,11 +94,9 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                     const moduleData = moduleMap.get(module);
 
                     if (!moduleData) {
-                        showToast(`Dettagli per il modulo "${module}" non trovati. Controlla la formattazione della Costituzione.`, 'error');
+                        showToast(`Dettagli per il modulo "${module}" non trovati. Controlla la formattazione del Progetto Didattico.`, 'error');
                         return; // Stop execution
                     }
-
-                    const constitutionExcerpt = moduleData.role ? `${moduleData.role.split('.')[0]}.` : "Ispirazione non trovata.";
 
                     const firstAssistantMessage: Message = {
                         id: `msg-ada-${Date.now()}`,
@@ -115,8 +113,6 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
                             objective,
                             module,
                             messages: [firstAssistantMessage],
-                            constitutionSummary: constitutionExcerpt,
-                            moduleDetails: moduleData,
                         };
                         return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks }};
                     });

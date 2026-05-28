@@ -28,13 +28,13 @@ interface DocCardState {
 }
 
 /**
- * Pre-processa il testo generato per la costituzione aggiungendo heading markdown
+ * Pre-processa il testo generato per il Progetto Didattico aggiungendo heading markdown
  * davanti ai prefissi speciali del sistema (MODULO N:, UDA N:, FSL:, EDUCAZIONE CIVICA:).
  * Questo permette a marked.parse() di generare <h2>/<h3> con gerarchia visiva.
- * I prefissi vengono preservati esattamente così come sono (il constitutionParser
+ * I prefissi vengono preservati esattamente così come sono (il progettazioneParser
  * li riconosce e fa lo strip dell'HTML prima di parsare).
  */
-const addHeadingsToConstitution = (text: string): string => {
+const addHeadingsToProgettazione = (text: string): string => {
     return text
         .split('\n')
         .map(line => {
@@ -81,7 +81,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
     masterContext, onClose, isInitialSetup,
     students, onAddStudent, onUpdateStudent, onDeleteStudent,
 }) => {
-    const [localConstitution, setLocalConstitution] = useState(masterContext.constitution);
+    const [localProgettazione, setLocalProgettazione] = useState(masterContext.progettazione);
     const [localRoute, setLocalRoute] = useState(masterContext.routeContext);
     const [localCrew, setLocalCrew] = useState(masterContext.crewContext);
     const [localRules, setLocalRules] = useState(masterContext.rulesContext);
@@ -89,7 +89,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
 
     const [cardStates, setCardStates] = useState<Record<string, DocCardState>>(() => ({
         profilo:      { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
-        costituzione: { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
+        progetto_didattico: { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         regole:       { isOpen: false, isEditing: !!isInitialSetup, isGenerating: false, generatedContent: null },
         equipaggio:   { isOpen: false, isEditing: false, isGenerating: false, generatedContent: null },
         ptof:         { isOpen: false, isEditing: false, isGenerating: false, generatedContent: null },
@@ -123,11 +123,11 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
             canGenerate: false,
         },
         {
-            id: 'costituzione',
+            id: 'progetto_didattico',
             title: 'Progetto Didattico',
-            content: cardStates['costituzione'].generatedContent
-                ?? (isInitialSetup ? localConstitution : masterContext.constitution),
-            onSave: isInitialSetup ? setLocalConstitution : masterContext.handleSaveConstitution,
+            content: cardStates['progetto_didattico'].generatedContent
+                ?? (isInitialSetup ? localProgettazione : masterContext.progettazione),
+            onSave: isInitialSetup ? setLocalProgettazione : masterContext.handleSaveProgettazione,
             description: 'Il progetto di disciplina: moduli, obiettivi, attività chiave. Il DNA del tuo percorso formativo. Scrivi liberamente o incolla da Word — Ada lo legge come contesto fisso.',
             canGenerate: true,
         },
@@ -140,7 +140,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
             description: 'Il sistema di valutazione e le regole del laboratorio. Scrivi liberamente — Ada parsa e struttura per te.',
             canGenerate: true,
         },
-    ], [isInitialSetup, localConstitution, localRoute, localRules, masterContext, cardStates]);
+    ], [isInitialSetup, localProgettazione, localRoute, localRules, masterContext, cardStates]);
 
     const profiloFilled = !!(isInitialSetup ? localRoute : masterContext.teacherProfile)?.trim();
 
@@ -165,7 +165,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
         if (!profiloContent?.trim()) return;
 
         const docTypeMap: Record<string, DocumentContentType> = {
-            costituzione: 'costituzione',
+            progetto_didattico: 'progetto_didattico',
             regole: 'regole',
         };
         const docType = docTypeMap[docId];
@@ -178,20 +178,20 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
 
         try {
             const markdown = await generateDocumentContent(docType, profiloContent);
-            // Per la costituzione, aggiungi heading markdown ai prefissi speciali
+            // Per il Progetto Didattico, aggiungi heading markdown ai prefissi speciali
             // prima di convertire in HTML, così h2/h3 vengono renderizzati con gerarchia visiva.
-            const preparedMarkdown = docId === 'costituzione'
-                ? addHeadingsToConstitution(markdown)
+            const preparedMarkdown = docId === 'progetto_didattico'
+                ? addHeadingsToProgettazione(markdown)
                 : markdown;
             const html = String(marked.parse(preparedMarkdown));
 
             if (isInitialSetup) {
-                if (docId === 'costituzione') setLocalConstitution(html);
+                if (docId === 'progetto_didattico') setLocalProgettazione(html);
                 else if (docId === 'regole') setLocalRules(html);
             } else {
                 // Salva subito nel DB — non aspettare che l'utente digiti qualcosa.
                 // Altrimenti al refresh il contenuto generato va perso.
-                if (docId === 'costituzione') await masterContext.handleSaveConstitution(html);
+                if (docId === 'progetto_didattico') await masterContext.handleSaveProgettazione(html);
                 else if (docId === 'regole') await masterContext.handleSaveRules(html);
             }
 
@@ -218,13 +218,13 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
         // Usiamo il crewContext generato dalla lista strutturata se ci sono studenti,
         // altrimenti il fallback localCrew (per retro-compatibilità).
         const crewToSave = students.length > 0 ? buildCrewContext(students) : localCrew;
-        if (!localConstitution.trim() || !crewToSave.trim() || !localRules.trim()) {
+        if (!localProgettazione.trim() || !crewToSave.trim() || !localRules.trim()) {
             setSetupError('Per favore, compila almeno Progetto Didattico, Equipaggio e Patto Formativo prima di continuare.');
             return;
         }
         setSetupError('');
         await Promise.all([
-            masterContext.handleSaveConstitution(localConstitution),
+            masterContext.handleSaveProgettazione(localProgettazione),
             masterContext.handleSaveCrew(crewToSave),
             masterContext.handleSaveRules(localRules),
             ...(localRoute.trim() ? [masterContext.handleSaveTeacherProfile(localRoute)] : []),

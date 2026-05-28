@@ -1,6 +1,6 @@
 // services/gemini.ts
 import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode, Part } from "@google/genai";
-import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, QualitativeAnalysisData, Conversation, WeekRouteInfo, MasterContextData, BlockSource, CourseModule, ModuleSection, LessonType } from '../types';
+import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, Conversation, WeekRouteInfo, MasterContextData, BlockSource, CourseModule, ModuleSection, LessonType } from '../types';
 import { getBlockFile } from './db';
 import { MODES } from '../constants';
 import TurndownService from 'turndown';
@@ -193,7 +193,7 @@ export const streamChatResponse = async (
         ? `# CONTESTO ISTITUZIONALE (PTOF):\n${masterContext.ptofExtract.trim()}`
         : '';
 
-    const fullContext = [masterContext.constitution, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, ptofSection, planningContext, studentContext].filter(Boolean).join('\n\n');
+    const fullContext = [masterContext.progettazione, dynamicStrategicMap, masterContext.rulesContext, masterContext.crewContext, ptofSection, planningContext, studentContext].filter(Boolean).join('\n\n');
 
     const { textSection: fontiText, fileParts: fontiFileParts } =
         await buildFontiContext(fonti ?? []);
@@ -419,108 +419,6 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
 };
 
 
-// --- MOTORE DI INFERENZA QUALITATIVA PER IL CRUSCOTTO ---
-
-const qualitativeAnalysisSchema: FunctionDeclaration = {
-    name: "analyze_qualitative_classroom_data",
-    description: "Analizza note qualitative sulle lezioni per estrarre insight sull'energia della classe, la crescita degli studenti e la comprensione dei concetti.",
-    parameters: {
-        type: Type.OBJECT,
-        properties: {
-            classEnergy: {
-                type: Type.ARRAY,
-                description: "Energia qualitativa della classe per ogni settimana menzionata nelle note.",
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        weekNumber: { type: Type.NUMBER, description: "Il numero della settimana a cui si riferisce la nota." },
-                        energyLevel: { type: Type.STRING, enum: ['Bassa Frequenza', 'Ritmo di Crociera', 'Scintilla Creativa'], description: "Il livello di energia inferito per quella settimana." }
-                    },
-                    required: ["weekNumber", "energyLevel"]
-                }
-            },
-            studentGrowth: {
-                type: Type.ARRAY,
-                description: "Analisi della crescita individuale per ogni studentessa menzionata, basata su 4 criteri.",
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        studentName: { type: Type.STRING, description: "Il nome completo della studentessa." },
-                        criteria: {
-                            type: Type.OBJECT,
-                            description: "Valutazione qualitativa per ogni criterio.",
-                            properties: {
-                                QualitàElaborati: { type: Type.STRING, enum: ['Da Potenziare', 'Stabile', 'Punto di Forza'], description: "Livello di qualità dei lavori prodotti." },
-                                Partecipazione: { type: Type.STRING, enum: ['Da Potenziare', 'Stabile', 'Punto di Forza'], description: "Livello di partecipazione attiva." },
-                                Collaborazione: { type: Type.STRING, enum: ['Da Potenziare', 'Stabile', 'Punto di Forza'], description: "Capacità di collaborare con i pari." },
-                                ResilienzaCreativa: { type: Type.STRING, enum: ['Da Potenziare', 'Stabile', 'Punto di Forza'], description: "Capacità di superare ostacoli creativi." },
-                            },
-                             required: ["QualitàElaborati", "Partecipazione", "Collaborazione", "ResilienzaCreativa"]
-                        }
-                    },
-                    required: ["studentName", "criteria"]
-                }
-            },
-            conceptMastery: {
-                type: Type.ARRAY,
-                description: "Comprensione dei concetti chiave (pilastri) menzionati nelle note.",
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        concept: { type: Type.STRING, description: "Il nome del concetto o pilastro." },
-                        mastery: { type: Type.STRING, enum: ['Compreso', 'In Difficoltà'], description: "Il livello di comprensione del concetto da parte della classe." },
-                        pillarType: { type: Type.STRING, enum: ['Sintonizzazione', 'Operativo', 'Attività Chiave', 'Sconosciuto'], description: "Il tipo di pilastro a cui appartiene il concetto." }
-                    },
-                    required: ["concept", "mastery", "pillarType"]
-                }
-            }
-        },
-        required: ["classEnergy", "studentGrowth", "conceptMastery"]
-    }
-};
-
-export const inferQualitativeMetrics = async (corpus: string, studentNames: string[], allPillars: {name: string, type: 'Sintonizzazione' | 'Operativo' | 'Attività Chiave'}[]): Promise<QualitativeAnalysisData> => {
-    const pillarsList = allPillars.map(p => `- ${p.name} (Tipo: ${p.type})`).join('\n');
-    const prompt = `Sei un'AI esperta in pedagogia. Analizza il seguente corpus di note di lezione. Estrai insight qualitativi secondo lo schema fornito.
-
-**CONTESTO:**
-- **Lista Studentesse:** ${studentNames.join(', ')}
-- **Lista Concetti/Pilastri Esistenti:**
-${pillarsList}
-
-**NOTE DA ANALIZZARE (ogni nota include il numero della settimana, es. "Nota Settimana 3: ..."):**
----
-${corpus}
----
-
-**ISTRUZIONI DETTAGLIATE:**
-1.  **Class Energy:** Per ogni settimana menzionata, assegna un livello di energia: 'Bassa Frequenza' (note negative, stanchezza), 'Ritmo di Crociera' (note neutre, lavoro standard), 'Scintilla Creativa' (entusiasmo, idee brillanti).
-2.  **Student Growth:** Per ogni studentessa menzionata, valuta i 4 criteri. Se una nota dice "Viola ha collaborato bene", assegna 'Punto di Forza' a 'Collaborazione' per Viola. Se non ci sono informazioni per un criterio, assegna 'Stabile'.
-3.  **Concept Mastery:** Se una nota menziona una difficoltà con un concetto (es. "difficoltà su 'Ciclo di Vita'"), assegna 'In Difficoltà'. Se la nota è positiva, assegna 'Compreso'. Usa la lista di pilastri fornita per classificare il 'pillarType'. Se un concetto non è nella lista, classificalo come 'Sconosciuto'.
-
-Estrai i dati in modo rigoroso e strutturato.`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-            tools: [{ functionDeclarations: [qualitativeAnalysisSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            thinkingConfig: { thinkingBudget: 8192 }
-        }
-    });
-
-    const call = response.functionCalls?.[0];
-    if (call?.name === 'analyze_qualitative_classroom_data' && call.args) {
-        const args = extractArgs<Partial<QualitativeAnalysisData>>(call.args);
-        return {
-            classEnergy: args.classEnergy || [],
-            studentGrowth: args.studentGrowth || [],
-            conceptMastery: args.conceptMastery || [],
-        };
-    }
-    throw new Error("L'AI non ha fornito un'analisi qualitativa strutturata valida.");
-};
 
 
 export const generateClassroomTrendAnalysis = async (qualitativeData: string, qualitativeNotes: string): Promise<string> => {
@@ -745,12 +643,11 @@ const strategicSuggestionsSchema: FunctionDeclaration = {
         required: ["theme", "objectives", "reasoning"]
     }
 };
-export const generateStrategicSuggestions = async (prompt: string, moduleContext: string, pillarContext: string | null): Promise<{ theme: string; objectives: string[]; reasoning: string; }> => {
+export const generateStrategicSuggestions = async (prompt: string, moduleContext: string): Promise<{ theme: string; objectives: string[]; reasoning: string; }> => {
     const fullPrompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera suggerimenti strategici per una settimana di lezioni.
 
 **Contesto:**
 - **Modulo di Riferimento:** ${moduleContext}
-${pillarContext ? `- **Pilastro di Focus:** ${pillarContext}\n` : ''}
 - **Idea/Prompt del Docente:** "${prompt}"
 
 Usa la funzione 'generate_strategic_suggestions' per la tua risposta. Fornisci un tema, 2-3 obiettivi e una motivazione.`;
@@ -786,14 +683,14 @@ const blockDetailsSchema: FunctionDeclaration = {
         required: ["lessonTitle", "lessonSyllabus", "lessonPlanMaterials"]
     }
 };
-export type DocumentContentType = 'costituzione' | 'regole' | 'personalita';
+export type DocumentContentType = 'progetto_didattico' | 'regole' | 'personalita';
 
 export const generateDocumentContent = async (
     docType: DocumentContentType,
     teacherProfile: string
 ): Promise<string> => {
     const prompts: Record<DocumentContentType, string> = {
-        costituzione: `Sei un esperto di progettazione didattica. Basandoti sul profilo del corso fornito, genera un Progetto Didattico completo e professionale per questa disciplina.
+        progetto_didattico: `Sei un esperto di progettazione didattica. Basandoti sul profilo del corso fornito, genera un Progetto Didattico completo e professionale per questa disciplina.
 
 Il Progetto Didattico deve usare OBBLIGATORIAMENTE i seguenti prefissi riconosciuti dal sistema per le unità di contenuto:
 
@@ -809,8 +706,8 @@ I prefissi sono case-sensitive e devono essere esattamente come mostrati sopra (
 Per ogni sezione MODULO includi (facoltativi ma molto utili):
   Ruolo: descrizione sintetica del ruolo nel percorso
   Significato: perché questo modulo è significativo per gli studenti
-  ⦁ Pilastri di Sintonizzazione: concetto 1; concetto 2; concetto 3
-  ⦁ Pilastri Operativi: competenza 1; competenza 2; competenza 3
+  ⦁ Concetti Chiave: concetto 1; concetto 2; concetto 3
+  ⦁ Competenze Operative: competenza 1; competenza 2; competenza 3
   ⦁ Attività Chiave: attività 1; attività 2; attività 3
 
 Per UDA, EDUCAZIONE CIVICA e FSL includi almeno:

@@ -165,7 +165,7 @@ export function createDataHandlers(deps: DataHandlerDeps) {
       const htmlContent = generateCourseBookHtml(
         masterContext.systemInstruction,
         {
-          constitution: masterContext.constitution,
+          progettazione: masterContext.progettazione,
           route: masterContext.routeContext,
           crew: masterContext.crewContext,
           rules: masterContext.rulesContext,
@@ -198,4 +198,5 @@ export function createDataHandlers(deps: DataHandlerDeps) {
     handleConfirmImportEvaluation,
     handleExportCourseBook,
   };
+}
 }

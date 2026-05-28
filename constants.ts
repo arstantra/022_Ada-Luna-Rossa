@@ -2,7 +2,7 @@
 import type { Mode, LessonType, ActivityType, CourseContentType } from './types';
 
 export const LOCAL_STORAGE_INSTRUCTION_KEY = 'ada-system-instruction';
-export const LOCAL_STORAGE_CONSTITUTION_KEY = 'ada-constitution';
+export const LOCAL_STORAGE_PROGETTAZIONE_KEY = 'ada-constitution'; // valore DB invariato per retrocompatibilità
 export const LOCAL_STORAGE_ROUTE_KEY = 'ada-route-context';
 export const LOCAL_STORAGE_CREW_KEY = 'ada-crew-context';
 export const LOCAL_STORAGE_RULES_KEY = 'ada-rules-context';
@@ -39,29 +39,29 @@ export const DEFAULT_SYSTEM_INSTRUCTION = `Sei Ada, un'assistente AI avanzata sp
 - **Contesto-Aware:** Sei consapevole del contesto specifico (es. tipo di scuola, età degli studenti, materie) e adatti le tue proposte di conseguenza.
 - **Personalizzata:** Sei consapevole del profilo del docente con cui stai interagendo (nome, materia, ruolo) e lo usi per rendere la conversazione più pertinente.`;
 
-export const DEFAULT_CONSTITUTION = `MODULO 0: Orientamento
+export const DEFAULT_PROGETTAZIONE = `MODULO 0: Orientamento
 Ruolo: Modulo introduttivo per accogliere gli studenti e presentare il percorso formativo, il metodo di lavoro e gli strumenti del laboratorio.
 Significato: È il momento in cui il gruppo-classe prende forma come comunità di pratica. Si stabiliscono le regole di convivenza, si esplorano le aspettative reciproche e si attivano le prime competenze progettuali.
 
 MODULO 1: Fondamenti del Design
 Ruolo: Introduzione ai principi fondamentali del design: storia, linguaggi visivi, teoria del colore, tipografia e composizione.
 Significato: Gli studenti sviluppano un vocabolario visivo condiviso e imparano a "leggere" gli artefatti del mondo artificiale con occhio critico.
-⦁ Pilastri di Sintonizzazione: Osservazione consapevole; Analisi visiva; Storia del design
-⦁ Pilastri Operativi: Teoria del colore; Tipografia; Composizione e layout
+⦁ Concetti Chiave: Osservazione consapevole; Analisi visiva; Storia del design
+⦁ Competenze Operative: Teoria del colore; Tipografia; Composizione e layout
 ⦁ Attività Chiave: Autopsia dell'oggetto; Moodboard; Brief di progetto
 
 MODULO 2: Processo Progettuale
 Ruolo: Apprendimento e applicazione del metodo progettuale: dalla ricerca all'ideazione, dal prototipo alla presentazione.
 Significato: Gli studenti sperimentano l'intero ciclo del design thinking, dalla comprensione del problema alla soluzione comunicata con chiarezza.
-⦁ Pilastri di Sintonizzazione: Design Thinking; Ricerca utente; Problem framing
-⦁ Pilastri Operativi: Sketching e ideazione; Prototipazione rapida; Presentazione del progetto
+⦁ Concetti Chiave: Design Thinking; Ricerca utente; Problem framing
+⦁ Competenze Operative: Sketching e ideazione; Prototipazione rapida; Presentazione del progetto
 ⦁ Attività Chiave: Mappa di empatia; Prototipo carta; Pitch di progetto
 
 MODULO 3: Progetto Integrato
 Ruolo: Applicazione autonoma delle competenze acquisite in un progetto complesso e multidisciplinare, con consegna finale.
 Significato: Il modulo conclusivo verifica la capacità degli studenti di gestire un processo progettuale in autonomia, integrando competenze tecniche, creative e comunicative.
-⦁ Pilastri di Sintonizzazione: Autonomia progettuale; Pensiero sistemico; Autovalutazione
-⦁ Pilastri Operativi: Project management; Documentazione del processo; Comunicazione del progetto
+⦁ Concetti Chiave: Autonomia progettuale; Pensiero sistemico; Autovalutazione
+⦁ Competenze Operative: Project management; Documentazione del processo; Comunicazione del progetto
 ⦁ Attività Chiave: Portfolio; Esposizione finale; Peer review
 
 MODULO 4: Riflessione e Bilancio
@@ -211,4 +211,6 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   produzione_scritta: 'Produzione scritta',
   progetto:           'Progetto',
   altro:              'Altro',
+};
+              'Altro',
 };

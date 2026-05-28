@@ -94,7 +94,7 @@ export function createBlockPlanningHandlers(deps: BlockPlanningDeps) {
       const moduleContext = moduleDetails
         ? `${moduleDetails.name}\nRuolo: ${moduleDetails.role}\nSignificato: ${moduleDetails.significance}`
         : module;
-      const result = await GeminiService.generateStrategicSuggestions(prompt, moduleContext, null);
+      const result = await GeminiService.generateStrategicSuggestions(prompt, moduleContext);
       showToast('Suggerimenti strategici generati!', 'success');
       return result;
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMasterContext } from './hooks/useMasterContext';
-import { ConstitutionCacheProvider } from './contexts/ConstitutionCacheContext';
+import { ProgettazioneCacheProvider } from './contexts/ProgettazioneCacheContext';
 import MainApp from './components/MainApp';
 import FoundingDocumentsView from './components/FoundingDocumentsView';
 import ApiKeySetup from './components/ApiKeySetup';
@@ -47,7 +47,7 @@ const App: React.FC = () => {
 
 
   return (
-    <ConstitutionCacheProvider constitutionText={masterContext.constitution}>
+    <ProgettazioneCacheProvider progettazioneText={masterContext.progettazione}>
       {showApiKeyModal && (
         <ApiKeySetup
           isModal
@@ -62,7 +62,7 @@ const App: React.FC = () => {
         </div>
         <AppFooter disciplina={masterContext.disciplina} />
       </div>
-    </ConstitutionCacheProvider>
+    </ProgettazioneCacheProvider>
   );
 };
 

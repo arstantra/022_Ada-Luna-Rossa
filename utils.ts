@@ -269,7 +269,7 @@ export const getBlockPlanningStatus = (block: BlockDetails | undefined): BlockPl
 
 export const generateCourseBookHtml = (
     adaPresentation: string,
-    foundingDocs: { constitution: string; route: string; crew: string; rules: string; },
+    foundingDocs: { progettazione: string; route: string; crew: string; rules: string; },
     conversations: Conversation[],
     students: Student[]
 ): string => {
@@ -313,8 +313,8 @@ export const generateCourseBookHtml = (
     const foundingDocsHtml = `
       <div class="page-break">
         <h2>Documenti Fondanti</h2>
-        <h3>La Costituzione</h3>
-        <pre>${escapeHtml(foundingDocs.constitution)}</pre>
+        <h3>Progetto Didattico</h3>
+        <pre>${escapeHtml(foundingDocs.progettazione)}</pre>
         <h3>La Rotta</h3>
         <pre>${escapeHtml(foundingDocs.route)}</pre>
         <h3>L'Equipaggio</h3>
@@ -392,4 +392,6 @@ export const generateCourseBookHtml = (
         </body>
         </html>
     `;
+};
+;
 };

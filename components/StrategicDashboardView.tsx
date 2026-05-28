@@ -14,7 +14,7 @@ interface StrategicDashboardViewProps {
     weeks: WeekRouteInfo[];
     modules: ModuleDetails[];
     contentUnits: CourseContentUnit[];
-    constitutionText: string;
+    progettazioneText: string;
     onClose: () => void;
     onUpdateWeekTheme: (weekNumber: number, theme: string) => void;
     onUpdateBlockObjective: (weekNumber: number, blockIndex: number, objective: string) => void;
@@ -33,7 +33,7 @@ interface StrategicDashboardViewProps {
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -132,14 +132,14 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     const handleModuleChange = (weekNumber: number, blockIndex: number, moduleName: string) => {
         let newLessonTitle = '';
 
-        if (moduleName && constitutionText) {
-            const moduleSections = constitutionText.split(/(?=^MODULO \d+:)/gm);
+        if (moduleName && progettazioneText) {
+            const moduleSections = progettazioneText.split(/(?=^MODULO \d+:)/gm);
             const fullModuleText = moduleSections.find(s => s.trim().startsWith(moduleName))?.trim() || '';
 
             if (fullModuleText) {
-                const firstPillarIndex = fullModuleText.search(/⦁\s*Pilastri|⦁\s*Attività Chiave:/);
-                newLessonTitle = (firstPillarIndex !== -1)
-                    ? fullModuleText.substring(0, firstPillarIndex).trim()
+                const firstSectionIndex = fullModuleText.search(/⦁\s*Concetti Chiave|⦁\s*Competenze Operative|⦁\s*Attività Chiave:/);
+                newLessonTitle = (firstSectionIndex !== -1)
+                    ? fullModuleText.substring(0, firstSectionIndex).trim()
                     : fullModuleText;
             }
         }

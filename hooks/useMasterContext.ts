@@ -4,7 +4,7 @@ import * as db from '../services/db';
 import type { Mode, WeekEntry } from '../types';
 import {
   DEFAULT_SYSTEM_INSTRUCTION,
-  DEFAULT_CONSTITUTION,
+  DEFAULT_PROGETTAZIONE,
   DEFAULT_ROUTE_CONTEXT,
   DEFAULT_CREW_CONTEXT,
   DEFAULT_RULES_CONTEXT,
@@ -12,7 +12,7 @@ import {
   DEFAULT_MODE_ID,
   MODES,
   LOCAL_STORAGE_INSTRUCTION_KEY,
-  LOCAL_STORAGE_CONSTITUTION_KEY,
+  LOCAL_STORAGE_PROGETTAZIONE_KEY,
   LOCAL_STORAGE_ROUTE_KEY,
   LOCAL_STORAGE_CREW_KEY,
   LOCAL_STORAGE_RULES_KEY,
@@ -28,7 +28,7 @@ import {
 
 export const useMasterContext = () => {
     const [systemInstruction, setSystemInstruction] = useState('');
-    const [constitution, setConstitution] = useState('');
+    const [progettazione, setProgettazione] = useState('');
     const [routeContext, setRouteContext] = useState('');
     const [crewContext, setCrewContext] = useState('');
     const [rulesContext, setRulesContext] = useState('');
@@ -57,7 +57,7 @@ export const useMasterContext = () => {
 
                 await Promise.all([
                     loadOrSeedSetting(LOCAL_STORAGE_INSTRUCTION_KEY, DEFAULT_SYSTEM_INSTRUCTION, setSystemInstruction),
-                    loadOrSeedSetting(LOCAL_STORAGE_CONSTITUTION_KEY, DEFAULT_CONSTITUTION, setConstitution),
+                    loadOrSeedSetting(LOCAL_STORAGE_PROGETTAZIONE_KEY, DEFAULT_PROGETTAZIONE, setProgettazione),
                     loadOrSeedSetting(LOCAL_STORAGE_ROUTE_KEY, DEFAULT_ROUTE_CONTEXT, setRouteContext),
                     loadOrSeedSetting(LOCAL_STORAGE_CREW_KEY, DEFAULT_CREW_CONTEXT, setCrewContext),
                     loadOrSeedSetting(LOCAL_STORAGE_RULES_KEY, DEFAULT_RULES_CONTEXT, setRulesContext),
@@ -105,7 +105,7 @@ export const useMasterContext = () => {
                 console.error("Failed to load/seed master contexts from DB", e);
                 // Fallback to defaults in memory if DB operations fail completely
                 setSystemInstruction(DEFAULT_SYSTEM_INSTRUCTION);
-                setConstitution(DEFAULT_CONSTITUTION);
+                setProgettazione(DEFAULT_PROGETTAZIONE);
                 setRouteContext(DEFAULT_ROUTE_CONTEXT);
                 setCrewContext(DEFAULT_CREW_CONTEXT);
                 setRulesContext(DEFAULT_RULES_CONTEXT);
@@ -129,11 +129,11 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save instructions:", error); }
     }, []);
 
-    const handleSaveConstitution = useCallback(async (value: string) => {
-        setConstitution(value);
+    const handleSaveProgettazione = useCallback(async (value: string) => {
+        setProgettazione(value);
         try {
-            await db.saveSetting(LOCAL_STORAGE_CONSTITUTION_KEY, value);
-        } catch (error) { console.error("Failed to save constitution:", error); }
+            await db.saveSetting(LOCAL_STORAGE_PROGETTAZIONE_KEY, value);
+        } catch (error) { console.error("Failed to save progettazione:", error); }
     }, []);
 
     const handleSaveRoute = useCallback(async (value: string) => {
@@ -206,12 +206,12 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save mode:", error); }
     }, []);
 
-    const isUninitialized = !isLoading && (!constitution.trim() || !crewContext.trim() || !rulesContext.trim());
+    const isUninitialized = !isLoading && (!progettazione.trim() || !crewContext.trim() || !rulesContext.trim());
 
     return {
         isLoading,
         systemInstruction,
-        constitution,
+        progettazione,
         routeContext,
         crewContext,
         rulesContext,
@@ -224,7 +224,7 @@ export const useMasterContext = () => {
         currentModeId,
         isUninitialized,
         handleSaveInstructions,
-        handleSaveConstitution,
+        handleSaveProgettazione,
         handleSaveRoute,
         handleSaveCrew,
         handleSaveRules,
