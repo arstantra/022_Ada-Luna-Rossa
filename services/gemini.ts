@@ -610,40 +610,54 @@ Usa la funzione 'suggest_week_theme' per la tua risposta.`;
 
 const objectiveSuggestionsSchema: FunctionDeclaration = {
     name: "generate_objective_suggestions",
-    description: "Genera tre varianti di un obiettivo didattico per un blocco di lezione.",
+    description: "Genera tre varianti di un obiettivo didattico istituzionale per un blocco di lezione.",
     parameters: {
         type: Type.OBJECT,
         properties: {
-            concise: { type: Type.STRING, description: "Un obiettivo breve, diretto e d'impatto." },
-            balanced: { type: Type.STRING, description: "Un obiettivo standard, chiaro e misurabile." },
-            creative: { type: Type.STRING, description: "Una formulazione più evocativa e non convenzionale per stimolare la curiosità." }
+            concise: { type: Type.STRING, description: "Un obiettivo sintetico: una frase formale e d'impatto, in stile 'Lo studente sarà in grado di...'." },
+            balanced: { type: Type.STRING, description: "Un obiettivo bilanciato: chiaro, misurabile, che integra contenuto e metodologia." },
+            creative: { type: Type.STRING, description: "Un obiettivo più articolato che collega il contenuto a competenze trasversali o al contesto reale degli studenti." }
         },
         required: ["concise", "balanced", "creative"]
     }
 };
 
-export const generateObjectiveSuggestions = async (prompt: string, moduleContext: string, theme: string): Promise<{ concise: string; balanced: string; creative: string; }> => {
-    const fullPrompt = `Sei un esperto di design didattico. Il tuo compito è distillare il contesto fornito per creare tre varianti di un obiettivo didattico per un blocco di lezione.
+/**
+ * Genera tre varianti di obiettivo didattico istituzionale (il "perché" formale del blocco).
+ * Usa: unità didattica selezionata + estratto dal Progetto Didattico + tipologia lezione + profilo docente/patto formativo + tema settimana.
+ */
+export const generateObjectiveSuggestions = async (
+    moduleTitle: string,
+    moduleContext: string,
+    tipologia: string,
+    teacherProfile: string,
+    theme: string
+): Promise<{ concise: string; balanced: string; creative: string; }> => {
+    const fullPrompt = `Sei un esperto di design didattico e programmazione curricolare. Il tuo compito è formulare tre varianti di un obiettivo didattico istituzionale per un blocco di lezione.
 
-**Contesto da Analizzare:**
-- **Tema della Settimana:** "${theme}"
-- **Estratto dalla Costituzione (Contesto del Modulo):** """${moduleContext}"""
-- **Idea/Prompt del Docente:** """${prompt}"""
+L'obiettivo deve essere in linguaggio formale, adatto alla documentazione scolastica (registro di classe, programmazione, consiglio di classe). NON deve essere un titolo creativo per gli studenti — quello viene dopo, separatamente.
 
-Basandoti su una sintesi di **entrambi** i testi ("Estratto dalla Costituzione" e "Idea/Prompt"), genera tre varianti di un obiettivo didattico:
-1.  **Sintetico:** Breve, diretto e d'impatto.
-2.  **Bilanciato:** Chiaro, misurabile e standard.
-3.  **Creativo:** Evocativo, non convenzionale, stimola la curiosità.
+**Contesto del blocco:**
+- **Unità didattica:** ${moduleTitle}
+- **Estratto dal Progetto Didattico:** """${moduleContext || 'non disponibile'}"""
+- **Modalità pedagogica (come):** ${tipologia || 'non specificata'}
+- **Tema della settimana:** "${theme || 'non definito'}"
+- **Profilo del corso / Patto Formativo:** """${teacherProfile ? teacherProfile.slice(0, 800) : 'non disponibile'}"""
 
-Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti. Assicurati che ogni variante sia una diretta conseguenza dei contenuti forniti.`;
-    
+Genera tre varianti di obiettivo didattico:
+1. **Sintetico:** Una frase concisa e formale. Inizia con "Lo studente sarà in grado di..." o formulazione equivalente.
+2. **Bilanciato:** Obiettivo standard, chiaro, misurabile, che integra contenuto e metodologia della lezione.
+3. **Articolato:** Obiettivo più ricco che collega il contenuto disciplinare a competenze trasversali o al contesto autentico degli studenti, richiamando il patto formativo.
+
+Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti.`;
+
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [objectiveSuggestionsSchema] }],
             toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
-            temperature: 0.7,
+            temperature: 0.6,
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -654,6 +668,67 @@ Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti. As
         return { concise: concise || '', balanced: balanced || '', creative: creative || '' };
     }
     throw new Error("L'AI non ha fornito gli obiettivi nel formato richiesto.");
+};
+
+const blockTitleSuggestionsSchema: FunctionDeclaration = {
+    name: "generate_block_title_suggestions",
+    description: "Genera tre titoli accattivanti per un blocco di lezione, da comunicare agli studenti.",
+    parameters: {
+        type: Type.OBJECT,
+        properties: {
+            direct: { type: Type.STRING, description: "Titolo diretto: chiaro, immediato, dice esattamente di cosa si tratta ma in modo vivace." },
+            narrative: { type: Type.STRING, description: "Titolo narrativo: racconta una storia, usa una metafora o un'immagine concreta che cattura l'essenza della lezione." },
+            evocative: { type: Type.STRING, description: "Titolo evocativo: apre una domanda o crea suspense, stimola la curiosità senza rivelare tutto." }
+        },
+        required: ["direct", "narrative", "evocative"]
+    }
+};
+
+/**
+ * Genera tre titoli accattivanti per il blocco da mostrare agli studenti (il "nome" della lezione).
+ * Usa: obiettivo istituzionale già definito + unità didattica + tipologia + tema settimana.
+ * I titoli devono essere coinvolgenti, mai scolastici, mai burocratici.
+ */
+export const generateBlockTitleSuggestions = async (
+    objective: string,
+    moduleTitle: string,
+    tipologia: string,
+    theme: string
+): Promise<{ direct: string; narrative: string; evocative: string }> => {
+    const fullPrompt = `Sei un esperto di comunicazione didattica e storytelling educativo. Il tuo compito è trasformare un obiettivo pedagogico formale in tre titoli accattivanti per una lezione, da comunicare agli studenti (scritto alla lavagna, nel registro, nel piano di lavoro settimanale condiviso).
+
+I titoli devono essere coinvolgenti, curiosi, mai burocratici. Devono fare venire voglia di saperne di più. Pensa a come un buon documentario o un libro avvincente intitola i propri capitoli.
+
+**Contesto:**
+- **Obiettivo didattico del blocco:** "${objective}"
+- **Unità didattica (cosa):** ${moduleTitle || 'non specificata'}
+- **Modalità pedagogica (come):** ${tipologia || 'non specificata'}
+- **Tema della settimana:** "${theme || 'non definito'}"
+
+Genera tre varianti di titolo:
+1. **Diretto:** Chiaro e vivace. Dice esattamente cosa si fa, ma con energia. Massimo 8 parole.
+2. **Narrativo:** Usa una metafora, un'immagine o un verbo d'azione che racconta la lezione come un'esperienza. Può avere un sottotitolo breve (separato da "—").
+3. **Evocativo:** Apre una domanda, crea attesa, non rivela tutto. Può essere una domanda retorica o una frase che lascia sospesa la curiosità.
+
+Usa la funzione 'generate_block_title_suggestions' per fornire le tre varianti.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        config: {
+            tools: [{ functionDeclarations: [blockTitleSuggestionsSchema] }],
+            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            temperature: 0.85,
+            thinkingConfig: { thinkingBudget: 8192 }
+        }
+    });
+
+    const call = response.functionCalls?.[0];
+    if (call?.name === 'generate_block_title_suggestions' && call.args) {
+        const { direct, narrative, evocative } = extractArgs<{ direct?: string; narrative?: string; evocative?: string }>(call.args);
+        return { direct: direct || '', narrative: narrative || '', evocative: evocative || '' };
+    }
+    throw new Error("L'AI non ha fornito i titoli nel formato richiesto.");
 };
 
 

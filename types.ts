@@ -264,7 +264,8 @@ export interface BlockDetails {
     status: BlockStatus;
     reason?: string; // For 'saltato' status
     module?: string;
-    objective?: string;
+    objective?: string;      // Obiettivo didattico istituzionale (il "perché" formale)
+    blockTitle?: string;     // Titolo accattivante per gli studenti (generato da Ada)
     constitutionSummary?: string; // For export headers
     moduleDetails?: ModuleDetails;
     contentBlocks?: ContentBlock[];

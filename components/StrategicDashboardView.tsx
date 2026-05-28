@@ -6,6 +6,7 @@ import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
 import ObjectiveSuggestionModal from './ObjectiveSuggestionModal';
+import TitleSuggestionModal from './TitleSuggestionModal';
 import { getExactDateForBlock } from '../utils';
 
 interface StrategicDashboardViewProps {
@@ -17,6 +18,7 @@ interface StrategicDashboardViewProps {
     onClose: () => void;
     onUpdateWeekTheme: (weekNumber: number, theme: string) => void;
     onUpdateBlockObjective: (weekNumber: number, blockIndex: number, objective: string) => void;
+    onUpdateBlockTitle: (weekNumber: number, blockIndex: number, blockTitle: string) => void;
     onGenerateStrategicSuggestions: (prompt: string, module: string) => Promise<{ theme: string; objectives: string[]; reasoning: string; }>;
     onSaveStrategicData: (weekNumber: number, theme: string, objectives: string[]) => void;
     onGenerateBlockDetails: (weekNumber: number, blockIndex: number) => Promise<void>;
@@ -31,9 +33,10 @@ interface StrategicDashboardViewProps {
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, constitutionText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
+    const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
 
@@ -59,11 +62,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     const handleGenerateTheme = async (week: typeof weekData[0]) => {
         const relevantBlocks = week.blocks.filter(b =>
-            (b.status === 'normale' || b.status === 'da definire') && b.objective && b.objective.trim()
+            (b.status === 'normale' || b.status === 'da definire') && (b.blockTitle || b.objective) && (b.blockTitle || b.objective || '').trim()
         );
-    
-        const objectivesContext = relevantBlocks.map((b, i) => 
-            `- Obiettivo ${i + 1}: ${b.objective}`
+
+        const objectivesContext = relevantBlocks.map((b, i) =>
+            `- Blocco ${i + 1}: ${b.blockTitle || b.objective}`
         ).join('\n');
     
         const notesContext = week.notes && week.notes.trim() ? `\n\nNote sulla settimana:\n${week.notes}` : '';
@@ -98,18 +101,32 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     
     const handleGenerateObjective = (weekNumber: number, blockIndex: number) => {
         const block = weekData.find(w => w.weekNumber === weekNumber)?.blocks[blockIndex];
-        if (!block || !block.lessonSyllabus || !block.module) {
-            showToast("Assicurati di aver inserito un'idea/prompt e selezionato un modulo.", 'error');
+        if (!block || !block.module) {
+            showToast("Seleziona prima un'unità didattica per generare l'obiettivo.", 'error');
             return;
         }
         setObjectiveModalInfo({ weekNumber, blockIndex });
     };
 
+    const handleGenerateTitle = (weekNumber: number, blockIndex: number) => {
+        const block = weekData.find(w => w.weekNumber === weekNumber)?.blocks[blockIndex];
+        if (!block || !block.objective?.trim()) {
+            showToast("Definisci prima l'obiettivo didattico nel pannello espanso.", 'error');
+            return;
+        }
+        setTitleModalInfo({ weekNumber, blockIndex });
+    };
+
     const handleSelectObjective = (weekNumber: number, blockIndex: number, objective: string) => {
         onUpdateBlockObjective(weekNumber, blockIndex, objective);
-        onUpdateBlockDetails(weekNumber, blockIndex, { isLocked: true });
         setObjectiveModalInfo(null);
-        showToast(`Obiettivo aggiornato per il Blocco ${blockIndex + 1}.`, 'success');
+        showToast(`Obiettivo didattico impostato per il Blocco ${blockIndex + 1}.`, 'success');
+    };
+
+    const handleSelectTitle = (weekNumber: number, blockIndex: number, title: string) => {
+        onUpdateBlockTitle(weekNumber, blockIndex, title);
+        setTitleModalInfo(null);
+        showToast(`Titolo impostato per il Blocco ${blockIndex + 1}.`, 'success');
     };
 
     const handleModuleChange = (weekNumber: number, blockIndex: number, moduleName: string) => {
@@ -181,13 +198,13 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                 ${week.blocks.map((block, index) => `
                     <div class="block">
                         <div class="block-header">
-                            <h3>Blocco ${index + 1}: ${escapeHtml(block.objective)}</h3>
+                            <h3>Blocco ${index + 1}: ${escapeHtml(block.blockTitle || block.objective)}</h3>
                         </div>
                         <div class="block-details">
-                            <h4>Titolo Lezione</h4>
-                            <p>${nl2br(block.lessonTitle) || '<em>Non definito</em>'}</p>
-                            <h4>Idea / Prompt per Ada</h4>
-                            <p>${nl2br(block.lessonSyllabus) || '<em>Non definito</em>'}</p>
+                            <h4>Obiettivo Didattico</h4>
+                            <p>${nl2br(block.objective) || '<em>Non definito</em>'}</p>
+                            <h4>Unità Didattica</h4>
+                            <p>${escapeHtml(block.module) || '<em>Non specificata</em>'}</p>
                         </div>
                     </div>
                 `).join('')}
@@ -491,14 +508,9 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 />
                                                             ) : (
                                                                 <EditableField
-                                                                    value={block.objective || ''}
-                                                                    onSave={(newObjective) => {
-                                                                        onUpdateBlockObjective(week.weekNumber, index, newObjective);
-                                                                        if (newObjective) {
-                                                                            onUpdateBlockDetails(week.weekNumber, index, { isLocked: true });
-                                                                        }
-                                                                    }}
-                                                                    placeholder="Definisci l'obiettivo del blocco..."
+                                                                    value={block.blockTitle || block.objective || ''}
+                                                                    onSave={(val) => onUpdateBlockTitle(week.weekNumber, index, val)}
+                                                                    placeholder="Titolo del blocco (generalo con Ada ✦)..."
                                                                 />
                                                             )}
                                                         </div>
@@ -625,10 +637,10 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         </button>
                                                     )}
                                                     <button
-                                                        onClick={(e) => { e.preventDefault(); handleGenerateObjective(week.weekNumber, index); }}
+                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
                                                         disabled={isSpecialStatus}
                                                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
-                                                        title="Suggerisci obiettivo con AI"
+                                                        title="Suggerisci titolo con Ada"
                                                     >
                                                         <SparklesIcon className="h-3.5 w-3.5" />
                                                         AI
@@ -637,14 +649,26 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 </div>
                                             </summary>
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
-                                                {block.lessonTitle && (
                                                 <div>
-                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Estratto dalla Costituzione</label>
-                                                    <EditableTextarea value={block.lessonTitle} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonTitle: val })} placeholder="" rows={1} disabled={isSpecialStatus || block.isLocked} />
-                                                </div>
-                                                )}
-                                                <div>
-                                                    <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80">Idea / Prompt per Ada</label><EditableTextarea value={block.lessonSyllabus || ''} onSave={(val) => onUpdateBlockDetails(week.weekNumber, index, { lessonSyllabus: val })} placeholder="Sequenza attività, concept, domande stimolo..." rows={2} disabled={isSpecialStatus || block.isLocked} />
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Obiettivo Didattico</label>
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateObjective(week.weekNumber, index); }}
+                                                            disabled={isSpecialStatus}
+                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
+                                                            title="Suggerisci obiettivo didattico con Ada"
+                                                        >
+                                                            <SparklesIcon className="h-3 w-3" />
+                                                            Suggerisci obiettivo
+                                                        </button>
+                                                    </div>
+                                                    <EditableTextarea
+                                                        value={block.objective || ''}
+                                                        onSave={(val) => onUpdateBlockObjective(week.weekNumber, index, val)}
+                                                        placeholder="Obiettivo pedagogico formale: cosa sapranno fare gli studenti al termine del blocco..."
+                                                        rows={2}
+                                                        disabled={isSpecialStatus}
+                                                    />
                                                 </div>
                                             </div>
                                         </details>
@@ -664,8 +688,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                 const block = week?.blocks[objectiveModalInfo.blockIndex];
                 if (!week || !block) return null;
 
-                const moduleContext = block.lessonTitle || '';
-
                 return (
                     <ObjectiveSuggestionModal
                         isOpen={!!objectiveModalInfo}
@@ -674,8 +696,29 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                         weekNumber={objectiveModalInfo.weekNumber}
                         blockIndex={objectiveModalInfo.blockIndex}
                         theme={week.theme || 'Nessun tema definito'}
-                        prompt={block.lessonSyllabus || ''}
-                        moduleContext={moduleContext}
+                        moduleTitle={block.module || ''}
+                        moduleContext={block.lessonTitle || ''}
+                        tipologia={block.tipologia || ''}
+                        teacherProfile={teacherProfile}
+                    />
+                );
+            })()}
+            {titleModalInfo && (() => {
+                const week = weekData.find(w => w.weekNumber === titleModalInfo.weekNumber);
+                const block = week?.blocks[titleModalInfo.blockIndex];
+                if (!week || !block) return null;
+
+                return (
+                    <TitleSuggestionModal
+                        isOpen={!!titleModalInfo}
+                        onClose={() => setTitleModalInfo(null)}
+                        onSelectTitle={(title) => handleSelectTitle(titleModalInfo.weekNumber, titleModalInfo.blockIndex, title)}
+                        weekNumber={titleModalInfo.weekNumber}
+                        blockIndex={titleModalInfo.blockIndex}
+                        theme={week.theme || 'Nessun tema definito'}
+                        objective={block.objective || ''}
+                        moduleTitle={block.module || ''}
+                        tipologia={block.tipologia || ''}
                     />
                 );
             })()}

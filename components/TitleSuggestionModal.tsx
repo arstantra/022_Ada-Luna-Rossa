@@ -4,21 +4,20 @@ import { SparklesIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 
 interface Suggestion {
-    type: 'Sintetico' | 'Bilanciato' | 'Creativo';
+    type: 'Diretto' | 'Narrativo' | 'Evocativo';
     text: string;
 }
 
-interface ObjectiveSuggestionModalProps {
+interface TitleSuggestionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelectObjective: (objective: string) => void;
+    onSelectTitle: (title: string) => void;
     weekNumber: number;
     blockIndex: number;
     theme: string;
+    objective: string;
     moduleTitle: string;
-    moduleContext: string;
     tipologia: string;
-    teacherProfile: string;
 }
 
 const SuggestionCard: React.FC<{ title: string; content: string; onSelect: () => void }> = ({ title, content, onSelect }) => (
@@ -36,7 +35,15 @@ const SuggestionCard: React.FC<{ title: string; content: string; onSelect: () =>
     </div>
 );
 
-const ObjectiveSuggestionModal: React.FC<ObjectiveSuggestionModalProps> = ({ isOpen, onClose, onSelectObjective, theme, moduleTitle, moduleContext, tipologia, teacherProfile }) => {
+const TitleSuggestionModal: React.FC<TitleSuggestionModalProps> = ({
+    isOpen,
+    onClose,
+    onSelectTitle,
+    theme,
+    objective,
+    moduleTitle,
+    tipologia,
+}) => {
     const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -47,43 +54,43 @@ const ObjectiveSuggestionModal: React.FC<ObjectiveSuggestionModalProps> = ({ isO
             setError(null);
             setSuggestions(null);
 
-            GeminiService.generateObjectiveSuggestions(moduleTitle, moduleContext, tipologia, teacherProfile, theme)
+            GeminiService.generateBlockTitleSuggestions(objective, moduleTitle, tipologia, theme)
                 .then(result => {
                     setSuggestions([
-                        { type: 'Sintetico', text: result.concise },
-                        { type: 'Bilanciato', text: result.balanced },
-                        { type: 'Creativo', text: result.creative },
+                        { type: 'Diretto',   text: result.direct },
+                        { type: 'Narrativo', text: result.narrative },
+                        { type: 'Evocativo', text: result.evocative },
                     ]);
                 })
                 .catch(err => {
-                    console.error("Error generating objective suggestions:", err);
-                    setError(err instanceof Error ? err.message : "Errore durante la generazione dei suggerimenti.");
+                    console.error("Error generating title suggestions:", err);
+                    setError(err instanceof Error ? err.message : "Errore durante la generazione dei titoli.");
                 })
                 .finally(() => {
                     setIsLoading(false);
                 });
         }
-    }, [isOpen, moduleTitle, moduleContext, tipologia, teacherProfile, theme]);
-    
+    }, [isOpen, objective, moduleTitle, tipologia, theme]);
+
     const handleSelect = (text: string) => {
-        onSelectObjective(text);
+        onSelectTitle(text);
         onClose();
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Suggerimenti AI per l'Obiettivo Didattico">
+        <Modal isOpen={isOpen} onClose={onClose} title="Suggerisci Titolo del Blocco">
             {isLoading && (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <SparklesIcon className="h-10 w-10 text-purple-400 animate-pulse mb-4" />
                     <p className="font-semibold text-white">Generazione in corso...</p>
-                    <p className="text-sm text-gray-400">Sto formulando tre varianti di obiettivo istituzionale.</p>
+                    <p className="text-sm text-gray-400">Sto inventando tre titoli per accendere la curiosità.</p>
                 </div>
             )}
             {error && <div className="text-center text-red-400 p-8">{error}</div>}
             {suggestions && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {suggestions.map(s => (
-                        <SuggestionCard 
+                        <SuggestionCard
                             key={s.type}
                             title={s.type}
                             content={s.text}
@@ -96,4 +103,4 @@ const ObjectiveSuggestionModal: React.FC<ObjectiveSuggestionModalProps> = ({ isO
     );
 };
 
-export default ObjectiveSuggestionModal;
+export default TitleSuggestionModal;
