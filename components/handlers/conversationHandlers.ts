@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Message, Mode, WeekRouteInfo, CourseModule, Evaluation } from '../../types';
+import type { Conversation, Message, Mode, WeekRouteInfo, Evaluation } from '../../types';
 import { MODES, ADA_QUICK_CHAT_ID } from '../../constants';
 
 export interface ConversationHandlerDeps {
@@ -70,11 +70,6 @@ export function createConversationHandlers(deps: ConversationHandlerDeps) {
     setView('chat');
   };
 
-  const handleSaveConversationModules = (modules: CourseModule[]) => {
-    if (!activeConversationId) return;
-    updateConversation(activeConversationId, c => ({ ...c, modules }));
-  };
-
   const handleEvaluationMessage = (conversation: Conversation, userInput: string) => {
     if (!conversation.studentId) return;
 
@@ -113,7 +108,6 @@ export function createConversationHandlers(deps: ConversationHandlerDeps) {
     handleOpenConversaConAda,
     handleStartPlanningForWeek,
     handleNewConversationClick,
-    handleSaveConversationModules,
     handleEvaluationMessage,
   };
 }

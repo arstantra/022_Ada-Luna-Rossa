@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, CourseModule, Activity, ActivityType } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -48,11 +48,10 @@ interface PlanningViewProps {
   onShowConfirmation: (props: Omit<ConfirmationModalProps, 'isOpen' | 'onClose'>) => void;
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
-  onSaveModules?: (modules: CourseModule[]) => void;
   onAddActivity?: (activity: Omit<Activity, 'id'>) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onSaveModules, onAddActivity }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddActivity }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
@@ -159,23 +158,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             fonti: (activeBlock?.fonti ?? []).map(f => f.id === fonteId ? { ...f, ...patch } : f),
         });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
-
-    const handleUpdateTipologia = useCallback((tipologia: LessonType | undefined) => {
-        handleUpdateBlockDetails({ tipologia });
-    }, [handleUpdateBlockDetails]);
-
-    const handleUpdateBlockModuleId = useCallback((
-        moduleId: string | undefined,
-        sectionId?: string | undefined,
-        inheritedTipologia?: LessonType
-    ) => {
-        // Eredita la tipologia dalla sezione solo se il blocco non ne ha già una
-        const updates: Partial<BlockDetails> = { moduleId, sectionId };
-        if (inheritedTipologia && !activeBlock?.tipologia) {
-            updates.tipologia = inheritedTipologia;
-        }
-        handleUpdateBlockDetails(updates);
-    }, [handleUpdateBlockDetails, activeBlock?.tipologia]);
 
     const handlePromote = useCallback((url: string) => {
         let title = url;
@@ -457,11 +439,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onRemoveFonte={handleRemoveFonte}
                     onUpdateFonte={handleUpdateFonte}
                     onPromoteFonte={handlePromote}
-                    onUpdateTipologia={handleUpdateTipologia}
-                    conversationModules={conversation.modules}
-                    onSaveModules={onSaveModules}
-                    onUpdateBlockModuleId={handleUpdateBlockModuleId}
-                    teacherProfile={masterContext.teacherProfile}
                     onAddActivity={onAddActivity ? handleAddActivity : undefined}
                 />
             </main>
