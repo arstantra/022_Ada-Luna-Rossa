@@ -212,5 +212,3 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   progetto:           'Progetto',
   altro:              'Altro',
 };
-              'Altro',
-};

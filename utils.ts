@@ -393,5 +393,3 @@ export const generateCourseBookHtml = (
         </html>
     `;
 };
-;
-};
