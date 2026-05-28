@@ -5,10 +5,17 @@ import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOp
 import BlockWorkspaceView from './BlockWorkspaceView';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
-import MarkdownRenderer from './MarkdownRenderer';
 import { getBlockPlanningStatus, getExactDateForBlock } from '../utils';
 import BlockEditModal from './BlockEditModal';
-import EditableField from './EditableField';
+import { LESSON_TYPE_LABELS } from '../constants';
+
+const TIPOLOGIA_COLORS: Record<string, string> = {
+    frontale_teorica:   'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
+    frontale_operativa: 'bg-teal-500/15 text-teal-300 ring-1 ring-inset ring-teal-500/25',
+    laboratorio:        'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
+    verifica:           'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
+    discussione:        'bg-purple-500/15 text-purple-300 ring-1 ring-inset ring-purple-500/25',
+};
 
 const getBlockDotColor = (block: BlockDetails): string => {
     if (block.isReviewed) return 'bg-emerald-500';
@@ -187,27 +194,6 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         });
     }, [weekPlan, activeBlock, onAddActivity]);
 
-    const objectiveContent = useMemo(() => {
-        if (!activeBlock) return null;
-        switch (activeBlock.status) {
-            case 'saltato':
-                return <div className="italic text-red-400/80">{activeBlock.reason || 'Blocco saltato, motivo non specificato'}</div>;
-            case 'annullato':
-                return (
-                    <div className="line-through text-gray-500">
-                        Annullato: {activeBlock.objective || 'Obiettivo non definito'}
-                    </div>
-                );
-            default:
-                return (
-                    <div>
-                        <span className="font-semibold">Obiettivo: </span>
-                        <span>{activeBlock.objective || "Non definito"}</span>
-                    </div>
-                );
-        }
-    }, [activeBlock, handleUpdateBlockDetails]);
-
     // Search Logic
     const handleCloseSearch = useCallback(() => {
         setIsSearchOpen(false);
@@ -380,47 +366,35 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                         })}
                     </div>
 
-                    {/* Riga 3: obiettivo blocco attivo — solo Laboratorio, solo se presente */}
-                    {activeWorkspaceTab === 'laboratorio' && activeBlock && (() => {
-                        const isSpecial = ['saltato', 'annullato'].includes(activeBlock.status);
-                        const hasObjective = activeBlock.objective?.trim();
-                        const isEmpty = !hasObjective && !isSpecial && !activeBlock.lessonTitle;
-
-                        if (isEmpty) {
-                            return (
-                                <div className="px-5 py-1.5 border-t border-gray-700/30 flex items-center gap-2">
-                                    <BookOpenIcon className="h-3 w-3 text-gray-700 flex-shrink-0" />
-                                    <span className="text-[11px] text-gray-700 italic">Obiettivo non ancora definito</span>
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <div className="px-5 py-2 border-t border-gray-700/30 bg-gray-800/40">
-                                {activeBlock.lessonTitle ? (
-                                    <details className="group">
-                                        <summary className="list-none flex items-center justify-between cursor-pointer gap-2">
-                                            <div className="text-white text-sm flex-grow flex items-center gap-2 min-w-0">
-                                                <BookOpenIcon className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                                                <div className="flex-grow truncate text-xs text-gray-300">{objectiveContent}</div>
-                                            </div>
-                                            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-600 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" />
-                                        </summary>
-                                        <div className="mt-2 pt-2 border-t border-gray-700/50">
-                                            <div className="max-h-48 overflow-y-auto custom-scrollbar border border-gray-700/40 rounded-lg p-3 text-sm">
-                                                <MarkdownRenderer content={activeBlock.lessonTitle} />
-                                            </div>
-                                        </div>
-                                    </details>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <BookOpenIcon className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                                        <div className="flex-grow truncate text-xs text-gray-300">{objectiveContent}</div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+                    {/* Riga 3: tipologia + titolo blocco — solo Laboratorio */}
+                    {activeWorkspaceTab === 'laboratorio' && activeBlock && (
+                        <div className="px-5 py-1.5 border-t border-gray-700/30 flex items-center gap-2.5 min-w-0">
+                            {activeBlock.status === 'saltato' ? (
+                                <span className="text-[11px] font-mono text-red-400/70 italic truncate">
+                                    {activeBlock.reason ? `Saltato: ${activeBlock.reason}` : 'Blocco saltato'}
+                                </span>
+                            ) : activeBlock.status === 'annullato' ? (
+                                <span className="text-[11px] font-mono text-gray-500 italic line-through truncate">
+                                    Annullato
+                                </span>
+                            ) : (
+                                <>
+                                    {activeBlock.tipologia && (
+                                        <span className={`text-[10px] font-mono rounded-full px-2 py-0.5 flex-shrink-0 ${TIPOLOGIA_COLORS[activeBlock.tipologia] ?? 'text-gray-500'}`}>
+                                            {LESSON_TYPE_LABELS[activeBlock.tipologia]}
+                                        </span>
+                                    )}
+                                    {(activeBlock.blockTitle || activeBlock.objective) ? (
+                                        <span className="text-xs text-gray-300 truncate">
+                                            {activeBlock.blockTitle || activeBlock.objective}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[11px] text-gray-700 italic">Titolo non ancora definito</span>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
                 
                 <BlockWorkspaceView

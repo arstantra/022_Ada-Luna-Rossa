@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType } from '../types';
-import { ACTIVITY_TYPE_LABELS, LESSON_TYPE_LABELS } from '../constants';
+import { ACTIVITY_TYPE_LABELS } from '../constants';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
 import ChatInput from './ChatInput';
@@ -8,15 +8,6 @@ import DocumentEditor from './DocumentEditor';
 import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import FontiDrawer from './FontiDrawer';
-
-
-const TIPOLOGIA_COLORS: Record<string, string> = {
-    frontale_teorica:   'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
-    frontale_operativa: 'bg-teal-500/15 text-teal-300 ring-1 ring-inset ring-teal-500/25',
-    laboratorio:        'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
-    verifica:           'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
-    discussione:        'bg-purple-500/15 text-purple-300 ring-1 ring-inset ring-purple-500/25',
-};
 
 // --- MAIN WORKSPACE VIEW ---
 
@@ -198,53 +189,52 @@ ${htmlContent}
 
             {activeTab === 'laboratorio' && (
                 <>
-                    {/* Mini-toolbar: tipologia (read-only) + Fonti */}
-                    {(block.tipologia || onAddFonte) && (
-                        <div className="flex-shrink-0 flex items-center justify-between px-4 py-1.5 border-b border-gray-800/40 bg-[#0D1117]">
-                            <div className="flex-1 min-w-0">
-                                {block.tipologia && (
-                                    <span className={`text-[10px] font-mono rounded-full px-2 py-0.5 ${TIPOLOGIA_COLORS[block.tipologia] ?? 'text-gray-500'}`}>
-                                        {LESSON_TYPE_LABELS[block.tipologia]}
-                                    </span>
-                                )}
-                            </div>
-                            {onAddFonte && (
-                                <button
-                                    onClick={() => setIsDrawerOpen(true)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-gray-300 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors ml-2 flex-shrink-0"
-                                    title="Fonti del blocco"
-                                >
-                                    <BookOpenIcon className="h-4 w-4" />
-                                    <span className="text-sm">Fonti</span>
-                                    {(block.fonti?.length ?? 0) > 0 && (
-                                        <span className="bg-purple-500/30 text-purple-300 text-[10px] font-mono rounded-full px-1.5">
-                                            {block.fonti!.length}
+                    {/* Pannello info blocco: accordion aperto di default con titolo, modulo e obiettivo */}
+                    {(block.blockTitle || block.module || block.objective || onAddFonte) && (
+                        <details className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] group" open>
+                            <summary className="list-none flex items-center gap-2 px-4 py-1.5 cursor-pointer select-none hover:bg-gray-800/30 transition-colors">
+                                <div className="flex-1 min-w-0">
+                                    {(block.blockTitle || block.objective) ? (
+                                        <span className="text-xs text-gray-300 truncate block">
+                                            {block.blockTitle || block.objective}
                                         </span>
+                                    ) : (
+                                        <span className="text-[11px] text-gray-600 italic">Dettagli blocco</span>
                                     )}
-                                </button>
-                            )}
-                        </div>
-                    )}
-                    {/* Pannello riferimento modulo — visibile solo se block.lessonTitle è popolato */}
-                    {block.lessonTitle?.trim() && (
-                        <details className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] group">
-                            <summary className="flex items-center gap-2 px-4 py-1.5 cursor-pointer list-none select-none hover:bg-gray-800/30 transition-colors">
-                                <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 group-open:text-gray-400 transition-colors">
-                                    Riferimento modulo
-                                </span>
-                                {block.module && (
-                                    <span className="text-[10px] font-mono text-sky-400/70 truncate">
-                                        {block.module}
-                                    </span>
-                                )}
-                                <svg className="ml-auto h-3 w-3 text-gray-600 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                    {onAddFonte && (
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDrawerOpen(true); }}
+                                            className="flex items-center gap-1.5 px-2 py-0.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors text-xs"
+                                            title="Fonti del blocco"
+                                        >
+                                            <BookOpenIcon className="h-3.5 w-3.5" />
+                                            <span>Fonti</span>
+                                            {(block.fonti?.length ?? 0) > 0 && (
+                                                <span className="bg-purple-500/30 text-purple-300 text-[9px] font-mono rounded-full px-1.5">
+                                                    {block.fonti!.length}
+                                                </span>
+                                            )}
+                                        </button>
+                                    )}
+                                    <svg className="h-3 w-3 text-gray-600 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </summary>
-                            <div className="px-4 pb-3 pt-1 max-h-48 overflow-y-auto custom-scrollbar">
-                                <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-wrap">
-                                    {block.lessonTitle}
-                                </p>
+                            <div className="px-4 pb-2.5 pt-1 flex flex-col gap-1">
+                                {block.module && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 flex-shrink-0">Riferimento modulo</span>
+                                        <span className="text-[10px] font-mono text-sky-400/70 truncate">{block.module}</span>
+                                    </div>
+                                )}
+                                {block.objective && (
+                                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                                        <span className="text-gray-500">Obiettivo: </span>{block.objective}
+                                    </p>
+                                )}
                             </div>
                         </details>
                     )}
