@@ -33,11 +33,26 @@ const DOT_CLASS: Record<BlockProgressState, string> = {
   speciale:   'bg-gray-500',
 };
 
-const BAR_CLASS: Record<BlockProgressState, string> = {
-  da_fare:    'bg-slate-700/40',
-  in_corso:   'bg-amber-950/50',
-  completato: 'bg-emerald-950/50',
-  speciale:   'bg-gray-800/60',
+// Barre per-settimana (vivaci, colore pieno)
+const WEEK_BAR_BG: Record<BlockProgressState, string> = {
+  da_fare:    'bg-slate-600/30',
+  in_corso:   'bg-amber-500/35',
+  completato: 'bg-emerald-600/40',
+  speciale:   'bg-gray-600/25',
+};
+const WEEK_BAR_BORDER: Record<BlockProgressState, string> = {
+  da_fare:    'border-slate-600/40',
+  in_corso:   'border-amber-500/50',
+  completato: 'border-emerald-500/55',
+  speciale:   'border-gray-600/35',
+};
+
+// Barra span sottile di sfondo (connettore)
+const SPAN_BAR_CLASS: Record<BlockProgressState, string> = {
+  da_fare:    'bg-slate-700/20',
+  in_corso:   'bg-amber-900/25',
+  completato: 'bg-emerald-900/25',
+  speciale:   'bg-gray-800/30',
 };
 
 
@@ -383,8 +398,16 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
 
           {/* ── Asse X: numeri settimana ─────────────────────────────────────── */}
           <div className="flex sticky top-0 z-10 bg-[#0D1117]" style={{ height: HEAD }}>
-            <div style={{ width: LEFT, flexShrink: 0 }} />
-            <div className="flex-1 relative">
+            <div style={{ width: LEFT, flexShrink: 0 }} className="border-b border-gray-700/40" />
+            <div className="flex-1 relative border-b border-gray-700/40">
+              {/* Linee verticali header */}
+              {weeks.map(w => (
+                <div
+                  key={w}
+                  className="absolute inset-y-0 border-l border-gray-800/50 pointer-events-none"
+                  style={{ left: colL(w) }}
+                />
+              ))}
               {weeks.map(w => (
                 <div
                   key={w}
@@ -405,7 +428,7 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
           {modules.map((mod) => {
             const dominant = bestState(mod.blocks);
 
-            // Un dot per settimana (aggrega più blocchi della stessa settimana)
+            // Aggrega blocchi per settimana
             const byWeek = new Map<number, GanttBlock[]>();
             for (const b of mod.blocks) {
               if (!byWeek.has(b.weekNumber)) byWeek.set(b.weekNumber, []);
@@ -416,7 +439,10 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
               <div key={mod.name} className="flex group" style={{ height: ROW }}>
 
                 {/* Nome modulo */}
-                <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center pr-6">
+                <div
+                  style={{ width: LEFT, flexShrink: 0 }}
+                  className="flex items-center pr-6 border-b border-gray-800/40 border-r border-r-gray-700/30"
+                >
                   <button
                     className="w-full text-left truncate"
                     title={mod.name}
@@ -429,31 +455,38 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
                 </div>
 
                 {/* Area timeline */}
-                <div className="flex-1 relative">
-                  {/* Divisore riga */}
-                  <div className="absolute bottom-0 left-0 right-0 border-b border-gray-800/25 pointer-events-none" />
+                <div className="flex-1 relative border-b border-gray-800/40">
+
+                  {/* Linee verticali colonna */}
+                  {weeks.map(w => (
+                    <div
+                      key={w}
+                      className="absolute inset-y-0 border-l border-gray-800/40 pointer-events-none"
+                      style={{ left: colL(w) }}
+                    />
+                  ))}
 
                   {/* Highlight settimana corrente */}
                   {currentWeek && currentWeek <= maxWeek && (
                     <div
-                      className="absolute inset-y-0 bg-purple-500/5 pointer-events-none"
+                      className="absolute inset-y-0 bg-purple-500/6 pointer-events-none"
                       style={{ left: colL(currentWeek), width: colW() }}
                     />
                   )}
 
-                  {/* Barra del modulo */}
+                  {/* Barra span sottile (connettore di sfondo) */}
                   <div
-                    className={`absolute rounded-sm pointer-events-none ${BAR_CLASS[dominant]}`}
+                    className={`absolute rounded-full pointer-events-none ${SPAN_BAR_CLASS[dominant]}`}
                     style={{
                       left:      barL(mod.firstWeek),
                       width:     barW(mod.firstWeek, mod.lastWeek),
-                      height:    4,
+                      height:    2,
                       top:       '50%',
                       transform: 'translateY(-50%)',
                     }}
                   />
 
-                  {/* Dot per settimana */}
+                  {/* Barra per settimana */}
                   {[...byWeek.entries()].map(([weekNum, weekBlocks]) => {
                     const state      = bestState(weekBlocks);
                     const allSaltato = weekBlocks.every(b => b.status === 'saltato' || b.status === 'annullato');
@@ -461,23 +494,36 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
                     const tip        = `Sett. ${weekNum}${count > 1 ? ` (${count} blocchi)` : ''}: ${
                       weekBlocks.map(b => b.lessonTitle || b.objective || b.day).filter(Boolean).join(' · ') || '—'
                     }`;
+                    const GAP = 3; // px gap laterale dentro la colonna
 
                     return (
                       <button
                         key={weekNum}
-                        className={`absolute rounded-full ring-1 ring-gray-900 transition-all hover:scale-125 hover:z-10 ${DOT_CLASS[state]} ${
-                          allSaltato ? 'opacity-25' : 'opacity-80 hover:opacity-100'
-                        }`}
+                        className={`absolute rounded border transition-all hover:brightness-125 hover:z-10 ${
+                          WEEK_BAR_BG[state]
+                        } ${WEEK_BAR_BORDER[state]} ${allSaltato ? 'opacity-20' : 'opacity-90 hover:opacity-100'}`}
                         style={{
-                          left:      dotL(weekNum),
-                          top:       '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width:     count > 1 ? 12 : 10,
-                          height:    count > 1 ? 12 : 10,
+                          left:      `calc(${colL(weekNum)} + ${GAP}px)`,
+                          width:     `calc(${colW()} - ${GAP * 2}px)`,
+                          height:    '58%',
+                          top:       '21%',
                         }}
                         title={tip}
                         onClick={() => onNavigateToWeek(weekNum)}
-                      />
+                      >
+                        {/* Dot colorato in alto a sinistra per i blocchi multipli */}
+                        {count > 1 && (
+                          <span
+                            className={`absolute top-0.5 right-1 text-[8px] font-mono leading-none ${
+                              state === 'completato' ? 'text-emerald-300/80' :
+                              state === 'in_corso'   ? 'text-amber-300/80' :
+                              state === 'speciale'   ? 'text-gray-400/60' : 'text-slate-400/60'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -488,12 +534,12 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
           {activities.length > 0 && (
             <>
               <div className="flex mt-8" style={{ height: 28 }}>
-                <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center gap-2">
+                <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center gap-2 border-r border-r-gray-700/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 flex-shrink-0" />
                   <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/80">Attività</span>
                   <span className="text-[9px] font-mono text-gray-700">{activities.length}</span>
                 </div>
-                <div className="flex-1 self-center border-t border-gray-800/30" />
+                <div className="flex-1 self-center border-t border-gray-700/30" />
               </div>
               {activities.map(activity => {
                 const dueWeek = getActivityDueWeek(activity, weekBlockCounts);
@@ -513,31 +559,34 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
                         </span>
                       </button>
                     </div>
-                    <div className="flex-1 relative">
-                      <div className="absolute bottom-0 left-0 right-0 border-b border-gray-800/25 pointer-events-none" />
+                    <div className="flex-1 relative border-b border-gray-800/40">
+                      {/* Linee verticali */}
+                      {weeks.map(w => (
+                        <div key={w} className="absolute inset-y-0 border-l border-gray-800/40 pointer-events-none" style={{ left: colL(w) }} />
+                      ))}
                       {currentWeek && currentWeek <= maxWeek && (
-                        <div className="absolute inset-y-0 bg-purple-500/5 pointer-events-none" style={{ left: colL(currentWeek), width: colW() }} />
+                        <div className="absolute inset-y-0 bg-purple-500/6 pointer-events-none" style={{ left: colL(currentWeek), width: colW() }} />
                       )}
-                      {/* Bar */}
+                      {/* Barra span attività */}
                       <button
-                        className={`absolute rounded-sm transition-opacity hover:opacity-80 ${ACTIVITY_BAR[effectiveStatus]}`}
-                        style={{ left: barL(activity.launchWeekNumber), width: barW(activity.launchWeekNumber, clampedDueWeek), height: 4, top: '50%', transform: 'translateY(-50%)' }}
+                        className={`absolute rounded transition-opacity hover:opacity-80 border border-rose-500/20 ${ACTIVITY_BAR[effectiveStatus]}`}
+                        style={{ left: barL(activity.launchWeekNumber), width: barW(activity.launchWeekNumber, clampedDueWeek), height: '50%', top: '25%' }}
                         onClick={() => setSelectedActivity(isSelected ? null : activity)}
                         title={`${activity.title} — scadenza sett. ${dueWeek}`}
                       />
-                      {/* Launch dot */}
+                      {/* Marker lancio */}
                       <div
-                        className={`absolute rounded-full ring-1 ring-gray-900 pointer-events-none ${ACTIVITY_DOT_CLS[effectiveStatus]}`}
-                        style={{ left: dotL(activity.launchWeekNumber), top: '50%', transform: 'translate(-50%, -50%)', width: 8, height: 8 }}
+                        className={`absolute pointer-events-none w-0.5 rounded-full ${ACTIVITY_DOT_CLS[effectiveStatus]}`}
+                        style={{ left: colL(activity.launchWeekNumber), top: '15%', height: '70%' }}
                       />
-                      {/* Due dot (if different week and in bounds) */}
+                      {/* Marker scadenza */}
                       {dueWeek !== activity.launchWeekNumber && dueWeek <= maxWeek && (
                         <div
-                          className={`absolute rounded-sm ring-1 ring-gray-900 pointer-events-none ${
+                          className={`absolute pointer-events-none w-0.5 rounded-full opacity-60 ${
                             effectiveStatus === 'consegnata' ? 'bg-emerald-500' :
                             effectiveStatus === 'scaduta'    ? 'bg-gray-500' : 'bg-amber-400'
                           }`}
-                          style={{ left: dotL(dueWeek), top: '50%', transform: 'translate(-50%, -50%)', width: 6, height: 6 }}
+                          style={{ left: `calc(${colL(dueWeek)} + ${colW()} - 2px)`, top: '15%', height: '70%' }}
                         />
                       )}
                     </div>
