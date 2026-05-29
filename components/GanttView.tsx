@@ -1,75 +1,39 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, BlockStatus, Activity, ActivityStatus, LessonType } from '../types';
+import type { Conversation, Activity, ActivityStatus, LessonType } from '../types';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
 
 // ── Tipi interni ──────────────────────────────────────────────────────────────
 
-interface GanttBlock {
-  weekNumber: number;
-  day: string;
-  status: BlockStatus;
-  objective?: string;
-  lessonTitle?: string;
-  messagesCount: number;
-  contentBlocksCount: number;
-}
-
 interface GanttModule {
   name: string;
-  blocks: GanttBlock[];
+  blockCount: number;
   firstWeek: number;
   lastWeek: number;
 }
 
-type BlockProgressState = 'da_fare' | 'in_corso' | 'completato' | 'speciale';
+// ── Palette categoriale moduli (colore per indice, non per stato) ─────────────
 
-// ── Colori canonici (stessi di StrategicDashboardView) ───────────────────────
-
-const DOT_CLASS: Record<BlockProgressState, string> = {
-  da_fare:    'bg-slate-500',
-  in_corso:   'bg-amber-400',
-  completato: 'bg-emerald-500',
-  speciale:   'bg-gray-500',
-};
-
-// Barre per-settimana (vivaci, colore pieno)
-const WEEK_BAR_BG: Record<BlockProgressState, string> = {
-  da_fare:    'bg-slate-600/30',
-  in_corso:   'bg-amber-500/35',
-  completato: 'bg-emerald-600/40',
-  speciale:   'bg-gray-600/25',
-};
-const WEEK_BAR_BORDER: Record<BlockProgressState, string> = {
-  da_fare:    'border-slate-600/40',
-  in_corso:   'border-amber-500/50',
-  completato: 'border-emerald-500/55',
-  speciale:   'border-gray-600/35',
-};
-
-// Barra span sottile di sfondo (connettore)
-const SPAN_BAR_CLASS: Record<BlockProgressState, string> = {
-  da_fare:    'bg-slate-700/20',
-  in_corso:   'bg-amber-900/25',
-  completato: 'bg-emerald-900/25',
-  speciale:   'bg-gray-800/30',
-};
-
-
-// ── Logica stato ──────────────────────────────────────────────────────────────
-
-function getBlockState(b: GanttBlock): BlockProgressState {
-  if (b.status === 'saltato' || b.status === 'annullato') return 'speciale';
-  if (b.contentBlocksCount > 0) return 'completato';
-  if (b.objective?.trim() || b.messagesCount > 0) return 'in_corso';
-  return 'da_fare';
+interface ModuleColor {
+  bg: string;        // sfondo barra
+  border: string;    // bordo barra
+  text: string;      // testo label hover
 }
 
-function bestState(blocks: GanttBlock[]): BlockProgressState {
-  if (blocks.some(b => getBlockState(b) === 'completato')) return 'completato';
-  if (blocks.some(b => getBlockState(b) === 'in_corso'))   return 'in_corso';
-  if (blocks.some(b => getBlockState(b) === 'da_fare'))    return 'da_fare';
-  return 'speciale';
+const MODULE_PALETTE: ModuleColor[] = [
+  { bg: 'rgba(30,58,95,0.75)',  border: 'rgba(59,130,246,0.55)',  text: '#93c5fd' },  // blue
+  { bg: 'rgba(59,31,94,0.75)',  border: 'rgba(168,85,247,0.55)',  text: '#d8b4fe' },  // purple
+  { bg: 'rgba(26,61,46,0.75)',  border: 'rgba(34,197,94,0.55)',   text: '#86efac' },  // green
+  { bg: 'rgba(61,42,26,0.75)',  border: 'rgba(249,115,22,0.55)',  text: '#fdba74' },  // orange
+  { bg: 'rgba(30,58,95,0.75)',  border: 'rgba(56,189,248,0.55)',  text: '#7dd3fc' },  // sky
+  { bg: 'rgba(59,31,58,0.75)',  border: 'rgba(232,121,249,0.55)', text: '#f0abfc' },  // fuchsia
+  { bg: 'rgba(26,61,46,0.75)',  border: 'rgba(20,184,166,0.55)',  text: '#5eead4' },  // teal
+  { bg: 'rgba(61,42,26,0.75)',  border: 'rgba(234,179,8,0.55)',   text: '#fde047' },  // yellow
+  { bg: 'rgba(42,42,42,0.75)',  border: 'rgba(107,114,128,0.55)', text: '#9ca3af' },  // gray
+];
+
+function moduleColor(idx: number): ModuleColor {
+  return MODULE_PALETTE[idx % MODULE_PALETTE.length];
 }
 
 // ── Rilevamento settimana corrente ────────────────────────────────────────────
@@ -118,7 +82,8 @@ const ACTIVITY_DOT_CLS: Record<ActivityStatus, string> = {
   scaduta:     'bg-gray-500',
 };
 const ACTIVITY_TYPE_LABEL: Record<string, string> = {
-  ricerca: 'Ricerca', audiovisivo: 'Audiovisivo', produzione_scritta: 'Produzione scritta', progetto: 'Progetto', altro: 'Altro',
+  ricerca: 'Ricerca', audiovisivo: 'Audiovisivo', produzione_scritta: 'Produzione scritta',
+  progetto: 'Progetto', altro: 'Altro',
 };
 
 // ── Helper attività ───────────────────────────────────────────────────────────
@@ -147,9 +112,14 @@ function getEffectiveActivityStatus(activity: Activity, dueWeek: number, current
 // ── Layout constants ──────────────────────────────────────────────────────────
 
 const LEFT      = 192;  // px – larghezza colonna nomi modulo
-const ROW       = 44;   // px – altezza riga modulo
+const ROW       = 42;   // px – altezza riga
 const HEAD      = 32;   // px – altezza header settimane
-const MIN_COL_W = 40;   // px – larghezza minima per colonna settimana
+const MIN_COL_W = 40;   // px – larghezza minima colonna settimana
+
+// Colori colonne alternate (inline per evitare purge Tailwind su valori arbitrari)
+const STRIPE_ODD  = 'rgba(15,22,36,0.6)';   // pari — più chiaro
+const STRIPE_EVEN = 'rgba(8,12,21,0.8)';    // dispari — più scuro
+const STRIPE_CUR  = 'rgba(26,16,64,0.55)';  // settimana corrente — viola
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -160,7 +130,7 @@ interface GanttViewProps {
   onMarkActivityDelivered?: (activityId: string) => void;
 }
 
-// ── Header (definito prima di GanttView per evitare forward reference) ────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 const SPLIT_LABELS = ['Gantt', '50/50', 'Radar'] as const;
 
@@ -171,37 +141,33 @@ interface GanttHeaderProps {
   activityCount: number;
   splitPreset: 0 | 1 | 2;
   onSetSplit: (p: 0 | 1 | 2) => void;
-  blockStats: { completato: number; inCorso: number; daFare: number; speciale: number; total: number };
 }
 
-const GanttHeader: React.FC<GanttHeaderProps> = ({ onClose, count, weeks, activityCount, splitPreset, onSetSplit, blockStats }) => (
+const GanttHeader: React.FC<GanttHeaderProps> = ({
+  onClose, count, weeks, activityCount, splitPreset, onSetSplit,
+}) => (
   <header className="flex-shrink-0 flex flex-col border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
-    {/* Riga 1 — titolo + controlli */}
-    <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
+    <div className="flex items-center justify-between px-6 pt-3.5 pb-2.5">
       <div className="flex items-center gap-2.5">
         <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
         <h1 className="text-base font-display font-semibold text-white">Analisi del Corso</h1>
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Toggle split — visibile solo su schermi lg+ */}
+        {/* Toggle split */}
         <div className="hidden lg:flex items-center gap-0.5 bg-gray-800/50 rounded-md p-0.5">
           {SPLIT_LABELS.map((label, i) => (
             <button
               key={label}
               onClick={() => onSetSplit(i as 0 | 1 | 2)}
               className={`text-[9px] font-mono px-2 py-0.5 rounded transition-colors ${
-                splitPreset === i
-                  ? 'text-gray-200 bg-gray-700/80'
-                  : 'text-gray-600 hover:text-gray-400'
+                splitPreset === i ? 'text-gray-200 bg-gray-700/80' : 'text-gray-600 hover:text-gray-400'
               }`}
-              title={`Layout: ${label}`}
             >
               {label}
             </button>
           ))}
         </div>
-
         <button
           onClick={onClose}
           className="p-1.5 rounded-md text-gray-600 hover:text-white hover:bg-gray-800/60 transition-colors"
@@ -211,9 +177,9 @@ const GanttHeader: React.FC<GanttHeaderProps> = ({ onClose, count, weeks, activi
       </div>
     </div>
 
-    {/* Riga 2 — info + KPI dinamici blocchi */}
-    <div className="flex items-center gap-3 px-6 pb-2.5 flex-wrap">
-      {(count > 0 || activityCount > 0 || weeks > 0) && (
+    {/* Sottotitolo info */}
+    {(count > 0 || weeks > 0) && (
+      <div className="px-6 pb-2.5">
         <span className="text-[10px] font-mono text-gray-600">
           {count > 0 && `${count} moduli`}
           {weeks > 0 && ` · ${weeks} settimane`}
@@ -221,54 +187,22 @@ const GanttHeader: React.FC<GanttHeaderProps> = ({ onClose, count, weeks, activi
             <> · <span className="text-rose-500/70">{activityCount} attività</span></>
           )}
         </span>
-      )}
-      {blockStats.total > 0 && (
-        <>
-          <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
-          <div className="flex items-center gap-2.5 flex-wrap" title="Stato blocchi: completati · in corso · da fare · speciali">
-            {blockStats.completato > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400/80 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500" />
-                completat{blockStats.completato !== 1 ? 'i' : 'o'}
-              </span>
-            )}
-            {blockStats.inCorso > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/80 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" />
-                in corso
-              </span>
-            )}
-            {blockStats.daFare > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400/80 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-slate-500" />
-                da fare
-              </span>
-            )}
-            {blockStats.speciale > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-500/80 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-500" />
-                speciale
-              </span>
-            )}
-            <span className="text-[10px] text-gray-600 font-mono">
-              {blockStats.completato + blockStats.inCorso + blockStats.daFare + blockStats.speciale} / {blockStats.total}
-            </span>
-          </div>
-        </>
-      )}
-    </div>
+      </div>
+    )}
   </header>
 );
 
 // ── Componente principale ─────────────────────────────────────────────────────
 
-const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigateToWeek, onMarkActivityDelivered }) => {
+const GanttView: React.FC<GanttViewProps> = ({
+  conversations, onClose, onNavigateToWeek, onMarkActivityDelivered,
+}) => {
 
-  // Tutti gli hook prima di qualsiasi return condizionale (regola React)
-
+  // Hook prima di qualsiasi return condizionale (regola React)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(0);
 
+  // ── Deriva moduli ─────────────────────────────────────────────────────────
   const modules = useMemo((): GanttModule[] => {
     const map = new Map<string, GanttModule>();
 
@@ -279,18 +213,10 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
       for (const block of blocks) {
         const name = block.module?.trim() || 'Senza modulo';
         if (!map.has(name)) {
-          map.set(name, { name, blocks: [], firstWeek: weekNumber, lastWeek: weekNumber });
+          map.set(name, { name, blockCount: 0, firstWeek: weekNumber, lastWeek: weekNumber });
         }
         const mod = map.get(name)!;
-        mod.blocks.push({
-          weekNumber,
-          day:                block.day,
-          status:             block.status,
-          objective:          block.objective,
-          lessonTitle:        block.lessonTitle,
-          messagesCount:      block.messages?.length ?? 0,
-          contentBlocksCount: block.contentBlocks?.length ?? 0,
-        });
+        mod.blockCount++;
         mod.firstWeek = Math.min(mod.firstWeek, weekNumber);
         mod.lastWeek  = Math.max(mod.lastWeek, weekNumber);
       }
@@ -321,26 +247,9 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
   }, [modules, activities, weekBlockCounts]);
 
   const currentWeek = useMemo(() => detectCurrentWeek(conversations), [conversations]);
-
   const weeks = useMemo(() => Array.from({ length: maxWeek }, (_, i) => i + 1), [maxWeek]);
 
-  // ── KPI dinamici blocchi (per header) ────────────────────────────────────────
-  const blockStats = useMemo(() => {
-    let completato = 0, inCorso = 0, daFare = 0, speciale = 0, total = 0;
-    for (const mod of modules) {
-      for (const b of mod.blocks) {
-        total++;
-        const s = getBlockState(b);
-        if (s === 'completato') completato++;
-        else if (s === 'in_corso') inCorso++;
-        else if (s === 'da_fare') daFare++;
-        else speciale++;
-      }
-    }
-    return { completato, inCorso, daFare, speciale, total };
-  }, [modules]);
-
-  // ── Radar equilibrio didattico ────────────────────────────────────────────────
+  // ── Radar equilibrio didattico ────────────────────────────────────────────
   const radarData = useMemo(() => {
     const counts: Partial<Record<LessonType, number>> = {};
     conversations.forEach(conv => {
@@ -355,21 +264,21 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
       .map(([tipologia, count]) => ({ tipologia, count }));
   }, [conversations]);
 
-  // ── Helpers di posizionamento (% relativi all'area timeline) ─────────────────
-  // maxWeek è noto qui — questi non sono hook, sono semplici funzioni derivate
+  // ── Helpers posizionamento (%) ────────────────────────────────────────────
+  const colL  = (w: number) => `${((w - 1) / maxWeek) * 100}%`;
+  const colW  = ()           => `${(1 / maxWeek) * 100}%`;
+  const barL  = (f: number) => `${((f - 1) / maxWeek) * 100}%`;
+  const barW  = (f: number, l: number) => `${((l - f + 1) / maxWeek) * 100}%`;
+  const curL  = (w: number) => `${((w - 0.5) / maxWeek) * 100}%`;
 
-  const colL = (w: number) => `${((w - 1) / maxWeek) * 100}%`;
-  const colW = ()           => `${(1 / maxWeek) * 100}%`;
-  const dotL = (w: number) => `${((w - 0.5) / maxWeek) * 100}%`;
-  const barL = (f: number) => `${((f - 1) / maxWeek) * 100}%`;
-  const barW = (f: number, l: number) => `${((l - f + 1) / maxWeek) * 100}%`;
-
-  // ── Empty state ───────────────────────────────────────────────────────────────
-
+  // ── Empty state ───────────────────────────────────────────────────────────
   if (maxWeek === 0) {
     return (
       <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
-        <GanttHeader onClose={onClose} count={0} weeks={0} activityCount={0} splitPreset={splitPreset} onSetSplit={setSplitPreset} blockStats={{ completato: 0, inCorso: 0, daFare: 0, speciale: 0, total: 0 }} />
+        <GanttHeader
+          onClose={onClose} count={0} weeks={0} activityCount={0}
+          splitPreset={splitPreset} onSetSplit={setSplitPreset}
+        />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm font-mono text-gray-600">
             Nessun dato da visualizzare. Pianifica alcune settimane per vedere il Gantt.
@@ -379,233 +288,283 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
     );
   }
 
-  // ── Render principale ─────────────────────────────────────────────────────────
-
+  // ── Render ────────────────────────────────────────────────────────────────
   const radarWidthClass = ['lg:w-[22%]', 'lg:w-[38%]', 'lg:w-[54%]'][splitPreset];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
-      <GanttHeader onClose={onClose} count={modules.length} weeks={maxWeek} activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset} blockStats={blockStats} />
+      <GanttHeader
+        onClose={onClose} count={modules.length} weeks={maxWeek}
+        activityCount={activities.length} splitPreset={splitPreset} onSetSplit={setSplitPreset}
+      />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
-        {/* ── Card Gantt (sinistra) ─────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0">
-          <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Moduli del Corso</span>
-        </div>
-        <div className="flex-1 overflow-auto custom-scrollbar">
-        <div className="px-6 pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
-          {/* ── Asse X: numeri settimana ─────────────────────────────────────── */}
-          <div className="flex sticky top-0 z-10 bg-[#0D1117]" style={{ height: HEAD }}>
-            <div style={{ width: LEFT, flexShrink: 0 }} className="border-b border-gray-700/40" />
-            <div className="flex-1 relative border-b border-gray-700/40">
-              {/* Linee verticali header */}
-              {weeks.map(w => (
-                <div
-                  key={w}
-                  className="absolute inset-y-0 border-l border-gray-800/50 pointer-events-none"
-                  style={{ left: colL(w) }}
-                />
-              ))}
-              {weeks.map(w => (
-                <div
-                  key={w}
-                  className="absolute flex items-center justify-center"
-                  style={{ left: colL(w), width: colW(), height: '100%' }}
-                >
-                  <span className={`text-[10px] font-mono leading-none select-none ${
-                    w === currentWeek ? 'text-purple-400 font-semibold' : 'text-gray-700'
-                  }`}>
-                    {w}
-                  </span>
-                </div>
-              ))}
-            </div>
+        {/* ── Card Gantt ─────────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
+
+          <div className="flex items-center px-5 pt-4 pb-3 flex-shrink-0">
+            <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">
+              Moduli del Corso
+            </span>
           </div>
 
-          {/* ── Righe modulo ─────────────────────────────────────────────────── */}
-          {modules.map((mod) => {
-            const dominant = bestState(mod.blocks);
+          <div className="flex-1 overflow-auto custom-scrollbar">
+            <div className="pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
-            // Aggrega blocchi per settimana
-            const byWeek = new Map<number, GanttBlock[]>();
-            for (const b of mod.blocks) {
-              if (!byWeek.has(b.weekNumber)) byWeek.set(b.weekNumber, []);
-              byWeek.get(b.weekNumber)!.push(b);
-            }
+              {/* ── Header settimane ──────────────────────────────────────── */}
+              <div className="flex sticky top-0 z-10" style={{ height: HEAD, background: '#0D1117' }}>
 
-            return (
-              <div key={mod.name} className="flex group" style={{ height: ROW }}>
-
-                {/* Nome modulo */}
+                {/* Cella vuota sopra la colonna nomi */}
                 <div
-                  style={{ width: LEFT, flexShrink: 0 }}
-                  className="flex items-center pr-6 border-b border-gray-800/40 border-r border-r-gray-700/30"
-                >
-                  <button
-                    className="w-full text-left truncate"
-                    title={mod.name}
-                    onClick={() => onNavigateToWeek(mod.firstWeek)}
-                  >
-                    <span className="text-xs font-display text-gray-500 group-hover:text-gray-300 transition-colors">
-                      {mod.name}
-                    </span>
-                  </button>
-                </div>
+                  style={{ width: LEFT, flexShrink: 0, borderBottom: '1px solid rgba(31,41,55,0.8)', borderRight: '1px solid rgba(31,41,55,0.5)' }}
+                />
 
-                {/* Area timeline */}
-                <div className="flex-1 relative border-b border-gray-800/40">
-
-                  {/* Linee verticali colonna */}
-                  {weeks.map(w => (
-                    <div
-                      key={w}
-                      className="absolute inset-y-0 border-l border-gray-800/40 pointer-events-none"
-                      style={{ left: colL(w) }}
-                    />
-                  ))}
-
-                  {/* Highlight settimana corrente */}
-                  {currentWeek && currentWeek <= maxWeek && (
-                    <div
-                      className="absolute inset-y-0 bg-purple-500/6 pointer-events-none"
-                      style={{ left: colL(currentWeek), width: colW() }}
-                    />
-                  )}
-
-                  {/* Barra span sottile (connettore di sfondo) */}
-                  <div
-                    className={`absolute rounded-full pointer-events-none ${SPAN_BAR_CLASS[dominant]}`}
-                    style={{
-                      left:      barL(mod.firstWeek),
-                      width:     barW(mod.firstWeek, mod.lastWeek),
-                      height:    2,
-                      top:       '50%',
-                      transform: 'translateY(-50%)',
-                    }}
-                  />
-
-                  {/* Barra per settimana */}
-                  {[...byWeek.entries()].map(([weekNum, weekBlocks]) => {
-                    const state      = bestState(weekBlocks);
-                    const allSaltato = weekBlocks.every(b => b.status === 'saltato' || b.status === 'annullato');
-                    const count      = weekBlocks.length;
-                    const tip        = `Sett. ${weekNum}${count > 1 ? ` (${count} blocchi)` : ''}: ${
-                      weekBlocks.map(b => b.lessonTitle || b.objective || b.day).filter(Boolean).join(' · ') || '—'
-                    }`;
-                    const GAP = 3; // px gap laterale dentro la colonna
-
+                {/* Celle settimana */}
+                <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.8)' }}>
+                  {weeks.map(w => {
+                    const isCur = w === currentWeek;
+                    const isOdd = w % 2 !== 0;
                     return (
-                      <button
-                        key={weekNum}
-                        className={`absolute rounded border transition-all hover:brightness-125 hover:z-10 ${
-                          WEEK_BAR_BG[state]
-                        } ${WEEK_BAR_BORDER[state]} ${allSaltato ? 'opacity-20' : 'opacity-90 hover:opacity-100'}`}
+                      <div
+                        key={w}
+                        className="absolute inset-y-0 flex items-center justify-center"
                         style={{
-                          left:      `calc(${colL(weekNum)} + ${GAP}px)`,
-                          width:     `calc(${colW()} - ${GAP * 2}px)`,
-                          height:    '58%',
-                          top:       '21%',
+                          left: colL(w),
+                          width: colW(),
+                          background: isCur ? STRIPE_CUR : isOdd ? STRIPE_ODD : STRIPE_EVEN,
+                          borderLeft: '1px solid rgba(22,29,43,0.9)',
                         }}
-                        title={tip}
-                        onClick={() => onNavigateToWeek(weekNum)}
                       >
-                        {/* Dot colorato in alto a sinistra per i blocchi multipli */}
-                        {count > 1 && (
-                          <span
-                            className={`absolute top-0.5 right-1 text-[8px] font-mono leading-none ${
-                              state === 'completato' ? 'text-emerald-300/80' :
-                              state === 'in_corso'   ? 'text-amber-300/80' :
-                              state === 'speciale'   ? 'text-gray-400/60' : 'text-slate-400/60'
-                            }`}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
+                        <span
+                          className="text-[10px] font-mono leading-none select-none"
+                          style={{ color: isCur ? '#a78bfa' : '#374151', fontWeight: isCur ? 600 : 400 }}
+                        >
+                          {w}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
               </div>
-            );
-          })}
-          {/* ── Sezione Attività ─────────────────────────────────────────── */}
-          {activities.length > 0 && (
-            <>
-              <div className="flex mt-8" style={{ height: 28 }}>
-                <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center gap-2 border-r border-r-gray-700/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 flex-shrink-0" />
-                  <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/80">Attività</span>
-                  <span className="text-[9px] font-mono text-gray-700">{activities.length}</span>
-                </div>
-                <div className="flex-1 self-center border-t border-gray-700/30" />
-              </div>
-              {activities.map(activity => {
-                const dueWeek = getActivityDueWeek(activity, weekBlockCounts);
-                const effectiveStatus = getEffectiveActivityStatus(activity, dueWeek, currentWeek);
-                const isSelected = selectedActivity?.id === activity.id;
-                const clampedDueWeek = Math.min(dueWeek, maxWeek);
+
+              {/* ── Righe modulo ──────────────────────────────────────────── */}
+              {modules.map((mod, idx) => {
+                const c = moduleColor(idx);
+                const label = `${mod.name} · ${mod.blockCount} bl. · sett. ${mod.firstWeek}–${mod.lastWeek}`;
+
                 return (
-                  <div key={activity.id} className="flex group" style={{ height: ROW }}>
-                    <div style={{ width: LEFT, flexShrink: 0 }} className="flex items-center pr-6">
+                  <div key={mod.name} className="flex" style={{ height: ROW }}>
+
+                    {/* Nome modulo (colonna sinistra) */}
+                    <div
+                      style={{
+                        width: LEFT,
+                        flexShrink: 0,
+                        borderBottom: '1px solid rgba(17,24,39,0.8)',
+                        borderRight: '1px solid rgba(31,41,55,0.5)',
+                      }}
+                      className="flex items-center pr-5 pl-5"
+                    >
+                      {/* Pallino colore modulo */}
+                      <span
+                        className="flex-shrink-0 w-2 h-2 rounded-full mr-2.5"
+                        style={{ background: c.border }}
+                      />
                       <button
-                        className="w-full text-left truncate"
-                        title={activity.title}
-                        onClick={() => setSelectedActivity(isSelected ? null : activity)}
+                        className="flex-1 text-left truncate"
+                        title={mod.name}
+                        onClick={() => onNavigateToWeek(mod.firstWeek)}
                       >
-                        <span className={`text-xs font-display transition-colors ${isSelected ? 'text-rose-300' : 'text-gray-500 group-hover:text-gray-300'}`}>
-                          {activity.title}
+                        <span className="text-xs font-display text-gray-500 hover:text-gray-300 transition-colors">
+                          {mod.name}
                         </span>
                       </button>
                     </div>
-                    <div className="flex-1 relative border-b border-gray-800/40">
-                      {/* Linee verticali */}
-                      {weeks.map(w => (
-                        <div key={w} className="absolute inset-y-0 border-l border-gray-800/40 pointer-events-none" style={{ left: colL(w) }} />
-                      ))}
+
+                    {/* Area timeline */}
+                    <div
+                      className="flex-1 relative"
+                      style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                    >
+                      {/* Strisce alternate + linee verticali */}
+                      {weeks.map(w => {
+                        const isCur = w === currentWeek;
+                        const isOdd = w % 2 !== 0;
+                        return (
+                          <div
+                            key={w}
+                            className="absolute inset-y-0"
+                            style={{
+                              left: colL(w),
+                              width: colW(),
+                              background: isCur ? STRIPE_CUR : isOdd ? STRIPE_ODD : STRIPE_EVEN,
+                              borderLeft: '1px solid rgba(22,29,43,0.9)',
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        );
+                      })}
+
+                      {/* Linea settimana corrente */}
                       {currentWeek && currentWeek <= maxWeek && (
-                        <div className="absolute inset-y-0 bg-purple-500/6 pointer-events-none" style={{ left: colL(currentWeek), width: colW() }} />
-                      )}
-                      {/* Barra span attività */}
-                      <button
-                        className={`absolute rounded transition-opacity hover:opacity-80 border border-rose-500/20 ${ACTIVITY_BAR[effectiveStatus]}`}
-                        style={{ left: barL(activity.launchWeekNumber), width: barW(activity.launchWeekNumber, clampedDueWeek), height: '50%', top: '25%' }}
-                        onClick={() => setSelectedActivity(isSelected ? null : activity)}
-                        title={`${activity.title} — scadenza sett. ${dueWeek}`}
-                      />
-                      {/* Marker lancio */}
-                      <div
-                        className={`absolute pointer-events-none w-0.5 rounded-full ${ACTIVITY_DOT_CLS[effectiveStatus]}`}
-                        style={{ left: colL(activity.launchWeekNumber), top: '15%', height: '70%' }}
-                      />
-                      {/* Marker scadenza */}
-                      {dueWeek !== activity.launchWeekNumber && dueWeek <= maxWeek && (
                         <div
-                          className={`absolute pointer-events-none w-0.5 rounded-full opacity-60 ${
-                            effectiveStatus === 'consegnata' ? 'bg-emerald-500' :
-                            effectiveStatus === 'scaduta'    ? 'bg-gray-500' : 'bg-amber-400'
-                          }`}
-                          style={{ left: `calc(${colL(dueWeek)} + ${colW()} - 2px)`, top: '15%', height: '70%' }}
+                          className="absolute inset-y-0 pointer-events-none"
+                          style={{
+                            left: curL(currentWeek),
+                            width: 1,
+                            background: 'rgba(124,58,237,0.45)',
+                            zIndex: 3,
+                          }}
                         />
                       )}
+
+                      {/* Barra continua del modulo — dal firstWeek al lastWeek */}
+                      <button
+                        className="absolute group"
+                        style={{
+                          left:      `calc(${barL(mod.firstWeek)} + 4px)`,
+                          width:     `calc(${barW(mod.firstWeek, mod.lastWeek)} - 8px)`,
+                          height:    20,
+                          top:       '50%',
+                          transform: 'translateY(-50%)',
+                          background: c.bg,
+                          border:    `1px solid ${c.border}`,
+                          borderRadius: 4,
+                          zIndex:    2,
+                          overflow:  'hidden',
+                          transition: 'filter 0.15s',
+                        }}
+                        title={label}
+                        onClick={() => onNavigateToWeek(mod.firstWeek)}
+                        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.4)')}
+                        onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
+                      >
+                        {/* Label visibile solo al hover */}
+                        <span
+                          className="absolute inset-0 flex items-center px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap overflow-hidden"
+                          style={{ fontSize: 9, color: c.text, fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.03em' }}
+                        >
+                          {mod.name} · {mod.blockCount} bl.
+                        </span>
+                      </button>
                     </div>
                   </div>
                 );
               })}
-            </>
-          )}
 
-        </div>
-        </div>
+              {/* ── Sezione Attività ──────────────────────────────────────── */}
+              {activities.length > 0 && (
+                <>
+                  <div className="flex mt-8" style={{ height: 28 }}>
+                    <div
+                      style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)' }}
+                      className="flex items-center gap-2 px-5"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 flex-shrink-0" />
+                      <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/80">Attività</span>
+                      <span className="text-[9px] font-mono text-gray-700">{activities.length}</span>
+                    </div>
+                    <div className="flex-1 self-center border-t border-gray-700/30" />
+                  </div>
+
+                  {activities.map(activity => {
+                    const dueWeek = getActivityDueWeek(activity, weekBlockCounts);
+                    const effectiveStatus = getEffectiveActivityStatus(activity, dueWeek, currentWeek);
+                    const isSelected = selectedActivity?.id === activity.id;
+                    const clampedDueWeek = Math.min(dueWeek, maxWeek);
+
+                    return (
+                      <div key={activity.id} className="flex group" style={{ height: ROW }}>
+                        <div
+                          style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                          className="flex items-center px-5"
+                        >
+                          <button
+                            className="w-full text-left truncate"
+                            title={activity.title}
+                            onClick={() => setSelectedActivity(isSelected ? null : activity)}
+                          >
+                            <span className={`text-xs font-display transition-colors ${
+                              isSelected ? 'text-rose-300' : 'text-gray-500 group-hover:text-gray-300'
+                            }`}>
+                              {activity.title}
+                            </span>
+                          </button>
+                        </div>
+
+                        <div
+                          className="flex-1 relative"
+                          style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                        >
+                          {/* Strisce */}
+                          {weeks.map(w => (
+                            <div
+                              key={w}
+                              className="absolute inset-y-0"
+                              style={{
+                                left: colL(w), width: colW(),
+                                background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
+                                borderLeft: '1px solid rgba(22,29,43,0.9)',
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          ))}
+
+                          {/* Linea settimana corrente */}
+                          {currentWeek && currentWeek <= maxWeek && (
+                            <div
+                              className="absolute inset-y-0 pointer-events-none"
+                              style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }}
+                            />
+                          )}
+
+                          {/* Barra attività */}
+                          <button
+                            className={`absolute rounded transition-opacity hover:opacity-80 border border-rose-500/20 ${ACTIVITY_BAR[effectiveStatus]}`}
+                            style={{
+                              left: `calc(${barL(activity.launchWeekNumber)} + 4px)`,
+                              width: `calc(${barW(activity.launchWeekNumber, clampedDueWeek)} - 8px)`,
+                              height: '48%', top: '26%', zIndex: 2,
+                            }}
+                            onClick={() => setSelectedActivity(isSelected ? null : activity)}
+                            title={`${activity.title} — scadenza sett. ${dueWeek}`}
+                          />
+
+                          {/* Marker lancio */}
+                          <div
+                            className={`absolute pointer-events-none w-0.5 rounded-full ${ACTIVITY_DOT_CLS[effectiveStatus]}`}
+                            style={{ left: colL(activity.launchWeekNumber), top: '18%', height: '64%', zIndex: 3 }}
+                          />
+
+                          {/* Marker scadenza */}
+                          {dueWeek !== activity.launchWeekNumber && dueWeek <= maxWeek && (
+                            <div
+                              className={`absolute pointer-events-none w-0.5 rounded-full opacity-60 ${
+                                effectiveStatus === 'consegnata' ? 'bg-emerald-500' :
+                                effectiveStatus === 'scaduta'    ? 'bg-gray-500' : 'bg-amber-400'
+                              }`}
+                              style={{
+                                left: `calc(${colL(dueWeek)} + ${colW()} - 2px)`,
+                                top: '18%', height: '64%', zIndex: 3,
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+            </div>
+          </div>
         </div>{/* fine card Gantt */}
 
-        {/* ── Card Radar (destra) ──────────────────────────────────────────── */}
+        {/* ── Card Radar ────────────────────────────────────────────────── */}
         <div className={`flex-shrink-0 w-full ${radarWidthClass} rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-y-auto custom-scrollbar p-5`}>
           {radarData.length > 0 ? (
-            <DidacticRadarChart
-              data={radarData}
-            />
+            <DidacticRadarChart data={radarData} />
           ) : (
             <div className="flex items-center justify-center h-full py-10">
               <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
@@ -614,9 +573,10 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
             </div>
           )}
         </div>
-      </div>{/* fine layout a due colonne */}
 
-      {/* ── Pannello dettaglio attività ──────────────────────────────────────── */}
+      </div>{/* fine layout */}
+
+      {/* ── Pannello dettaglio attività ───────────────────────────────────── */}
       {selectedActivity && (() => {
         const dueWeek = getActivityDueWeek(selectedActivity, weekBlockCounts);
         const effectiveStatus = getEffectiveActivityStatus(selectedActivity, dueWeek, currentWeek);
@@ -634,8 +594,8 @@ const GanttView: React.FC<GanttViewProps> = ({ conversations, onClose, onNavigat
                 <div className="flex items-center gap-3 text-[10px] font-mono text-gray-500 flex-wrap">
                   <span>Lanciata: sett. {selectedActivity.launchWeekNumber}</span>
                   <span>Scadenza: sett. {dueWeek} ({selectedActivity.dueInBlocks} blocchi)</span>
-                  {effectiveStatus === 'consegnata' && <span className="text-emerald-400">● Consegnata</span>}
-                  {effectiveStatus === 'scaduta'    && <span className="text-gray-500">● Scaduta</span>}
+                  {effectiveStatus === 'consegnata'  && <span className="text-emerald-400">● Consegnata</span>}
+                  {effectiveStatus === 'scaduta'     && <span className="text-gray-500">● Scaduta</span>}
                   {effectiveStatus === 'in_scadenza' && <span className="text-amber-400">● In scadenza</span>}
                 </div>
                 {selectedActivity.description && (
