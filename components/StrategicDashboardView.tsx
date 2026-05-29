@@ -730,7 +730,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                            {isFormOpen ? (
+                                                            {isFormOpen && (
                                                                 <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5">
                                                                     <p className="text-[9px] font-mono text-rose-400/80 mb-2">↗ Nuova attività</p>
                                                                     <input
