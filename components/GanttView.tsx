@@ -247,7 +247,7 @@ const GanttView: React.FC<GanttViewProps> = ({
 
   // Hook prima di qualsiasi return condizionale (regola React)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(0);
+  const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(1);
 
   // ── Deriva moduli (per bar chart) ─────────────────────────────────────────
   const modules = useMemo((): GanttModule[] => {
@@ -331,7 +331,7 @@ const GanttView: React.FC<GanttViewProps> = ({
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const radarWidthClass = ['lg:w-[22%]', 'lg:w-[38%]', 'lg:w-[54%]'][splitPreset];
+  const radarWidthClass = ['lg:w-[30%]', 'lg:w-[44%]', 'lg:w-[60%]'][splitPreset];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
