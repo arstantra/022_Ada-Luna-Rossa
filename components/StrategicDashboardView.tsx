@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity, CourseContentUnit } from '../types';
-import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity, ActivityType, CourseContentUnit } from '../types';
+import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -30,16 +30,22 @@ interface StrategicDashboardViewProps {
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
     onUpdateBlockTipologia: (weekNumber: number, blockIndex: number, tipologia: LessonType | '') => void;
     onToggleFslPeriod: (weekNumber: number, blockIndex: number, value: boolean) => void;
+    onAddActivityForBlock?: (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, onAddActivityForBlock, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
+    // Form "Lancia attività" inline nella sezione espansa
+    const [activityFormKey, setActivityFormKey] = useState<string | null>(null); // `${weekNumber}-${blockIndex}`
+    const [activityTitle, setActivityTitle] = useState('');
+    const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
+    const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
 
     const weekData = useMemo(() => {
         const convoMap = new Map<number, Conversation>();
@@ -485,11 +491,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        {block.tipologia && !isSpecialStatus && (
-                                                            <span className="text-[9px] font-mono text-gray-500 border border-gray-700/50 rounded px-1.5 py-0.5 flex-shrink-0">
-                                                                {LESSON_TYPE_LABELS[block.tipologia]}
-                                                            </span>
-                                                        )}
                                                         {block.isFslPeriod && (
                                                             <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
                                                                 FSL
@@ -691,6 +692,93 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         disabled={isSpecialStatus}
                                                     />
                                                 </div>
+                                                {/* Sezione attività */}
+                                                {onAddActivityForBlock && !isSpecialStatus && (() => {
+                                                    const formKey = `${week.weekNumber}-${index}`;
+                                                    const isFormOpen = activityFormKey === formKey;
+                                                    const blockConvo = conversations.find(c => c.weekPlan?.weekNumber === week.weekNumber);
+                                                    const launched = (blockConvo?.activities ?? []).filter(a => a.launchBlockId === block.id);
+                                                    return (
+                                                        <div className="pt-1">
+                                                            {launched.length > 0 && (
+                                                                <div className="mb-2">
+                                                                    <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1">Attività lanciate</p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {launched.map(a => {
+                                                                            const statusColor =
+                                                                                a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
+                                                                                a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
+                                                                                a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
+                                                                                                             'text-rose-400/70 border-rose-500/20';
+                                                                            return (
+                                                                                <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
+                                                                                    <span>↗</span>
+                                                                                    <span className="max-w-[120px] truncate">{a.title}</span>
+                                                                                    <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
+                                                                                    {a.status === 'consegnata' && <span>✓</span>}
+                                                                                    {a.status === 'scaduta' && <span>⚑</span>}
+                                                                                </span>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {isFormOpen ? (
+                                                                <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5">
+                                                                    <p className="text-[9px] font-mono text-rose-400/80 mb-2">↗ Nuova attività</p>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={activityTitle}
+                                                                        onChange={e => setActivityTitle(e.target.value)}
+                                                                        placeholder="Titolo dell'attività..."
+                                                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 mb-2"
+                                                                        autoFocus
+                                                                        onKeyDown={e => {
+                                                                            if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) {
+                                                                                e.preventDefault();
+                                                                                onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks);
+                                                                                setActivityTitle(''); setActivityFormKey(null);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <div className="flex items-center gap-1 flex-wrap mb-2">
+                                                                        {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
+                                                                            <button key={t} onClick={() => setActivityType(t)}
+                                                                                className={`px-2 py-0.5 text-[9px] font-mono rounded-full transition-colors ${activityType === t ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'text-gray-600 hover:text-gray-400 border border-transparent'}`}>
+                                                                                {ACTIVITY_TYPE_LABELS[t]}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                        <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
+                                                                        <input type="number" min={1} max={20} value={activityDueInBlocks}
+                                                                            onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                                                                            className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
+                                                                        <span className="text-[9px] font-mono text-gray-500">blocchi</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={() => { if (!activityTitle.trim()) return; onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); }}
+                                                                            disabled={!activityTitle.trim()}
+                                                                            className="px-3 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                                                            Lancia
+                                                                        </button>
+                                                                        <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); }} className="px-3 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors">
+                                                                            Annulla
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
+                                                                    className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/8 hover:border-rose-400/25 transition-colors"
+                                                                >
+                                                                    ↗ Lancia attività
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </details>
                                     )})}

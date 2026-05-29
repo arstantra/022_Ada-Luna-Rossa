@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ModuleDetails } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ModuleDetails, Activity } from '../types';
 import { ACTIVITY_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
@@ -31,9 +31,10 @@ interface BlockWorkspaceViewProps {
     onPromoteFonte?: (url: string) => void;
     // Attività
     onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
+    blockActivities?: Activity[];
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -333,6 +334,32 @@ ${htmlContent}
                                 )}
                             </div>
                         </details>
+                    )}
+                    {/* Lista attività lanciate da questo blocco */}
+                    {blockActivities && blockActivities.length > 0 && (
+                        <div className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] px-4 py-2">
+                            <div className="max-w-3xl mx-auto">
+                                <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">Attività lanciate</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {blockActivities.map(a => {
+                                        const statusColor =
+                                            a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
+                                            a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
+                                            a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
+                                                                         'text-rose-400/70 border-rose-500/20';
+                                        return (
+                                            <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
+                                                <span>↗</span>
+                                                <span className="max-w-[140px] truncate">{a.title}</span>
+                                                <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
+                                                {a.status === 'consegnata' && <span>✓</span>}
+                                                {a.status === 'scaduta' && <span>⚑</span>}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
                     )}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">

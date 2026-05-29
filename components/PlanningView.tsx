@@ -194,6 +194,12 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         });
     }, [weekPlan, activeBlock, onAddActivity]);
 
+    // Attività lanciate dal blocco attivo
+    const activeBlockActivities = useMemo(() => {
+        if (!activeBlock) return [];
+        return (conversation.activities ?? []).filter(a => a.launchBlockId === activeBlock.id);
+    }, [activeBlock, conversation.activities]);
+
     // Search Logic
     const handleCloseSearch = useCallback(() => {
         setIsSearchOpen(false);
@@ -414,6 +420,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onUpdateFonte={handleUpdateFonte}
                     onPromoteFonte={handlePromote}
                     onAddActivity={onAddActivity ? handleAddActivity : undefined}
+                    blockActivities={activeBlockActivities}
                 />
             </main>
             {activeBlock && (

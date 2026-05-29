@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity } from '../../types';
+import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity, ActivityType } from '../../types';
 
 export interface LessonHandlerDeps {
   conversationsRef: React.MutableRefObject<Conversation[]>;
@@ -40,6 +40,31 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
       ...c,
       activities: [...(c.activities ?? []), newActivity],
     }));
+  };
+
+  // Lancia attività da StrategicDashboardView (conosce weekNumber e blockIndex)
+  const handleAddActivityForBlock = (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => {
+    const convo = conversations.find(c => c.weekPlan?.weekNumber === weekNumber);
+    if (!convo) return;
+    const block = convo.weekPlan?.blocks[blockIndex];
+    if (!block) return;
+    const newActivity: Activity = {
+      id: crypto.randomUUID(),
+      title,
+      type,
+      launchBlockId: block.id,
+      launchWeekNumber: weekNumber,
+      launchBlockIndex: blockIndex,
+      dueInBlocks,
+      description,
+      status: 'in_corso',
+      moduleId: block.moduleId,
+    };
+    updateConversation(convo.id, c => ({
+      ...c,
+      activities: [...(c.activities ?? []), newActivity],
+    }));
+    showToast(`Attività "${title}" lanciata.`, 'success');
   };
 
   const handleMarkActivityDelivered = (activityId: string) => {
@@ -190,6 +215,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
     handleUpdateBlockInConversation,
     handleReEditBlock,
     handleAddActivity,
+    handleAddActivityForBlock,
     handleMarkActivityDelivered,
     handleAvviaLezione,
     handleChiudiLezione,
