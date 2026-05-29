@@ -18,6 +18,7 @@ interface TitleSuggestionModalProps {
     objective: string;
     moduleTitle: string;
     tipologia: string;
+    lessonSubject?: string;
 }
 
 const SuggestionCard: React.FC<{ title: string; content: string; onSelect: () => void }> = ({ title, content, onSelect }) => (
@@ -43,6 +44,7 @@ const TitleSuggestionModal: React.FC<TitleSuggestionModalProps> = ({
     objective,
     moduleTitle,
     tipologia,
+    lessonSubject,
 }) => {
     const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +56,7 @@ const TitleSuggestionModal: React.FC<TitleSuggestionModalProps> = ({
             setError(null);
             setSuggestions(null);
 
-            GeminiService.generateBlockTitleSuggestions(objective, moduleTitle, tipologia, theme)
+            GeminiService.generateBlockTitleSuggestions(objective, moduleTitle, tipologia, theme, lessonSubject)
                 .then(result => {
                     setSuggestions([
                         { type: 'Diretto',   text: result.direct },
@@ -70,7 +72,7 @@ const TitleSuggestionModal: React.FC<TitleSuggestionModalProps> = ({
                     setIsLoading(false);
                 });
         }
-    }, [isOpen, objective, moduleTitle, tipologia, theme]);
+    }, [isOpen, objective, moduleTitle, tipologia, theme, lessonSubject]);
 
     const handleSelect = (text: string) => {
         onSelectTitle(text);
@@ -83,7 +85,7 @@ const TitleSuggestionModal: React.FC<TitleSuggestionModalProps> = ({
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <SparklesIcon className="h-10 w-10 text-purple-400 animate-pulse mb-4" />
                     <p className="font-semibold text-white">Generazione in corso...</p>
-                    <p className="text-sm text-gray-400">Sto inventando tre titoli per accendere la curiosità.</p>
+                    <p className="text-sm text-gray-400">{lessonSubject ? `Sto costruendo tre titoli a partire da "${lessonSubject}"…` : 'Sto inventando tre titoli per accendere la curiosità.'}</p>
                 </div>
             )}
             {error && <div className="text-center text-red-400 p-8">{error}</div>}

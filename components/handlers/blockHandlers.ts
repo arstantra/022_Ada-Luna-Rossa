@@ -60,6 +60,30 @@ export function createBlockPlanningHandlers(deps: BlockPlanningDeps) {
     }
   };
 
+  const handleUpdateBlockSubject = (weekNumber: number, blockIndex: number, lessonSubject: string) => {
+    let conversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
+    if (!conversation) {
+      const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+      if (!weekInfo) {
+        console.warn(`Attempted to update lessonSubject for non-existent week number: ${weekNumber}`);
+        return;
+      }
+      conversation = getOrCreateConversationForWeek(weekInfo);
+    }
+    if (conversation.weekPlan) {
+      const newBlocks = [...conversation.weekPlan.blocks];
+      if (newBlocks[blockIndex]) {
+        newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonSubject };
+        updateConversation(conversation.id, c => ({
+          ...c,
+          weekPlan: { ...c.weekPlan!, blocks: newBlocks },
+        }));
+      } else {
+        console.warn(`Attempted to update lessonSubject for non-existent block index: ${blockIndex} in week ${weekNumber}`);
+      }
+    }
+  };
+
   const handleUpdateBlockTitle = (weekNumber: number, blockIndex: number, blockTitle: string) => {
     let conversation = conversationsRef.current.find(c => c.weekPlan?.weekNumber === weekNumber);
     if (!conversation) {
@@ -196,6 +220,7 @@ export function createBlockPlanningHandlers(deps: BlockPlanningDeps) {
     handleSetWeekTheme,
     handleUpdateWeekTheme,
     handleUpdateBlockObjective,
+    handleUpdateBlockSubject,
     handleUpdateBlockTitle,
     handleGenerateStrategicSuggestions,
     handleUpdateStrategicData,

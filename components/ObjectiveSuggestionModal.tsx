@@ -72,6 +72,12 @@ const ObjectiveSuggestionModal: React.FC<ObjectiveSuggestionModalProps> = ({ isO
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Suggerimenti AI per l'Obiettivo Didattico">
+            {moduleTitle && (
+                <p className="text-[10px] font-mono text-gray-500 mb-3 -mt-1">
+                    basato su: <span className="text-gray-400">{moduleTitle}</span>
+                    {teacherProfile && <> · <span className="text-gray-400">Patto Formativo</span></>}
+                </p>
+            )}
             {isLoading && (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                     <SparklesIcon className="h-10 w-10 text-purple-400 animate-pulse mb-4" />

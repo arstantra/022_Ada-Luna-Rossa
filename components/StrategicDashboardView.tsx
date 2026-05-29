@@ -18,6 +18,7 @@ interface StrategicDashboardViewProps {
     onClose: () => void;
     onUpdateWeekTheme: (weekNumber: number, theme: string) => void;
     onUpdateBlockObjective: (weekNumber: number, blockIndex: number, objective: string) => void;
+    onUpdateBlockSubject: (weekNumber: number, blockIndex: number, lessonSubject: string) => void;
     onUpdateBlockTitle: (weekNumber: number, blockIndex: number, blockTitle: string) => void;
     onGenerateStrategicSuggestions: (prompt: string, module: string) => Promise<{ theme: string; objectives: string[]; reasoning: string; }>;
     onSaveStrategicData: (weekNumber: number, theme: string, objectives: string[]) => void;
@@ -33,7 +34,7 @@ interface StrategicDashboardViewProps {
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -110,8 +111,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     const handleGenerateTitle = (weekNumber: number, blockIndex: number) => {
         const block = weekData.find(w => w.weekNumber === weekNumber)?.blocks[blockIndex];
-        if (!block || !block.objective?.trim()) {
-            showToast("Definisci prima l'obiettivo didattico nel pannello espanso.", 'error');
+        if (!block || (!block.lessonSubject?.trim() && !block.objective?.trim())) {
+            showToast("Definisci prima l'argomento della lezione o l'obiettivo didattico.", 'error');
             return;
         }
         setTitleModalInfo({ weekNumber, blockIndex });
@@ -484,6 +485,11 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
+                                                        {block.tipologia && !isSpecialStatus && (
+                                                            <span className="text-[9px] font-mono text-gray-500 border border-gray-700/50 rounded px-1.5 py-0.5 flex-shrink-0">
+                                                                {LESSON_TYPE_LABELS[block.tipologia]}
+                                                            </span>
+                                                        )}
                                                         {block.isFslPeriod && (
                                                             <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
                                                                 FSL
@@ -649,6 +655,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 </div>
                                             </summary>
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
+                                                {/* Campo Argomento — nucleo semantico della lezione */}
+                                                <div>
+                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">
+                                                        Argomento
+                                                    </label>
+                                                    <EditableField
+                                                        value={block.lessonSubject || ''}
+                                                        onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)}
+                                                        placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…"
+                                                        disabled={isSpecialStatus}
+                                                    />
+                                                    <p className="text-[9px] font-mono text-gray-600 mt-0.5">
+                                                        Il soggetto concreto — Ada lo usa come base per generare il titolo
+                                                    </p>
+                                                </div>
                                                 <div>
                                                     <div className="flex items-center justify-between mb-1">
                                                         <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Obiettivo Didattico</label>
@@ -719,6 +740,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                         objective={block.objective || ''}
                         moduleTitle={block.module || ''}
                         tipologia={block.tipologia || ''}
+                        lessonSubject={block.lessonSubject || ''}
                     />
                 );
             })()}

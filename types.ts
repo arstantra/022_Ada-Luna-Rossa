@@ -265,7 +265,8 @@ export interface BlockDetails {
     reason?: string; // For 'saltato' status
     module?: string;
     objective?: string;      // Obiettivo didattico istituzionale (il "perché" formale)
-    blockTitle?: string;     // Titolo accattivante per gli studenti (generato da Ada)
+    lessonSubject?: string;  // Argomento specifico della lezione (il "cosa" concreto, es. "Vetrate gotiche")
+    blockTitle?: string;     // Titolo accattivante per gli studenti (generato da Ada, radicato in lessonSubject)
     contentBlocks?: ContentBlock[];
     messages?: Message[]; // Each block has its own chat history
     allocations?: BlockAllocation; // For group/individual work

@@ -591,20 +591,27 @@ export const generateBlockTitleSuggestions = async (
     objective: string,
     moduleTitle: string,
     tipologia: string,
-    theme: string
+    theme: string,
+    lessonSubject?: string
 ): Promise<{ direct: string; narrative: string; evocative: string }> => {
-    const fullPrompt = `Sei un esperto di comunicazione didattica e storytelling educativo. Il tuo compito è trasformare un obiettivo pedagogico formale in tre titoli accattivanti per una lezione, da comunicare agli studenti (scritto alla lavagna, nel registro, nel piano di lavoro settimanale condiviso).
+    const subjectLine = lessonSubject?.trim()
+        ? `- **Argomento specifico della lezione:** "${lessonSubject}" ← QUESTO è il nucleo concreto da cui partire`
+        : '';
+    const fullPrompt = `Sei un esperto di comunicazione didattica e storytelling educativo. Il tuo compito è creare tre titoli accattivanti per una lezione, da comunicare agli studenti (scritto alla lavagna, nel registro, nel piano di lavoro settimanale condiviso).
 
-I titoli devono essere coinvolgenti, curiosi, mai burocratici. Devono fare venire voglia di saperne di più. Pensa a come un buon documentario o un libro avvincente intitola i propri capitoli.
+I titoli devono essere radicati nell'argomento specifico della lezione${lessonSubject ? ` ("${lessonSubject}")` : ''}, coinvolgenti, mai burocratici. Devono fare venire voglia di saperne di più. Pensa a come un buon documentario o un libro avvincente intitola i propri capitoli.
 
 **Contesto:**
-- **Obiettivo didattico del blocco:** "${objective}"
+${subjectLine}
+- **Obiettivo didattico del blocco:** "${objective || 'non definito'}"
 - **Unità didattica (cosa):** ${moduleTitle || 'non specificata'}
 - **Modalità pedagogica (come):** ${tipologia || 'non specificata'}
 - **Tema della settimana:** "${theme || 'non definito'}"
 
-Genera tre varianti di titolo:
-1. **Diretto:** Chiaro e vivace. Dice esattamente cosa si fa, ma con energia. Massimo 8 parole.
+${lessonSubject ? `Parti sempre dall'argomento specifico ("${lessonSubject}") come nucleo semantico del titolo. L'obiettivo serve da cornice pedagogica, non da soggetto del titolo.
+
+` : ''}Genera tre varianti di titolo:
+1. **Diretto:** Chiaro e vivace. Dice esattamente di cosa si parla, ma con energia. Massimo 8 parole.
 2. **Narrativo:** Usa una metafora, un'immagine o un verbo d'azione che racconta la lezione come un'esperienza. Può avere un sottotitolo breve (separato da "—").
 3. **Evocativo:** Apre una domanda, crea attesa, non rivela tutto. Può essere una domanda retorica o una frase che lascia sospesa la curiosità.
 
