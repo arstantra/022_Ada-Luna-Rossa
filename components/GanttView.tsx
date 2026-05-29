@@ -279,10 +279,10 @@ function getEffectiveActivityStatus(activity: Activity, dueWeek: number, current
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
-const LEFT      = 192;  // px – larghezza colonna nomi modulo
-const ROW       = 42;   // px – altezza riga
-const HEAD      = 32;   // px – altezza header settimane
-const MIN_COL_W = 40;   // px – larghezza minima colonna settimana
+const LEFT      = 160;  // px – larghezza colonna nomi attività
+const ROW       = 28;   // px – altezza riga
+const HEAD      = 28;   // px – altezza header settimane
+const MIN_COL_W = 34;   // px – larghezza minima colonna settimana
 
 // Colori colonne alternate (inline per evitare purge Tailwind su valori arbitrari)
 const STRIPE_ODD  = 'rgba(15,22,36,0.6)';   // pari — più chiaro
@@ -481,7 +481,7 @@ const GanttView: React.FC<GanttViewProps> = ({
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const radarWidthClass = ['lg:w-[30%]', 'lg:w-[44%]', 'lg:w-[60%]'][splitPreset];
+  const radarWidthClass = ['lg:w-[26%]', 'lg:w-[36%]', 'lg:w-[50%]'][splitPreset];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0D1117]">
@@ -492,8 +492,11 @@ const GanttView: React.FC<GanttViewProps> = ({
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
 
-        {/* ── Card Gantt Attività ────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
+        {/* ── Colonna sinistra: Gantt + heatmap ─────────────────────────── */}
+        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
+
+        {/* Card Gantt Attività */}
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ minHeight: 0, flex: '0 0 auto', maxHeight: '55%' }}>
 
           <div className="flex items-center px-5 pt-4 pb-3 flex-shrink-0">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">
@@ -637,7 +640,20 @@ const GanttView: React.FC<GanttViewProps> = ({
           </div>
         </div>{/* fine card Gantt */}
 
-        {/* ── Colonna destra: donut moduli + radar + heatmap ───────────── */}
+        {/* Heatmap argomento × tipologia — sotto il Gantt */}
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Argomento × Tipologia</span>
+            {heatmapRows.length > 0 && (
+              <span className="text-[9px] font-mono text-gray-700">{heatmapRows.length} arg.</span>
+            )}
+          </div>
+          <SubjectHeatmap rows={heatmapRows} />
+        </div>
+
+        </div>{/* fine colonna sinistra */}
+
+        {/* ── Colonna destra: donut moduli + radar ─────────────────────── */}
         <div className={`flex-shrink-0 w-full ${radarWidthClass} flex flex-col gap-4 overflow-y-auto custom-scrollbar`}>
 
           {/* Donut distribuzione moduli */}
@@ -662,17 +678,6 @@ const GanttView: React.FC<GanttViewProps> = ({
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Heatmap argomento × tipologia */}
-          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Argomento × Tipologia</span>
-              {heatmapRows.length > 0 && (
-                <span className="text-[9px] font-mono text-gray-700">{heatmapRows.length} arg.</span>
-              )}
-            </div>
-            <SubjectHeatmap rows={heatmapRows} />
           </div>
 
         </div>
