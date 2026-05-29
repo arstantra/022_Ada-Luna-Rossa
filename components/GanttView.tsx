@@ -8,16 +8,14 @@ import DidacticRadarChart from './DidacticRadarChart';
 interface GanttModule {
   name: string;
   blockCount: number;
-  firstWeek: number;
-  lastWeek: number;
 }
 
 // ── Palette categoriale moduli (colore per indice, non per stato) ─────────────
 
 interface ModuleColor {
-  bg: string;        // sfondo barra
-  border: string;    // bordo barra
-  text: string;      // testo label hover
+  bg: string;
+  border: string;
+  text: string;
 }
 
 const MODULE_PALETTE: ModuleColor[] = [
@@ -35,6 +33,55 @@ const MODULE_PALETTE: ModuleColor[] = [
 function moduleColor(idx: number): ModuleColor {
   return MODULE_PALETTE[idx % MODULE_PALETTE.length];
 }
+
+// ── Bar chart moduli ──────────────────────────────────────────────────────────
+
+const ModuleBarChart: React.FC<{ modules: GanttModule[] }> = ({ modules }) => {
+  if (modules.length === 0) return (
+    <div className="flex items-center justify-center py-8">
+      <p className="text-[10px] font-mono text-gray-600 text-center">
+        Assegna moduli ai blocchi per vedere la distribuzione
+      </p>
+    </div>
+  );
+
+  const maxCount = Math.max(...modules.map(m => m.blockCount), 1);
+  const BAR_MAX_H = 80; // px altezza massima barra
+
+  return (
+    <div className="flex items-end gap-2 px-1 pt-2 pb-1 overflow-x-auto custom-scrollbar" style={{ minHeight: BAR_MAX_H + 40 }}>
+      {modules.map((mod, idx) => {
+        const c = moduleColor(idx);
+        const barH = Math.max(4, Math.round((mod.blockCount / maxCount) * BAR_MAX_H));
+        return (
+          <div key={mod.name} className="flex flex-col items-center gap-1 flex-shrink-0" style={{ minWidth: 36, maxWidth: 56 }}>
+            {/* Contatore */}
+            <span className="text-[9px] font-mono" style={{ color: c.text }}>{mod.blockCount}</span>
+            {/* Barra */}
+            <div
+              className="w-full rounded-t-sm transition-all"
+              style={{
+                height: barH,
+                background: c.bg,
+                border: `1px solid ${c.border}`,
+                borderBottom: 'none',
+              }}
+              title={`${mod.name}: ${mod.blockCount} blocchi`}
+            />
+            {/* Label nome modulo troncato */}
+            <span
+              className="text-[8px] font-mono text-gray-600 text-center leading-tight w-full"
+              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+              title={mod.name}
+            >
+              {mod.name}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ── Rilevamento settimana corrente ────────────────────────────────────────────
 
@@ -178,11 +225,11 @@ const GanttHeader: React.FC<GanttHeaderProps> = ({
     </div>
 
     {/* Sottotitolo info */}
-    {(count > 0 || weeks > 0) && (
+    {(weeks > 0) && (
       <div className="px-6 pb-2.5">
         <span className="text-[10px] font-mono text-gray-600">
-          {count > 0 && `${count} moduli`}
-          {weeks > 0 && ` · ${weeks} settimane`}
+          {weeks > 0 && `${weeks} settimane`}
+          {count > 0 && ` · ${count} moduli`}
           {activityCount > 0 && (
             <> · <span className="text-rose-500/70">{activityCount} attività</span></>
           )}
@@ -202,27 +249,21 @@ const GanttView: React.FC<GanttViewProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(0);
 
-  // ── Deriva moduli ─────────────────────────────────────────────────────────
+  // ── Deriva moduli (per bar chart) ─────────────────────────────────────────
   const modules = useMemo((): GanttModule[] => {
-    const map = new Map<string, GanttModule>();
+    const map = new Map<string, number>();
 
     for (const conv of conversations) {
       if (!conv.weekPlan) continue;
-      const { weekNumber, blocks } = conv.weekPlan;
-
-      for (const block of blocks) {
+      for (const block of conv.weekPlan.blocks) {
         const name = block.module?.trim() || 'Senza modulo';
-        if (!map.has(name)) {
-          map.set(name, { name, blockCount: 0, firstWeek: weekNumber, lastWeek: weekNumber });
-        }
-        const mod = map.get(name)!;
-        mod.blockCount++;
-        mod.firstWeek = Math.min(mod.firstWeek, weekNumber);
-        mod.lastWeek  = Math.max(mod.lastWeek, weekNumber);
+        map.set(name, (map.get(name) ?? 0) + 1);
       }
     }
 
-    return [...map.values()].sort((a, b) => a.firstWeek - b.firstWeek);
+    return [...map.entries()]
+      .map(([name, blockCount]) => ({ name, blockCount }))
+      .sort((a, b) => b.blockCount - a.blockCount);
   }, [conversations]);
 
   const weekBlockCounts = useMemo(() => {
@@ -240,11 +281,12 @@ const GanttView: React.FC<GanttViewProps> = ({
   );
 
   const maxWeek = useMemo(() => {
-    const moduleMax = modules.length === 0 ? 0 : Math.max(...modules.map(m => m.lastWeek));
+    const weekNums = [...weekBlockCounts.keys()];
+    const calMax = weekNums.length > 0 ? Math.max(...weekNums) : 0;
     const actDueWeeks = activities.map(a => getActivityDueWeek(a, weekBlockCounts));
     const actMax = actDueWeeks.length > 0 ? Math.max(...actDueWeeks) : 0;
-    return Math.max(moduleMax, actMax);
-  }, [modules, activities, weekBlockCounts]);
+    return Math.max(calMax, actMax);
+  }, [activities, weekBlockCounts]);
 
   const currentWeek = useMemo(() => detectCurrentWeek(conversations), [conversations]);
   const weeks = useMemo(() => Array.from({ length: maxWeek }, (_, i) => i + 1), [maxWeek]);
@@ -300,27 +342,31 @@ const GanttView: React.FC<GanttViewProps> = ({
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
 
-        {/* ── Card Gantt ─────────────────────────────────────────────────── */}
+        {/* ── Card Gantt Attività ────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col">
 
           <div className="flex items-center px-5 pt-4 pb-3 flex-shrink-0">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">
-              Moduli del Corso
+              Attività in corso
             </span>
           </div>
 
           <div className="flex-1 overflow-auto custom-scrollbar">
+            {activities.length === 0 ? (
+              <div className="flex items-center justify-center h-full py-16">
+                <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+                  Nessuna attività lanciata.<br />
+                  Apri un blocco nel Laboratorio per lanciarne una.
+                </p>
+              </div>
+            ) : (
             <div className="pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
               {/* ── Header settimane ──────────────────────────────────────── */}
               <div className="flex sticky top-0 z-10" style={{ height: HEAD, background: '#0D1117' }}>
-
-                {/* Cella vuota sopra la colonna nomi */}
                 <div
                   style={{ width: LEFT, flexShrink: 0, borderBottom: '1px solid rgba(31,41,55,0.8)', borderRight: '1px solid rgba(31,41,55,0.5)' }}
                 />
-
-                {/* Celle settimana */}
                 <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.8)' }}>
                   {weeks.map(w => {
                     const isCur = w === currentWeek;
@@ -348,127 +394,8 @@ const GanttView: React.FC<GanttViewProps> = ({
                 </div>
               </div>
 
-              {/* ── Righe modulo ──────────────────────────────────────────── */}
-              {modules.map((mod, idx) => {
-                const c = moduleColor(idx);
-                const label = `${mod.name} · ${mod.blockCount} bl. · sett. ${mod.firstWeek}–${mod.lastWeek}`;
-
-                return (
-                  <div key={mod.name} className="flex" style={{ height: ROW }}>
-
-                    {/* Nome modulo (colonna sinistra) */}
-                    <div
-                      style={{
-                        width: LEFT,
-                        flexShrink: 0,
-                        borderBottom: '1px solid rgba(17,24,39,0.8)',
-                        borderRight: '1px solid rgba(31,41,55,0.5)',
-                      }}
-                      className="flex items-center pr-5 pl-5"
-                    >
-                      {/* Pallino colore modulo */}
-                      <span
-                        className="flex-shrink-0 w-2 h-2 rounded-full mr-2.5"
-                        style={{ background: c.border }}
-                      />
-                      <button
-                        className="flex-1 text-left truncate"
-                        title={mod.name}
-                        onClick={() => onNavigateToWeek(mod.firstWeek)}
-                      >
-                        <span className="text-xs font-display text-gray-500 hover:text-gray-300 transition-colors">
-                          {mod.name}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Area timeline */}
-                    <div
-                      className="flex-1 relative"
-                      style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}
-                    >
-                      {/* Strisce alternate + linee verticali */}
-                      {weeks.map(w => {
-                        const isCur = w === currentWeek;
-                        const isOdd = w % 2 !== 0;
-                        return (
-                          <div
-                            key={w}
-                            className="absolute inset-y-0"
-                            style={{
-                              left: colL(w),
-                              width: colW(),
-                              background: isCur ? STRIPE_CUR : isOdd ? STRIPE_ODD : STRIPE_EVEN,
-                              borderLeft: '1px solid rgba(22,29,43,0.9)',
-                              pointerEvents: 'none',
-                            }}
-                          />
-                        );
-                      })}
-
-                      {/* Linea settimana corrente */}
-                      {currentWeek && currentWeek <= maxWeek && (
-                        <div
-                          className="absolute inset-y-0 pointer-events-none"
-                          style={{
-                            left: curL(currentWeek),
-                            width: 1,
-                            background: 'rgba(124,58,237,0.45)',
-                            zIndex: 3,
-                          }}
-                        />
-                      )}
-
-                      {/* Barra continua del modulo — dal firstWeek al lastWeek */}
-                      <button
-                        className="absolute group"
-                        style={{
-                          left:      `calc(${barL(mod.firstWeek)} + 4px)`,
-                          width:     `calc(${barW(mod.firstWeek, mod.lastWeek)} - 8px)`,
-                          height:    20,
-                          top:       '50%',
-                          transform: 'translateY(-50%)',
-                          background: c.bg,
-                          border:    `1px solid ${c.border}`,
-                          borderRadius: 4,
-                          zIndex:    2,
-                          overflow:  'hidden',
-                          transition: 'filter 0.15s',
-                        }}
-                        title={label}
-                        onClick={() => onNavigateToWeek(mod.firstWeek)}
-                        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.4)')}
-                        onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
-                      >
-                        {/* Label visibile solo al hover */}
-                        <span
-                          className="absolute inset-0 flex items-center px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap overflow-hidden"
-                          style={{ fontSize: 9, color: c.text, fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.03em' }}
-                        >
-                          {mod.name} · {mod.blockCount} bl.
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* ── Sezione Attività ──────────────────────────────────────── */}
-              {activities.length > 0 && (
-                <>
-                  <div className="flex mt-8" style={{ height: 28 }}>
-                    <div
-                      style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)' }}
-                      className="flex items-center gap-2 px-5"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 flex-shrink-0" />
-                      <span className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/80">Attività</span>
-                      <span className="text-[9px] font-mono text-gray-700">{activities.length}</span>
-                    </div>
-                    <div className="flex-1 self-center border-t border-gray-700/30" />
-                  </div>
-
-                  {activities.map(activity => {
+              {/* ── Righe attività ───────────────────────────────────────── */}
+              {activities.map(activity => {
                     const dueWeek = getActivityDueWeek(activity, weekBlockCounts);
                     const effectiveStatus = getEffectiveActivityStatus(activity, dueWeek, currentWeek);
                     const isSelected = selectedActivity?.id === activity.id;
@@ -553,25 +480,40 @@ const GanttView: React.FC<GanttViewProps> = ({
                         </div>
                       </div>
                     );
-                  })}
-                </>
-              )}
+              })}
 
             </div>
+            )}
           </div>
         </div>{/* fine card Gantt */}
 
-        {/* ── Card Radar ────────────────────────────────────────────────── */}
-        <div className={`flex-shrink-0 w-full ${radarWidthClass} rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-y-auto custom-scrollbar p-5`}>
-          {radarData.length > 0 ? (
-            <DidacticRadarChart data={radarData} />
-          ) : (
-            <div className="flex items-center justify-center h-full py-10">
-              <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
-                Imposta una tipologia di lezione per vedere l'equilibrio didattico
-              </p>
+        {/* ── Colonna destra: bar chart moduli + radar ──────────────────── */}
+        <div className={`flex-shrink-0 w-full ${radarWidthClass} flex flex-col gap-4 overflow-y-auto custom-scrollbar`}>
+
+          {/* Bar chart distribuzione moduli */}
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Moduli</span>
+              {modules.length > 0 && (
+                <span className="text-[9px] font-mono text-gray-700">{modules.reduce((s, m) => s + m.blockCount, 0)} bl.</span>
+              )}
             </div>
-          )}
+            <ModuleBarChart modules={modules} />
+          </div>
+
+          {/* Radar equilibrio didattico */}
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-5 flex-shrink-0">
+            {radarData.length > 0 ? (
+              <DidacticRadarChart data={radarData} />
+            ) : (
+              <div className="flex items-center justify-center py-10">
+                <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+                  Imposta una tipologia di lezione per vedere l'equilibrio didattico
+                </p>
+              </div>
+            )}
+          </div>
+
         </div>
 
       </div>{/* fine layout */}
