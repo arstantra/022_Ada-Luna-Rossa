@@ -212,3 +212,9 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   progetto:           'Progetto',
   altro:              'Altro',
 };
+
+export const ACTIVITY_CONTEXT_LABELS: Record<import('./types').ActivityContext, string> = {
+  solo_in_classe: 'Solo in classe',
+  classe_e_casa:  'Classe + casa',
+  solo_a_casa:    'Solo a casa',
+};

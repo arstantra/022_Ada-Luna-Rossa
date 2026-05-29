@@ -139,10 +139,16 @@ export type ActivityStatus =
   | 'consegnata'     // docente ha marcato come consegnata
   | 'scaduta';       // scadenza superata senza consegna
 
+export type ActivityContext =
+  | 'solo_in_classe'   // svolta interamente in aula
+  | 'classe_e_casa'    // inizia in aula, prosegue a casa
+  | 'solo_a_casa';     // assegnata in classe, svolta a casa
+
 export interface Activity {
   id: string;
   title: string;
   type: ActivityType;
+  context?: ActivityContext;     // dove si svolge l'attività
   launchBlockId: string;        // id del BlockDetails da cui è stata lanciata
   launchWeekNumber: number;
   launchBlockIndex: number;     // indice blocco nella settimana (0-based)

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ModuleDetails, Activity } from '../types';
-import { ACTIVITY_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ActivityContext, ModuleDetails, Activity } from '../types';
+import { ACTIVITY_TYPE_LABELS, ACTIVITY_CONTEXT_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
@@ -30,7 +30,7 @@ interface BlockWorkspaceViewProps {
     onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
     onPromoteFonte?: (url: string) => void;
     // Attività
-    onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
+    onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => void;
     blockActivities?: Activity[];
 }
 
@@ -44,6 +44,7 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
     const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
     const [activityDescription, setActivityDescription] = useState('');
+    const [activityContext, setActivityContext] = useState<ActivityContext>('solo_in_classe');
     const editorRef = useRef<HTMLDivElement>(null);
     const [isModuleExpanded, setIsModuleExpanded] = useState(false);
 
@@ -175,13 +176,14 @@ ${htmlContent}
 
     const handleSubmitActivity = useCallback(() => {
         if (!activityTitle.trim() || !onAddActivity) return;
-        onAddActivity(activityTitle.trim(), activityType, activityDueInBlocks, activityDescription.trim() || undefined);
+        onAddActivity(activityTitle.trim(), activityType, activityDueInBlocks, activityDescription.trim() || undefined, activityContext);
         setActivityTitle('');
         setActivityType('produzione_scritta');
         setActivityDueInBlocks(4);
         setActivityDescription('');
+        setActivityContext('solo_in_classe');
         setIsActivityFormOpen(false);
-    }, [activityTitle, activityType, activityDueInBlocks, activityDescription, onAddActivity]);
+    }, [activityTitle, activityType, activityDueInBlocks, activityDescription, activityContext, onAddActivity]);
 
     const editorToolbarActions = useMemo(() => (
         <button
@@ -413,6 +415,22 @@ ${htmlContent}
                                             className="w-12 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center"
                                         />
                                         <span className="text-[10px] font-mono text-gray-500">blocchi</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-wrap mb-2">
+                                        <span className="text-[10px] font-mono text-gray-500 mr-1">Dove:</span>
+                                        {(['solo_in_classe', 'classe_e_casa', 'solo_a_casa'] as ActivityContext[]).map(ctx => (
+                                            <button
+                                                key={ctx}
+                                                onClick={() => setActivityContext(ctx)}
+                                                className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                                    activityContext === ctx
+                                                        ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
+                                                        : 'text-gray-600 hover:text-gray-400 border border-transparent'
+                                                }`}
+                                            >
+                                                {ACTIVITY_CONTEXT_LABELS[ctx]}
+                                            </button>
+                                        ))}
                                     </div>
                                     <textarea
                                         value={activityDescription}

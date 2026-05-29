@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity, ActivityType } from '../../types';
+import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity, ActivityType, ActivityContext } from '../../types';
 
 export interface LessonHandlerDeps {
   conversationsRef: React.MutableRefObject<Conversation[]>;
@@ -43,7 +43,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
   };
 
   // Lancia attività da StrategicDashboardView (conosce weekNumber e blockIndex)
-  const handleAddActivityForBlock = (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => {
+  const handleAddActivityForBlock = (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => {
     const convo = conversations.find(c => c.weekPlan?.weekNumber === weekNumber);
     if (!convo) return;
     const block = convo.weekPlan?.blocks[blockIndex];
@@ -52,6 +52,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
       id: crypto.randomUUID(),
       title,
       type,
+      context,
       launchBlockId: block.id,
       launchWeekNumber: weekNumber,
       launchBlockIndex: blockIndex,

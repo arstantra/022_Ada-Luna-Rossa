@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType, ActivityContext } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -180,11 +180,12 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), promoted] });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
 
-    const handleAddActivity = useCallback((title: string, type: ActivityType, dueInBlocks: number, description?: string) => {
+    const handleAddActivity = useCallback((title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => {
         if (!weekPlan || !activeBlock || !onAddActivity) return;
         onAddActivity({
             title,
             type,
+            context,
             launchBlockId: activeBlock.id,
             launchWeekNumber: weekPlan.weekNumber,
             launchBlockIndex: weekPlan.activeBlockIndex,

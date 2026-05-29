@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { Conversation, Activity, ActivityStatus, LessonType } from '../types';
+import { LESSON_TYPE_LABELS } from '../constants';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
 
@@ -34,51 +35,171 @@ function moduleColor(idx: number): ModuleColor {
   return MODULE_PALETTE[idx % MODULE_PALETTE.length];
 }
 
-// ── Bar chart moduli ──────────────────────────────────────────────────────────
+// ── Donut distribuzione moduli ────────────────────────────────────────────────
 
-const ModuleBarChart: React.FC<{ modules: GanttModule[] }> = ({ modules }) => {
+const ModuleDonut: React.FC<{ modules: GanttModule[] }> = ({ modules }) => {
+  const [hovered, setHovered] = useState<string | null>(null);
   if (modules.length === 0) return (
-    <div className="flex items-center justify-center py-8">
+    <div className="flex items-center justify-center py-6">
       <p className="text-[10px] font-mono text-gray-600 text-center">
         Assegna moduli ai blocchi per vedere la distribuzione
       </p>
     </div>
   );
 
-  const maxCount = Math.max(...modules.map(m => m.blockCount), 1);
-  const BAR_MAX_H = 80; // px altezza massima barra
+  const total = modules.reduce((s, m) => s + m.blockCount, 0);
+  const R = 48; const r = 28; const cx = 60; const cy = 60;
+  let angle = -Math.PI / 2;
+  const slices = modules.map((mod, idx) => {
+    const pct  = mod.blockCount / total;
+    const span = pct * 2 * Math.PI;
+    const x1 = cx + R * Math.cos(angle);
+    const y1 = cy + R * Math.sin(angle);
+    angle += span;
+    const x2 = cx + R * Math.cos(angle);
+    const y2 = cy + R * Math.sin(angle);
+    const xi1 = cx + r * Math.cos(angle);
+    const yi1 = cy + r * Math.sin(angle);
+    const xi2 = cx + r * Math.cos(angle - span);
+    const yi2 = cy + r * Math.sin(angle - span);
+    const large = span > Math.PI ? 1 : 0;
+    const c = moduleColor(idx);
+    return { mod, pct, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c, idx };
+  });
+
+  const hoveredMod = hovered ? modules.find(m => m.name === hovered) : null;
 
   return (
-    <div className="flex items-end gap-2 px-1 pt-2 pb-1 overflow-x-auto custom-scrollbar" style={{ minHeight: BAR_MAX_H + 40 }}>
-      {modules.map((mod, idx) => {
-        const c = moduleColor(idx);
-        const barH = Math.max(4, Math.round((mod.blockCount / maxCount) * BAR_MAX_H));
-        return (
-          <div key={mod.name} className="flex flex-col items-center gap-1 flex-shrink-0" style={{ minWidth: 36, maxWidth: 56 }}>
-            {/* Contatore */}
-            <span className="text-[9px] font-mono" style={{ color: c.text }}>{mod.blockCount}</span>
-            {/* Barra */}
+    <div className="flex items-start gap-3">
+      {/* Donut SVG */}
+      <svg width="120" height="120" viewBox="0 0 120 120" className="flex-shrink-0">
+        {slices.map(({ mod, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c }) => (
+          <path
+            key={mod.name}
+            d={`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${r} ${r} 0 ${large} 0 ${xi2} ${yi2} Z`}
+            fill={c.bg}
+            stroke={c.border}
+            strokeWidth="0.8"
+            opacity={hovered && hovered !== mod.name ? 0.35 : 1}
+            onMouseEnter={() => setHovered(mod.name)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ cursor: 'default', transition: 'opacity 0.15s' }}
+          />
+        ))}
+        {/* Label centrale */}
+        <text x={cx} y={cy - 5} textAnchor="middle" fill="rgba(156,163,175,0.7)" fontSize="7" fontFamily="monospace">
+          {hoveredMod ? `${hoveredMod.blockCount}` : `${total}`}
+        </text>
+        <text x={cx} y={cy + 5} textAnchor="middle" fill="rgba(107,114,128,0.6)" fontSize="6" fontFamily="monospace">
+          {hoveredMod ? 'bl.' : 'tot.'}
+        </text>
+      </svg>
+      {/* Legenda */}
+      <div className="flex flex-col gap-1 min-w-0 flex-1 pt-1">
+        {modules.map((mod, idx) => {
+          const c = moduleColor(idx);
+          const pct = Math.round((mod.blockCount / total) * 100);
+          const isHov = hovered === mod.name;
+          return (
             <div
-              className="w-full rounded-t-sm transition-all"
-              style={{
-                height: barH,
-                background: c.bg,
-                border: `1px solid ${c.border}`,
-                borderBottom: 'none',
-              }}
-              title={`${mod.name}: ${mod.blockCount} blocchi`}
-            />
-            {/* Label nome modulo troncato */}
-            <span
-              className="text-[8px] font-mono text-gray-600 text-center leading-tight w-full"
-              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-              title={mod.name}
+              key={mod.name}
+              className="flex items-center gap-1.5 cursor-default"
+              onMouseEnter={() => setHovered(mod.name)}
+              onMouseLeave={() => setHovered(null)}
+              style={{ opacity: hovered && !isHov ? 0.4 : 1, transition: 'opacity 0.15s' }}
             >
-              {mod.name}
-            </span>
-          </div>
-        );
-      })}
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: c.border }} />
+              <span
+                className="text-[9px] font-mono text-gray-500 truncate flex-1 min-w-0"
+                style={isHov ? { color: c.text } : {}}
+                title={mod.name}
+              >
+                {mod.name}
+              </span>
+              <span className="text-[9px] font-mono text-gray-700 flex-shrink-0 tabular-nums">{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── Heatmap argomento × tipologia ─────────────────────────────────────────────
+
+const ALL_LESSON_TYPES: LessonType[] = [
+  'frontale_teorica', 'frontale_operativa', 'laboratorio', 'verifica', 'discussione',
+];
+const TYPE_SHORT: Record<LessonType, string> = {
+  frontale_teorica:   'Fr.T.',
+  frontale_operativa: 'Fr.O.',
+  laboratorio:        'Lab.',
+  verifica:           'Ver.',
+  discussione:        'Disc.',
+};
+
+interface HeatmapRow { subject: string; counts: Record<LessonType, number>; total: number }
+
+const SubjectHeatmap: React.FC<{ rows: HeatmapRow[] }> = ({ rows }) => {
+  if (rows.length === 0) return (
+    <div className="flex items-center justify-center py-6">
+      <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+        Compila "Argomento" nei blocchi per vedere la heatmap
+      </p>
+    </div>
+  );
+
+  const globalMax = Math.max(...rows.flatMap(r => Object.values(r.counts)), 1);
+
+  return (
+    <div className="overflow-x-auto custom-scrollbar">
+      <table className="w-full border-collapse" style={{ minWidth: 260 }}>
+        <thead>
+          <tr>
+            <th className="text-left pr-2 pb-1.5" style={{ width: '40%' }} />
+            {ALL_LESSON_TYPES.map(t => (
+              <th key={t} className="text-center pb-1.5" style={{ width: '12%' }}>
+                <span className="text-[8px] font-mono text-gray-600">{TYPE_SHORT[t]}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.subject} className="group">
+              <td className="pr-2 py-0.5">
+                <span
+                  className="text-[9px] font-mono text-gray-500 group-hover:text-gray-300 truncate block transition-colors"
+                  style={{ maxWidth: 110 }}
+                  title={row.subject}
+                >
+                  {row.subject}
+                </span>
+              </td>
+              {ALL_LESSON_TYPES.map(t => {
+                const v = row.counts[t] ?? 0;
+                const intensity = v / globalMax;
+                const bg = v > 0
+                  ? `rgba(129,140,248,${0.12 + intensity * 0.65})`
+                  : 'rgba(17,24,39,0.4)';
+                return (
+                  <td key={t} className="text-center py-0.5 px-0.5">
+                    <div
+                      className="mx-auto rounded-sm flex items-center justify-center transition-all"
+                      style={{ width: 22, height: 18, background: bg }}
+                      title={v > 0 ? `${row.subject} · ${LESSON_TYPE_LABELS[t]}: ${v} bl.` : undefined}
+                    >
+                      {v > 0 && (
+                        <span className="text-[8px] font-mono text-indigo-300/80 tabular-nums">{v}</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -306,6 +427,35 @@ const GanttView: React.FC<GanttViewProps> = ({
       .map(([tipologia, count]) => ({ tipologia, count }));
   }, [conversations]);
 
+  // ── Heatmap argomento × tipologia ─────────────────────────────────────────
+  const heatmapRows = useMemo((): HeatmapRow[] => {
+    const map = new Map<string, Record<LessonType, number>>();
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach(block => {
+        const subject = block.lessonSubject?.trim();
+        if (!subject) return;
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        if (!map.has(subject)) {
+          map.set(subject, {
+            frontale_teorica: 0, frontale_operativa: 0,
+            laboratorio: 0, verifica: 0, discussione: 0,
+          });
+        }
+        if (block.tipologia) {
+          map.get(subject)![block.tipologia]++;
+        }
+      });
+    });
+    return [...map.entries()]
+      .map(([subject, counts]) => ({
+        subject,
+        counts,
+        total: Object.values(counts).reduce((a, b) => a + b, 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [conversations]);
+
   // ── Helpers posizionamento (%) ────────────────────────────────────────────
   const colL  = (w: number) => `${((w - 1) / maxWeek) * 100}%`;
   const colW  = ()           => `${(1 / maxWeek) * 100}%`;
@@ -487,10 +637,10 @@ const GanttView: React.FC<GanttViewProps> = ({
           </div>
         </div>{/* fine card Gantt */}
 
-        {/* ── Colonna destra: bar chart moduli + radar ──────────────────── */}
+        {/* ── Colonna destra: donut moduli + radar + heatmap ───────────── */}
         <div className={`flex-shrink-0 w-full ${radarWidthClass} flex flex-col gap-4 overflow-y-auto custom-scrollbar`}>
 
-          {/* Bar chart distribuzione moduli */}
+          {/* Donut distribuzione moduli */}
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Moduli</span>
@@ -498,20 +648,31 @@ const GanttView: React.FC<GanttViewProps> = ({
                 <span className="text-[9px] font-mono text-gray-700">{modules.reduce((s, m) => s + m.blockCount, 0)} bl.</span>
               )}
             </div>
-            <ModuleBarChart modules={modules} />
+            <ModuleDonut modules={modules} />
           </div>
 
           {/* Radar equilibrio didattico */}
-          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-5 flex-shrink-0">
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             {radarData.length > 0 ? (
               <DidacticRadarChart data={radarData} />
             ) : (
-              <div className="flex items-center justify-center py-10">
+              <div className="flex items-center justify-center py-8">
                 <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
                   Imposta una tipologia di lezione per vedere l'equilibrio didattico
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Heatmap argomento × tipologia */}
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Argomento × Tipologia</span>
+              {heatmapRows.length > 0 && (
+                <span className="text-[9px] font-mono text-gray-700">{heatmapRows.length} arg.</span>
+              )}
+            </div>
+            <SubjectHeatmap rows={heatmapRows} />
           </div>
 
         </div>
