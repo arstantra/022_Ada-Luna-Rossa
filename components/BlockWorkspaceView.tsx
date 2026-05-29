@@ -212,18 +212,38 @@ ${htmlContent}
                     {(block.module || block.objective || onAddFonte) && (
                         <details className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] group" open>
                             <summary className="list-none flex items-center gap-2 px-4 py-1.5 cursor-pointer select-none hover:bg-gray-800/30 transition-colors">
-                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
                                     {matchingUnit ? (
                                         <>
                                             <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 flex-shrink-0">
                                                 {COURSE_CONTENT_TYPE_LABELS[matchingUnit.type]} {matchingUnit.order}
                                             </span>
-                                            <span className="text-[10px] font-mono text-sky-400/60 truncate">{matchingUnit.title}</span>
+                                            <span className="text-[10px] font-mono text-sky-400/60 truncate flex-shrink min-w-0">{matchingUnit.title}</span>
                                         </>
                                     ) : block.module ? (
-                                        <span className="text-[10px] font-mono text-sky-400/60 truncate">{block.module}</span>
+                                        <span className="text-[10px] font-mono text-sky-400/60 truncate flex-shrink min-w-0">{block.module}</span>
                                     ) : (
                                         <span className="text-[11px] text-gray-600 italic">Dettagli blocco</span>
+                                    )}
+                                    {blockActivities && blockActivities.length > 0 && (
+                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                            {blockActivities.map(a => {
+                                                const statusColor =
+                                                    a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
+                                                    a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
+                                                    a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
+                                                                                 'text-rose-400/70 border-rose-500/20';
+                                                return (
+                                                    <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
+                                                        <span>↗</span>
+                                                        <span className="max-w-[100px] truncate">{a.title}</span>
+                                                        <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
+                                                        {a.status === 'consegnata' && <span>✓</span>}
+                                                        {a.status === 'scaduta' && <span>⚑</span>}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -334,32 +354,6 @@ ${htmlContent}
                                 )}
                             </div>
                         </details>
-                    )}
-                    {/* Lista attività lanciate da questo blocco */}
-                    {blockActivities && blockActivities.length > 0 && (
-                        <div className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] px-4 py-2">
-                            <div className="max-w-3xl mx-auto">
-                                <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">Attività lanciate</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {blockActivities.map(a => {
-                                        const statusColor =
-                                            a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
-                                            a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
-                                            a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
-                                                                         'text-rose-400/70 border-rose-500/20';
-                                        return (
-                                            <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
-                                                <span>↗</span>
-                                                <span className="max-w-[140px] truncate">{a.title}</span>
-                                                <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
-                                                {a.status === 'consegnata' && <span>✓</span>}
-                                                {a.status === 'scaduta' && <span>⚑</span>}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
                     )}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">

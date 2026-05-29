@@ -700,11 +700,10 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     const launched = (blockConvo?.activities ?? []).filter(a => a.launchBlockId === block.id);
                                                     return (
                                                         <div className="pt-1">
-                                                            {launched.length > 0 && (
-                                                                <div className="mb-2">
-                                                                    <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1">Attività lanciate</p>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {launched.map(a => {
+                                                            {!isFormOpen && (
+                                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                                        {launched.length > 0 ? launched.map(a => {
                                                                             const statusColor =
                                                                                 a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
                                                                                 a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
@@ -719,8 +718,16 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                                     {a.status === 'scaduta' && <span>⚑</span>}
                                                                                 </span>
                                                                             );
-                                                                        })}
+                                                                        }) : (
+                                                                            <span className="text-[9px] font-mono text-gray-600">Nessuna attività lanciata</span>
+                                                                        )}
                                                                     </div>
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
+                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/8 hover:border-rose-400/25 transition-colors flex-shrink-0"
+                                                                    >
+                                                                        ↗ Lancia attività
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                             {isFormOpen ? (
@@ -768,13 +775,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                         </button>
                                                                     </div>
                                                                 </div>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
-                                                                    className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/8 hover:border-rose-400/25 transition-colors"
-                                                                >
-                                                                    ↗ Lancia attività
-                                                                </button>
                                                             )}
                                                         </div>
                                                     );
