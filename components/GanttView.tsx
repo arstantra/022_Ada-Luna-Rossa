@@ -455,6 +455,74 @@ const GanttHeader: React.FC<GanttHeaderProps> = ({
   </header>
 );
 
+// ── Contesto Fisico: barre stacked in aula / fuori aula per modulo ────────────
+
+interface ContestoRow { module: string; inAula: number; fuoriAula: number; total: number }
+
+const ContestoFisicoChart: React.FC<{ rows: ContestoRow[] }> = ({ rows }) => {
+  if (rows.length === 0) return (
+    <div className="flex items-center justify-center py-6">
+      <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+        Attiva "FUORI" su almeno un blocco per vedere il contesto fisico
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-1.5">
+      {rows.map(row => {
+        const fuoriPct = row.total > 0 ? (row.fuoriAula / row.total) * 100 : 0;
+        const inAulaPct = 100 - fuoriPct;
+        return (
+          <div key={row.module} className="flex items-center gap-2">
+            <span
+              className="text-[9px] font-mono text-gray-500 flex-shrink-0 truncate"
+              style={{ width: 100 }}
+              title={row.module}
+            >
+              {row.module}
+            </span>
+            <div className="flex-1 flex h-3.5 rounded-sm overflow-hidden bg-gray-900/60">
+              {row.inAula > 0 && (
+                <div
+                  className="h-full bg-indigo-500/40 flex items-center justify-center transition-all"
+                  style={{ width: `${inAulaPct}%` }}
+                  title={`In aula: ${row.inAula} bl.`}
+                >
+                  {inAulaPct > 20 && (
+                    <span className="text-[7px] font-mono text-indigo-300/80 tabular-nums">{row.inAula}</span>
+                  )}
+                </div>
+              )}
+              {row.fuoriAula > 0 && (
+                <div
+                  className="h-full bg-teal-500/50 flex items-center justify-center transition-all"
+                  style={{ width: `${fuoriPct}%` }}
+                  title={`Fuori aula: ${row.fuoriAula} bl.`}
+                >
+                  {fuoriPct > 15 && (
+                    <span className="text-[7px] font-mono text-teal-300/80 tabular-nums">{row.fuoriAula}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <span className="text-[8px] font-mono text-gray-700 flex-shrink-0 tabular-nums w-6 text-right">{row.total}</span>
+          </div>
+        );
+      })}
+      {/* Legenda */}
+      <div className="flex items-center gap-3 pt-1">
+        <span className="flex items-center gap-1 text-[8px] font-mono text-gray-600">
+          <span className="w-2 h-2 rounded-sm bg-indigo-500/40 inline-block" />in aula
+        </span>
+        <span className="flex items-center gap-1 text-[8px] font-mono text-gray-600">
+          <span className="w-2 h-2 rounded-sm bg-teal-500/50 inline-block" />fuori aula
+        </span>
+      </div>
+    </div>
+  );
+};
+
 // ── Componente principale ─────────────────────────────────────────────────────
 
 const GanttView: React.FC<GanttViewProps> = ({
@@ -578,6 +646,26 @@ const GanttView: React.FC<GanttViewProps> = ({
       }))
       .sort((a, b) => b.total - a.total);
     return { matrixRows: rows, usedMethods: methodOrder };
+  }, [conversations]);
+
+  // ── Contesto fisico per modulo ────────────────────────────────────────────
+  const contestoRows = useMemo((): ContestoRow[] => {
+    const map = new Map<string, { inAula: number; fuoriAula: number }>();
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach(block => {
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        const mod = block.module?.trim() || 'Senza modulo';
+        if (!map.has(mod)) map.set(mod, { inAula: 0, fuoriAula: 0 });
+        const entry = map.get(mod)!;
+        if (block.isFuoriAula) entry.fuoriAula++;
+        else entry.inAula++;
+      });
+    });
+    return [...map.entries()]
+      .map(([module, { inAula, fuoriAula }]) => ({ module, inAula, fuoriAula, total: inAula + fuoriAula }))
+      .filter(r => r.fuoriAula > 0) // mostra solo moduli con almeno 1 blocco fuori aula
+      .sort((a, b) => b.fuoriAula - a.fuoriAula);
   }, [conversations]);
 
   // ── Helpers posizionamento (%) ────────────────────────────────────────────
@@ -785,6 +873,17 @@ const GanttView: React.FC<GanttViewProps> = ({
           </div>
           <ModuloMetodologiaMatrix rows={matrixRows} usedMethods={usedMethods} />
         </div>
+
+        {/* Contesto fisico: in aula vs fuori aula per modulo */}
+        {contestoRows.length > 0 && (
+          <div className="rounded-xl border border-teal-600/25 bg-gray-800/30 p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Contesto Fisico</span>
+              <span className="text-[9px] font-mono text-teal-600/60">{contestoRows.reduce((s, r) => s + r.fuoriAula, 0)} fuori aula</span>
+            </div>
+            <ContestoFisicoChart rows={contestoRows} />
+          </div>
+        )}
 
         </div>{/* fine colonna sinistra */}
 

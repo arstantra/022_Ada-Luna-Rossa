@@ -32,12 +32,16 @@ interface StrategicDashboardViewProps {
     onUpdateBlockMetodologia: (weekNumber: number, blockIndex: number, metodologia: TeachingMethodology | '') => void;
     parsedMethodologies: TeachingMethodology[]; // metodologie trovate nel Progetto Didattico
     onToggleFslPeriod: (weekNumber: number, blockIndex: number, value: boolean) => void;
+    onToggleExternalExpert: (weekNumber: number, blockIndex: number, value: boolean) => void;
+    onUpdateExternalExpertName: (weekNumber: number, blockIndex: number, name: string) => void;
+    onToggleFuoriAula: (weekNumber: number, blockIndex: number, value: boolean) => void;
+    onUpdateLuogo: (weekNumber: number, blockIndex: number, luogo: string) => void;
     onAddActivityForBlock?: (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, onToggleFslPeriod, onAddActivityForBlock, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, onToggleFslPeriod, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, onAddActivityForBlock, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -494,8 +498,16 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
                                                         {block.isFslPeriod && (
-                                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">
-                                                                FSL
+                                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">FSL</span>
+                                                        )}
+                                                        {block.hasExternalExpert && (
+                                                            <span className="text-[9px] font-mono text-amber-400/70 border border-amber-500/20 rounded px-1.5 py-0.5 flex-shrink-0" title={block.externalExpertName || 'Esperto esterno'}>
+                                                                ESP
+                                                            </span>
+                                                        )}
+                                                        {block.isFuoriAula && (
+                                                            <span className="text-[9px] font-mono text-teal-400/70 border border-teal-500/20 rounded px-1.5 py-0.5 flex-shrink-0" title={block.luogo || 'Fuori aula'}>
+                                                                FUORI
                                                             </span>
                                                         )}
                                                         {block.moduleId && (() => {
@@ -622,20 +634,24 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         </select>
                                                         {/* Toggle periodo FSL */}
                                                         <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod);
-                                                            }}
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); }}
                                                             title={block.isFslPeriod ? 'Disattiva periodo FSL' : 'Attiva periodo FSL'}
-                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${
-                                                                block.isFslPeriod
-                                                                    ? 'text-sky-400 border-sky-500/40 bg-sky-500/10'
-                                                                    : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'
-                                                            }`}
-                                                        >
-                                                            FSL
-                                                        </button>
+                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFslPeriod ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'}`}
+                                                        >FSL</button>
+                                                        {/* Toggle esperto esterno */}
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); }}
+                                                            title={block.hasExternalExpert ? 'Rimuovi esperto esterno' : 'Segna come lezione con esperto esterno'}
+                                                            disabled={isSpecialStatus}
+                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.hasExternalExpert ? 'text-amber-400 border-amber-500/40 bg-amber-500/10' : 'text-gray-600 border-gray-700/40 hover:text-amber-400/70 hover:border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
+                                                        >ESP</button>
+                                                        {/* Toggle fuori aula */}
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); }}
+                                                            title={block.isFuoriAula ? 'Riporta in aula' : 'Segna come attività fuori aula'}
+                                                            disabled={isSpecialStatus}
+                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFuoriAula ? 'text-teal-400 border-teal-500/40 bg-teal-500/10' : 'text-gray-600 border-gray-700/40 hover:text-teal-400/70 hover:border-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
+                                                        >FUORI</button>
                                                     </div>
                                                     {/* Attività attive su questo blocco */}
                                                     {blockActivities.length > 0 && (
@@ -723,6 +739,32 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         disabled={isSpecialStatus}
                                                     />
                                                 </div>
+                                                {/* Campo esperto esterno — visibile solo se attivo */}
+                                                {block.hasExternalExpert && (
+                                                    <div>
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-amber-500/60 mb-1 block">
+                                                            Esperto esterno
+                                                        </label>
+                                                        <EditableField
+                                                            value={block.externalExpertName || ''}
+                                                            onSave={(val) => onUpdateExternalExpertName(week.weekNumber, index, val)}
+                                                            placeholder="Nome e ruolo dell'esperto (es. Arch. Bianchi — Studio XY)…"
+                                                        />
+                                                    </div>
+                                                )}
+                                                {/* Campo luogo — visibile solo se fuori aula */}
+                                                {block.isFuoriAula && (
+                                                    <div>
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-teal-500/60 mb-1 block">
+                                                            Luogo
+                                                        </label>
+                                                        <EditableField
+                                                            value={block.luogo || ''}
+                                                            onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)}
+                                                            placeholder="Destinazione o luogo (es. Museo del Design, Milano)…"
+                                                        />
+                                                    </div>
+                                                )}
                                                 {/* Sezione attività */}
                                                 {onAddActivityForBlock && !isSpecialStatus && (() => {
                                                     const formKey = `${week.weekNumber}-${index}`;

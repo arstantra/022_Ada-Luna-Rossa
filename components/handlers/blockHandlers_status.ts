@@ -115,6 +115,62 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
     });
   };
 
+  const handleToggleExternalExpert = (weekNumber: number, blockIndex: number, value: boolean) => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex
+          ? { ...b, hasExternalExpert: value || undefined, externalExpertName: value ? b.externalExpertName : undefined }
+          : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  };
+
+  const handleUpdateExternalExpertName = (weekNumber: number, blockIndex: number, name: string) => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex ? { ...b, externalExpertName: name || undefined } : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  };
+
+  const handleToggleFuoriAula = (weekNumber: number, blockIndex: number, value: boolean) => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex
+          ? { ...b, isFuoriAula: value || undefined, luogo: value ? b.luogo : undefined }
+          : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  };
+
+  const handleUpdateLuogo = (weekNumber: number, blockIndex: number, luogo: string) => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex ? { ...b, luogo: luogo || undefined } : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  };
+
   const handleToggleFslPeriod = (weekNumber: number, blockIndex: number, value: boolean) => {
     const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
     if (!weekInfo) return;
@@ -237,6 +293,10 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
     handleUpdateBlockTipologia,
     handleUpdateBlockMetodologia,
     handleToggleFslPeriod,
+    handleToggleExternalExpert,
+    handleUpdateExternalExpertName,
+    handleToggleFuoriAula,
+    handleUpdateLuogo,
     handleSaltaChoice,
   };
 }

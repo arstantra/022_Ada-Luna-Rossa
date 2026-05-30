@@ -319,6 +319,10 @@ export interface BlockDetails {
     tipologia?: LessonType;
     metodologia?: TeachingMethodology; // approccio pedagogico — ortogonale a tipologia e cosa
     isFslPeriod?: boolean;  // flag periodo FSL: badge visuale, ortogonale allo stato
+    hasExternalExpert?: boolean;   // lezione/lab condotto da esperto esterno
+    externalExpertName?: string;   // nome/ruolo dell'esperto (es. "Arch. Rossi — studi Oma")
+    isFuoriAula?: boolean;         // blocco svolto fuori dall'aula (uscita, laboratorio esterno, ecc.)
+    luogo?: string;                // descrizione libera del luogo (es. "Museo del Design, Milano")
     moduleId?: string;    // riferimento a CourseModule.id
     sectionId?: string;   // riferimento a ModuleSection.id
     // Il campo module?: string rimane per retrocompatibilità DB
