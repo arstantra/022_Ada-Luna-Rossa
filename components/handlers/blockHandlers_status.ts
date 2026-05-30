@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, WeekRouteInfo, BlockStatus, LessonType, DetachedLesson } from '../../types';
+import type { Conversation, WeekRouteInfo, BlockStatus, LessonType, TeachingMethodology, DetachedLesson } from '../../types';
 import type { SaltaChoice } from '../SaltaLezioneModal';
 
 export interface BlockStatusDeps {
@@ -97,6 +97,19 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
       if (!c.weekPlan) return c;
       const blocks = c.weekPlan.blocks.map((b, i) =>
         i === blockIndex ? { ...b, tipologia: (tipologia || undefined) as LessonType | undefined } : b
+      );
+      return { ...c, weekPlan: { ...c.weekPlan, blocks } };
+    });
+  };
+
+  const handleUpdateBlockMetodologia = (weekNumber: number, blockIndex: number, metodologia: TeachingMethodology | '') => {
+    const weekInfo = availableWeeks.find(w => w.weekNumber === weekNumber);
+    if (!weekInfo) return;
+    const conversation = getOrCreateConversationForWeek(weekInfo);
+    updateConversation(conversation.id, c => {
+      if (!c.weekPlan) return c;
+      const blocks = c.weekPlan.blocks.map((b, i) =>
+        i === blockIndex ? { ...b, metodologia: (metodologia || undefined) as TeachingMethodology | undefined } : b
       );
       return { ...c, weekPlan: { ...c.weekPlan, blocks } };
     });
@@ -222,6 +235,7 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
     handleUpdateBlockModule,
     handleUpdateBlockStatus,
     handleUpdateBlockTipologia,
+    handleUpdateBlockMetodologia,
     handleToggleFslPeriod,
     handleSaltaChoice,
   };

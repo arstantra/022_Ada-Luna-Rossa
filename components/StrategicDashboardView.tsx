@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, CourseModule, Activity, ActivityType, CourseContentUnit } from '../types';
-import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS } from '../constants';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityType, CourseContentUnit } from '../types';
+import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -29,13 +29,15 @@ interface StrategicDashboardViewProps {
     onUpdateBlockModule: (weekNumber: number, blockIndex: number, module: string, lessonTitle: string) => void;
     onUpdateBlockStatus: (weekNumber: number, blockIndex: number, status: BlockStatus, reason?: string) => void;
     onUpdateBlockTipologia: (weekNumber: number, blockIndex: number, tipologia: LessonType | '') => void;
+    onUpdateBlockMetodologia: (weekNumber: number, blockIndex: number, metodologia: TeachingMethodology | '') => void;
+    parsedMethodologies: TeachingMethodology[]; // metodologie trovate nel Progetto Didattico
     onToggleFslPeriod: (weekNumber: number, blockIndex: number, value: boolean) => void;
     onAddActivityForBlock?: (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onToggleFslPeriod, onAddActivityForBlock, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, onToggleFslPeriod, onAddActivityForBlock, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -590,6 +592,34 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 <option key={key} value={key}>{label}</option>
                                                             ))}
                                                         </select>
+                                                        {/* Select approccio metodologico — voci dal Progetto Didattico in cima */}
+                                                        <select
+                                                            value={block.metodologia || (parsedMethodologies.length === 0 ? 'tradizionale' : '')}
+                                                            onChange={(e) => {
+                                                                onUpdateBlockMetodologia(week.weekNumber, index, e.target.value as TeachingMethodology | '');
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={selectKeyDownHandler}
+                                                            disabled={isSpecialStatus}
+                                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+                                                        >
+                                                            <option value="" disabled>— approccio —</option>
+                                                            {parsedMethodologies.length > 0 && (
+                                                                <optgroup label="· nel corso">
+                                                                    {parsedMethodologies.map(m => (
+                                                                        <option key={m} value={m}>{TEACHING_METHODOLOGY_LABELS[m]}</option>
+                                                                    ))}
+                                                                </optgroup>
+                                                            )}
+                                                            <optgroup label={parsedMethodologies.length > 0 ? '· altre' : ''}>
+                                                                {(Object.entries(TEACHING_METHODOLOGY_LABELS) as [TeachingMethodology, string][])
+                                                                    .filter(([key]) => !parsedMethodologies.includes(key))
+                                                                    .map(([key, label]) => (
+                                                                        <option key={key} value={key}>{label}</option>
+                                                                    ))
+                                                                }
+                                                            </optgroup>
+                                                        </select>
                                                         {/* Toggle periodo FSL */}
                                                         <button
                                                             onClick={(e) => {
@@ -621,6 +651,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                         {isLaunch && '↗ '}
                                                                         {isDue && '⚑ '}
                                                                         <span className="max-w-[80px] truncate">{a.title}</span>
+                                                                        <span className="opacity-60 ml-0.5">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
                                                                     </span>
                                                                 );
                                                             })}
@@ -701,27 +732,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     return (
                                                         <div className="pt-1">
                                                             {!isFormOpen && (
-                                                                <div className="flex items-center justify-between gap-2 mb-2">
-                                                                    <div className="flex items-center gap-1 flex-wrap">
-                                                                        {launched.length > 0 ? launched.map(a => {
-                                                                            const statusColor =
-                                                                                a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
-                                                                                a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
-                                                                                a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
-                                                                                                             'text-rose-400/70 border-rose-500/20';
-                                                                            return (
-                                                                                <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
-                                                                                    <span>↗</span>
-                                                                                    <span className="max-w-[120px] truncate">{a.title}</span>
-                                                                                    <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
-                                                                                    {a.status === 'consegnata' && <span>✓</span>}
-                                                                                    {a.status === 'scaduta' && <span>⚑</span>}
-                                                                                </span>
-                                                                            );
-                                                                        }) : (
-                                                                            <span className="text-[9px] font-mono text-gray-600">Nessuna attività lanciata</span>
-                                                                        )}
-                                                                    </div>
+                                                                <div className="flex items-center justify-end mb-2">
                                                                     <button
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
                                                                         className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/8 hover:border-rose-400/25 transition-colors flex-shrink-0"

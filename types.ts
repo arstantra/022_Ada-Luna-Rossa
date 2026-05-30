@@ -96,6 +96,22 @@ export type LessonType =
 /** Tipo di unità di contenuto del corso — il "cosa" (dichiarato nel Progetto Didattico) */
 export type CourseContentType = 'modulo' | 'uda' | 'educazione_civica' | 'fsl';
 
+/** Approccio pedagogico — il "metodo" (ortogonale a tipologia e cosa) */
+export type TeachingMethodology =
+  | 'tradizionale'
+  | 'flipped_classroom'
+  | 'project_based'
+  | 'problem_based'
+  | 'cooperative_learning'
+  | 'peer_teaching'
+  | 'debate'
+  | 'design_thinking'
+  | 'gamification'
+  | 'studio_di_caso'
+  | 'inquiry_based'
+  | 'role_playing'
+  | 'jigsaw';
+
 /** Unità di contenuto parsata dal Progetto Didattico */
 export interface CourseContentUnit {
   id: string;             // formato: `${type}-${order}`, es. "modulo-1", "uda-1"
@@ -176,6 +192,7 @@ export interface ParsedProgettazione {
     modules: ModuleDetails[];           // mantenuto per retrocompatibilità
     moduleMap: Map<string, ModuleDetails>;
     contentUnits: CourseContentUnit[];  // lista flat di tutte le unità (moduli, UDA, EC, FSL)
+    parsedMethodologies: TeachingMethodology[]; // metodologie trovate nel testo (ordinate per rilevanza)
 }
 
 export interface GroupDefinition {
@@ -300,6 +317,7 @@ export interface BlockDetails {
     lessonState?: LessonState; // Ciclo di vita: progettata → in_corso → archiviata
     fonti?: BlockSource[];
     tipologia?: LessonType;
+    metodologia?: TeachingMethodology; // approccio pedagogico — ortogonale a tipologia e cosa
     isFslPeriod?: boolean;  // flag periodo FSL: badge visuale, ortogonale allo stato
     moduleId?: string;    // riferimento a CourseModule.id
     sectionId?: string;   // riferimento a ModuleSection.id

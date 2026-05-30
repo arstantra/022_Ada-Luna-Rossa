@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, Activity, ActivityStatus, LessonType } from '../types';
-import { LESSON_TYPE_LABELS } from '../constants';
+import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology } from '../types';
+import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
 
@@ -196,6 +196,101 @@ const SubjectHeatmap: React.FC<{ rows: HeatmapRow[] }> = ({ rows }) => {
                   </td>
                 );
               })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ── Matrice Modulo × Metodologia ──────────────────────────────────────────────
+
+// Abbreviazioni compatte per le intestazioni di colonna
+const METHOD_SHORT: Partial<Record<TeachingMethodology, string>> = {
+  tradizionale:         'Trad.',
+  flipped_classroom:    'Flip.',
+  project_based:        'PBL',
+  problem_based:        'PrBL',
+  cooperative_learning: 'CL',
+  peer_teaching:        'Peer',
+  debate:               'Deb.',
+  design_thinking:      'DT',
+  gamification:         'Game',
+  studio_di_caso:       'Case',
+  inquiry_based:        'IBL',
+  role_playing:         'RP',
+  jigsaw:               'Jig.',
+};
+
+interface MatrixRow { module: string; counts: Partial<Record<TeachingMethodology, number>>; total: number }
+
+const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: TeachingMethodology[] }> = ({ rows, usedMethods }) => {
+  if (rows.length === 0 || usedMethods.length === 0) return (
+    <div className="flex items-center justify-center py-6">
+      <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+        Imposta modulo e approccio nei blocchi per vedere la matrice
+      </p>
+    </div>
+  );
+
+  const globalMax = Math.max(...rows.flatMap(r => Object.values(r.counts) as number[]), 1);
+
+  return (
+    <div className="overflow-x-auto custom-scrollbar">
+      <table className="w-full border-collapse" style={{ minWidth: 200 }}>
+        <thead>
+          <tr>
+            <th className="text-left pr-2 pb-1.5" style={{ width: '38%' }} />
+            {usedMethods.map(m => (
+              <th key={m} className="text-center pb-1.5 px-0.5" title={TEACHING_METHODOLOGY_LABELS[m]}>
+                <span className="text-[8px] font-mono text-gray-600">{METHOD_SHORT[m] ?? m.slice(0, 4)}</span>
+              </th>
+            ))}
+            <th className="text-center pb-1.5 pl-1.5">
+              <span className="text-[8px] font-mono text-gray-700">tot</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row.module} className="group">
+              <td className="pr-2 py-0.5">
+                <span
+                  className="text-[9px] font-mono text-gray-500 group-hover:text-gray-300 truncate block transition-colors"
+                  style={{ maxWidth: 100 }}
+                  title={row.module}
+                >
+                  {row.module}
+                </span>
+              </td>
+              {usedMethods.map(m => {
+                const v = row.counts[m] ?? 0;
+                const intensity = v / globalMax;
+                // verde-teal per metodologie innovative, grigio per tradizionale
+                const isTradi = m === 'tradizionale';
+                const bg = v > 0
+                  ? isTradi
+                    ? `rgba(75,85,99,${0.15 + intensity * 0.55})`
+                    : `rgba(20,184,166,${0.10 + intensity * 0.60})`
+                  : 'rgba(17,24,39,0.4)';
+                return (
+                  <td key={m} className="text-center py-0.5 px-0.5">
+                    <div
+                      className="mx-auto rounded-sm flex items-center justify-center transition-all"
+                      style={{ width: 22, height: 18, background: bg }}
+                      title={v > 0 ? `${row.module} · ${TEACHING_METHODOLOGY_LABELS[m]}: ${v} bl.` : undefined}
+                    >
+                      {v > 0 && (
+                        <span className={`text-[8px] font-mono tabular-nums ${isTradi ? 'text-gray-400' : 'text-teal-300/80'}`}>{v}</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              })}
+              <td className="text-center py-0.5 pl-1.5">
+                <span className="text-[8px] font-mono text-gray-600 tabular-nums">{row.total}</span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -456,6 +551,35 @@ const GanttView: React.FC<GanttViewProps> = ({
       .sort((a, b) => b.total - a.total);
   }, [conversations]);
 
+  // ── Matrice modulo × metodologia ─────────────────────────────────────────
+  const { matrixRows, usedMethods } = useMemo(() => {
+    const map = new Map<string, Partial<Record<TeachingMethodology, number>>>();
+    const methodSet = new Set<TeachingMethodology>();
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach(block => {
+        if (!block.metodologia) return;
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        const mod = block.module?.trim() || 'Senza modulo';
+        if (!map.has(mod)) map.set(mod, {});
+        const entry = map.get(mod)!;
+        entry[block.metodologia] = (entry[block.metodologia] ?? 0) + 1;
+        methodSet.add(block.metodologia);
+      });
+    });
+    // Ordine stabile: tradizionale prima, poi gli altri in ordine di TEACHING_METHODOLOGY_LABELS
+    const methodOrder = (Object.keys(TEACHING_METHODOLOGY_LABELS) as TeachingMethodology[])
+      .filter(m => methodSet.has(m));
+    const rows: MatrixRow[] = [...map.entries()]
+      .map(([module, counts]) => ({
+        module,
+        counts,
+        total: Object.values(counts).reduce((a, b) => (a as number) + (b as number), 0) as number,
+      }))
+      .sort((a, b) => b.total - a.total);
+    return { matrixRows: rows, usedMethods: methodOrder };
+  }, [conversations]);
+
   // ── Helpers posizionamento (%) ────────────────────────────────────────────
   const colL  = (w: number) => `${((w - 1) / maxWeek) * 100}%`;
   const colW  = ()           => `${(1 / maxWeek) * 100}%`;
@@ -649,6 +773,17 @@ const GanttView: React.FC<GanttViewProps> = ({
             )}
           </div>
           <SubjectHeatmap rows={heatmapRows} />
+        </div>
+
+        {/* Matrice modulo × metodologia */}
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Modulo × Metodologia</span>
+            {usedMethods.length > 0 && (
+              <span className="text-[9px] font-mono text-gray-700">{usedMethods.length} met.</span>
+            )}
+          </div>
+          <ModuloMetodologiaMatrix rows={matrixRows} usedMethods={usedMethods} />
         </div>
 
         </div>{/* fine colonna sinistra */}

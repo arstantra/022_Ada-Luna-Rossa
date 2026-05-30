@@ -1,5 +1,5 @@
 // constants.ts
-import type { Mode, LessonType, ActivityType, CourseContentType } from './types';
+import type { Mode, LessonType, ActivityType, CourseContentType, TeachingMethodology } from './types';
 
 export const LOCAL_STORAGE_INSTRUCTION_KEY = 'ada-system-instruction';
 export const LOCAL_STORAGE_PROGETTAZIONE_KEY = 'ada-constitution'; // valore DB invariato per retrocompatibilità
@@ -203,6 +203,23 @@ export const COURSE_CONTENT_TYPE_LABELS: Record<CourseContentType, string> = {
   uda:               'UDA',
   educazione_civica: 'Educazione Civica',
   fsl:               'FSL',
+};
+
+/** Approccio pedagogico — il "metodo" (tradizionale + innovativi) */
+export const TEACHING_METHODOLOGY_LABELS: Record<TeachingMethodology, string> = {
+  tradizionale:         'Tradizionale',
+  flipped_classroom:    'Flipped Classroom',
+  project_based:        'Project Based',
+  problem_based:        'Problem Based',
+  cooperative_learning: 'Cooperative Learning',
+  peer_teaching:        'Peer Teaching',
+  debate:               'Debate',
+  design_thinking:      'Design Thinking',
+  gamification:         'Gamification',
+  studio_di_caso:       'Studio di caso',
+  inquiry_based:        'Inquiry Based',
+  role_playing:         'Role Playing',
+  jigsaw:               'Jigsaw',
 };
 
 export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {

@@ -21,10 +21,14 @@ const EditableTextarea: React.FC<EditableTextareaProps> = ({ value, onSave, plac
 
     useEffect(() => {
         const textarea = textareaRef.current;
-        if (textarea) {
+        if (!textarea) return;
+        // rAF garantisce che il resize avvenga dopo che il DOM è visibile
+        // (fix: textarea dentro accordion chiuso ha scrollHeight=0 al mount)
+        const id = requestAnimationFrame(() => {
             textarea.style.height = 'auto';
             textarea.style.height = `${textarea.scrollHeight}px`;
-        }
+        });
+        return () => cancelAnimationFrame(id);
     }, [text]);
 
     useEffect(() => {

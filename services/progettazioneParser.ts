@@ -1,5 +1,56 @@
 // services/progettazioneParser.ts
-import type { Pillar, ModuleDetails, ParsedProgettazione, CourseContentType, CourseContentUnit } from '../types';
+import type { Pillar, ModuleDetails, ParsedProgettazione, CourseContentType, CourseContentUnit, TeachingMethodology } from '../types';
+
+// ── Parser metodologie didattiche ────────────────────────────────────────────
+
+/**
+ * Keyword multi-parola per ogni metodologia.
+ * Scelta conservativa: solo frasi esplicite e riconoscibili,
+ * per evitare falsi positivi con parole comuni italiane.
+ */
+const METHODOLOGY_KEYWORDS: Record<TeachingMethodology, string[]> = {
+  tradizionale:         ['tradizionale', 'lezione magistrale', 'ex cathedra'],
+  flipped_classroom:    ['flipped classroom', 'flipped class', 'classe capovolta', 'lezione capovolta'],
+  project_based:        ['project based learning', 'project-based learning', 'apprendimento per progetti', 'project based'],
+  problem_based:        ['problem based learning', 'problem-based learning', 'apprendimento per problemi', 'problem based'],
+  cooperative_learning: ['cooperative learning', 'apprendimento cooperativo', 'cooperative'],
+  peer_teaching:        ['peer teaching', 'peer tutoring', 'tutoraggio tra pari', 'insegnamento tra pari'],
+  debate:               ['debate strutturato', 'structured debate', 'dibattito strutturato'],
+  design_thinking:      ['design thinking', 'human centered design', 'human-centered design'],
+  gamification:         ['gamification', 'gamificazione', 'game based learning', 'game-based learning'],
+  studio_di_caso:       ['studio di caso', 'case study', 'caso di studio'],
+  inquiry_based:        ['inquiry based learning', 'inquiry-based learning', 'ricerca-azione', 'scoperta guidata', 'inquiry based'],
+  role_playing:         ['role playing', 'role-playing', 'gioco di ruolo'],
+  jigsaw:               ['jigsaw', 'gruppi esperti', 'puzzle cooperativo'],
+};
+
+/**
+ * Scansiona il testo del Progetto Didattico alla ricerca di metodologie esplicite.
+ * Restituisce le metodologie trovate in ordine di prima occorrenza nel testo,
+ * senza duplicati. `tradizionale` non viene mai aggiunto automaticamente —
+ * è il default UI quando la lista è vuota.
+ */
+export const parseMethodologiesFromText = (text: string): TeachingMethodology[] => {
+  if (!text.trim()) return [];
+  const normalized = text.toLowerCase();
+  const found: TeachingMethodology[] = [];
+
+  for (const [methodology, keywords] of Object.entries(METHODOLOGY_KEYWORDS) as [TeachingMethodology, string[]][]) {
+    if (methodology === 'tradizionale') continue; // non auto-detect: è il default UI
+    const firstIndex = keywords.reduce((min, kw) => {
+      const idx = normalized.indexOf(kw.toLowerCase());
+      return idx !== -1 && idx < min ? idx : min;
+    }, Infinity);
+    if (firstIndex !== Infinity) {
+      found.push([methodology, firstIndex] as unknown as TeachingMethodology);
+    }
+  }
+
+  // Ordina per prima occorrenza nel testo, poi estrae solo la metodologia
+  return (found as unknown as [TeachingMethodology, number][])
+    .sort((a, b) => a[1] - b[1])
+    .map(([m]) => m);
+};
 
 const parsePillarsOrActivities = (text: string): string[] => {
     if (!text) return [];
@@ -141,5 +192,7 @@ export const parseProgettazione = (progettazioneText: string): ParsedProgettazio
         }
     }
 
-    return { modules, moduleMap, contentUnits };
+    const parsedMethodologies = parseMethodologiesFromText(progettazioneText);
+
+    return { modules, moduleMap, contentUnits, parsedMethodologies };
 };
