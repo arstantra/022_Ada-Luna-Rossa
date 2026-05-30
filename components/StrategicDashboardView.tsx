@@ -497,28 +497,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        {block.isFslPeriod && (
-                                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5 flex-shrink-0">FSL</span>
-                                                        )}
-                                                        {block.hasExternalExpert && (
-                                                            <span className="text-[9px] font-mono text-amber-400/70 border border-amber-500/20 rounded px-1.5 py-0.5 flex-shrink-0" title={block.externalExpertName || 'Esperto esterno'}>
-                                                                ESP
-                                                            </span>
-                                                        )}
-                                                        {block.isFuoriAula && (
-                                                            <span className="text-[9px] font-mono text-teal-400/70 border border-teal-500/20 rounded px-1.5 py-0.5 flex-shrink-0" title={block.luogo || 'Fuori aula'}>
-                                                                FUORI
-                                                            </span>
-                                                        )}
-                                                        {block.moduleId && (() => {
-                                                            const mod = week.modules.find(m => m.id === block.moduleId);
-                                                            if (!mod) return null;
-                                                            return (
-                                                                <span className="text-[9px] font-mono text-sky-400/60 flex-shrink-0">
-                                                                    M{mod.order}
-                                                                </span>
-                                                            );
-                                                        })()}
                                                         <div className="flex-grow">
                                                             {block.status === 'saltato' ? (
                                                                 <EditableField
@@ -562,100 +540,113 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className={`flex items-center gap-3 pl-8 flex-wrap ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                        {/* Tendina "Cosa" — unità di contenuto dal Progetto Didattico */}
-                                                        <select
-                                                            value={block.module || ''}
-                                                            onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={selectKeyDownHandler}
-                                                            disabled={isSpecialStatus || block.isLocked}
-                                                            className="w-full md:w-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
-                                                        >
-                                                            <option value="" disabled>— unità didattica —</option>
-                                                            {contentUnits.length > 0
-                                                                ? (['modulo', 'uda', 'educazione_civica', 'fsl'] as const).flatMap(type => {
-                                                                    const units = contentUnits.filter(u => u.type === type);
-                                                                    if (units.length === 0) return [];
-                                                                    return [
-                                                                        <optgroup key={type} label={COURSE_CONTENT_TYPE_LABELS[type]}>
-                                                                            {units.map(u => (
-                                                                                <option key={u.id} value={u.title}>{u.title}</option>
-                                                                            ))}
-                                                                        </optgroup>
-                                                                    ];
-                                                                })
-                                                                : modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)
-                                                            }
-                                                        </select>
-                                                        {/* Tendina "Come" — modalità pedagogica (5 voci stabili) */}
-                                                        <select
-                                                            value={block.tipologia || ''}
-                                                            onChange={(e) => {
-                                                                onUpdateBlockTipologia(week.weekNumber, index, e.target.value as LessonType | '');
-                                                            }}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={selectKeyDownHandler}
-                                                            disabled={isSpecialStatus}
-                                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
-                                                        >
-                                                            <option value="" disabled>— tipologia di lezione —</option>
-                                                            {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
-                                                                <option key={key} value={key}>{label}</option>
-                                                            ))}
-                                                        </select>
-                                                        {/* Select approccio metodologico — voci dal Progetto Didattico in cima */}
-                                                        <select
-                                                            value={block.metodologia || (parsedMethodologies.length === 0 ? 'tradizionale' : '')}
-                                                            onChange={(e) => {
-                                                                onUpdateBlockMetodologia(week.weekNumber, index, e.target.value as TeachingMethodology | '');
-                                                            }}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={selectKeyDownHandler}
-                                                            disabled={isSpecialStatus}
-                                                            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
-                                                        >
-                                                            <option value="" disabled>— approccio —</option>
-                                                            {parsedMethodologies.length > 0 && (
-                                                                <optgroup label="· nel corso">
-                                                                    {parsedMethodologies.map(m => (
-                                                                        <option key={m} value={m}>{TEACHING_METHODOLOGY_LABELS[m]}</option>
-                                                                    ))}
-                                                                </optgroup>
-                                                            )}
-                                                            <optgroup label={parsedMethodologies.length > 0 ? '· altre' : ''}>
-                                                                {(Object.entries(TEACHING_METHODOLOGY_LABELS) as [TeachingMethodology, string][])
-                                                                    .filter(([key]) => !parsedMethodologies.includes(key))
-                                                                    .map(([key, label]) => (
-                                                                        <option key={key} value={key}>{label}</option>
-                                                                    ))
+                                                    <div className={`flex items-center gap-2 flex-wrap ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
+                                                        {/* Cosa — unità di contenuto dal Progetto Didattico */}
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Cosa</span>
+                                                            <select
+                                                                value={block.module || ''}
+                                                                onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onKeyDown={selectKeyDownHandler}
+                                                                disabled={isSpecialStatus || block.isLocked}
+                                                                className="max-w-[220px] bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                            >
+                                                                <option value="" disabled>— unità didattica —</option>
+                                                                {contentUnits.length > 0
+                                                                    ? (['modulo', 'uda', 'educazione_civica', 'fsl'] as const).flatMap(type => {
+                                                                        const units = contentUnits.filter(u => u.type === type);
+                                                                        if (units.length === 0) return [];
+                                                                        return [
+                                                                            <optgroup key={type} label={COURSE_CONTENT_TYPE_LABELS[type]}>
+                                                                                {units.map(u => (
+                                                                                    <option key={u.id} value={u.title}>{u.title}</option>
+                                                                                ))}
+                                                                            </optgroup>
+                                                                        ];
+                                                                    })
+                                                                    : modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)
                                                                 }
-                                                            </optgroup>
-                                                        </select>
-                                                        {/* Toggle periodo FSL */}
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); }}
-                                                            title={block.isFslPeriod ? 'Disattiva periodo FSL' : 'Attiva periodo FSL'}
-                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFslPeriod ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'}`}
-                                                        >FSL</button>
-                                                        {/* Toggle esperto esterno */}
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); }}
-                                                            title={block.hasExternalExpert ? 'Rimuovi esperto esterno' : 'Segna come lezione con esperto esterno'}
-                                                            disabled={isSpecialStatus}
-                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.hasExternalExpert ? 'text-amber-400 border-amber-500/40 bg-amber-500/10' : 'text-gray-600 border-gray-700/40 hover:text-amber-400/70 hover:border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
-                                                        >ESP</button>
-                                                        {/* Toggle fuori aula */}
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); }}
-                                                            title={block.isFuoriAula ? 'Riporta in aula' : 'Segna come attività fuori aula'}
-                                                            disabled={isSpecialStatus}
-                                                            className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFuoriAula ? 'text-teal-400 border-teal-500/40 bg-teal-500/10' : 'text-gray-600 border-gray-700/40 hover:text-teal-400/70 hover:border-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
-                                                        >FUORI</button>
+                                                            </select>
+                                                        </div>
+                                                        {/* Come — modalità pedagogica (5 voci stabili) */}
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Come</span>
+                                                            <select
+                                                                value={block.tipologia || ''}
+                                                                onChange={(e) => {
+                                                                    onUpdateBlockTipologia(week.weekNumber, index, e.target.value as LessonType | '');
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onKeyDown={selectKeyDownHandler}
+                                                                disabled={isSpecialStatus}
+                                                                className="bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+                                                            >
+                                                                <option value="" disabled>— tipologia —</option>
+                                                                {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
+                                                                    <option key={key} value={key}>{label}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        {/* Approccio — metodologia didattica, voci dal Progetto in cima */}
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Approccio</span>
+                                                            <select
+                                                                value={block.metodologia || (parsedMethodologies.length === 0 ? 'tradizionale' : '')}
+                                                                onChange={(e) => {
+                                                                    onUpdateBlockMetodologia(week.weekNumber, index, e.target.value as TeachingMethodology | '');
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onKeyDown={selectKeyDownHandler}
+                                                                disabled={isSpecialStatus}
+                                                                className="bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
+                                                            >
+                                                                <option value="" disabled>— approccio —</option>
+                                                                {parsedMethodologies.length > 0 && (
+                                                                    <optgroup label="· nel corso">
+                                                                        {parsedMethodologies.map(m => (
+                                                                            <option key={m} value={m}>{TEACHING_METHODOLOGY_LABELS[m]}</option>
+                                                                        ))}
+                                                                    </optgroup>
+                                                                )}
+                                                                <optgroup label={parsedMethodologies.length > 0 ? '· altre' : ''}>
+                                                                    {(Object.entries(TEACHING_METHODOLOGY_LABELS) as [TeachingMethodology, string][])
+                                                                        .filter(([key]) => !parsedMethodologies.includes(key))
+                                                                        .map(([key, label]) => (
+                                                                            <option key={key} value={key}>{label}</option>
+                                                                        ))
+                                                                    }
+                                                                </optgroup>
+                                                            </select>
+                                                        </div>
+                                                        {/* Separatore visivo */}
+                                                        <span className="w-px h-4 bg-gray-700/60 flex-shrink-0" />
+                                                        {/* Contesto: toggle FSL · ESP · FUORI */}
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Contesto</span>
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); }}
+                                                                title={block.isFslPeriod ? 'Disattiva periodo FSL' : 'Attiva periodo FSL'}
+                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFslPeriod ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'}`}
+                                                            >FSL</button>
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); }}
+                                                                title={block.hasExternalExpert ? 'Rimuovi esperto esterno' : 'Segna come lezione con esperto esterno'}
+                                                                disabled={isSpecialStatus}
+                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.hasExternalExpert ? 'text-amber-400 border-amber-500/40 bg-amber-500/10' : 'text-gray-600 border-gray-700/40 hover:text-amber-400/70 hover:border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
+                                                            >ESP</button>
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); }}
+                                                                title={block.isFuoriAula ? 'Riporta in aula' : 'Segna come attività fuori aula'}
+                                                                disabled={isSpecialStatus}
+                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFuoriAula ? 'text-teal-400 border-teal-500/40 bg-teal-500/10' : 'text-gray-600 border-gray-700/40 hover:text-teal-400/70 hover:border-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
+                                                            >FUORI</button>
+                                                        </div>
                                                     </div>
                                                     {/* Attività attive su questo blocco */}
                                                     {blockActivities.length > 0 && (
-                                                        <div className="flex items-center gap-1.5 pl-8 flex-wrap">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Attività:</span>
                                                             {blockActivities.slice(0, 2).map(a => {
                                                                 const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
                                                                 const dueGlobal = launchGlobal + a.dueInBlocks;

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, ActivityType, ActivityContext, ModuleDetails, Activity } from '../types';
-import { ACTIVITY_TYPE_LABELS, ACTIVITY_CONTEXT_LABELS, COURSE_CONTENT_TYPE_LABELS } from '../constants';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, TeachingMethodology, ActivityType, ActivityContext, ModuleDetails, Activity } from '../types';
+import { ACTIVITY_TYPE_LABELS, ACTIVITY_CONTEXT_LABELS, COURSE_CONTENT_TYPE_LABELS, LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
@@ -352,6 +352,33 @@ ${htmlContent}
                                     <div>
                                         <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Obiettivo</p>
                                         <p className="text-[11px] text-gray-400 leading-relaxed">{block.objective}</p>
+                                    </div>
+                                )}
+                                {/* Come · Approccio · Contesto — coerenza con Progettazione */}
+                                {(block.tipologia || block.metodologia || block.isFslPeriod || block.hasExternalExpert || block.isFuoriAula) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        {block.tipologia && (
+                                            <span className="text-[9px] font-mono bg-gray-800/70 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40" title="Come">
+                                                {LESSON_TYPE_LABELS[block.tipologia as LessonType]}
+                                            </span>
+                                        )}
+                                        {block.metodologia && (
+                                            <span className="text-[9px] font-mono bg-gray-800/70 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40" title="Approccio">
+                                                {TEACHING_METHODOLOGY_LABELS[block.metodologia as TeachingMethodology]}
+                                            </span>
+                                        )}
+                                        {(block.tipologia || block.metodologia) && (block.isFslPeriod || block.hasExternalExpert || block.isFuoriAula) && (
+                                            <span className="w-px h-3 bg-gray-700/50" />
+                                        )}
+                                        {block.isFslPeriod && (
+                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5">FSL</span>
+                                        )}
+                                        {block.hasExternalExpert && (
+                                            <span className="text-[9px] font-mono text-amber-400/70 border border-amber-500/20 rounded px-1.5 py-0.5" title={block.externalExpertName || 'Esperto esterno'}>ESP{block.externalExpertName ? ` · ${block.externalExpertName}` : ''}</span>
+                                        )}
+                                        {block.isFuoriAula && (
+                                            <span className="text-[9px] font-mono text-teal-400/70 border border-teal-500/20 rounded px-1.5 py-0.5" title={block.luogo || 'Fuori aula'}>FUORI{block.luogo ? ` · ${block.luogo}` : ''}</span>
+                                        )}
                                     </div>
                                 )}
                             </div>
