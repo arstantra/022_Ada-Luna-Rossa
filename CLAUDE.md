@@ -102,7 +102,7 @@ components/
   MainApp.tsx                — orchestratore centrale (509 righe dopo split 2026-05-25): stato, hook, factory call (useMemo), render
   handlers/                  — handler estratti da MainApp.tsx (split 2026-05-25):
     blockHandlers.ts         — pianificazione blocchi: handleSetWeekTheme, handleUpdateBlockObjective, handleUpdateBlockTitle, handleGenerateStrategicSuggestions, handleGenerateBlockDetails, ecc.
-    blockHandlers_status.ts  — stato blocco: handleUpdateBlockStatus, handleUpdateBlockTipologia, handleToggleFslPeriod, handleSaltaChoice + createApplyBlockStatus (helper)
+    blockHandlers_status.ts  — stato blocco: handleUpdateBlockStatus, handleUpdateBlockTipologia, handleUpdateBlockMetodologia, handleToggleFslPeriod, handleToggleExternalExpert, handleUpdateExternalExpertName, handleToggleFuoriAula, handleUpdateLuogo, handleSaltaChoice + createApplyBlockStatus (helper)
     conversationHandlers.ts  — handleModeChange, handlePlanningModeChange, handleOpenConversaConAda, handleEvaluationMessage, ecc.
     messagingHandlers.ts     — handleSendMessage, handleGenerateImage, handleSendPlanningMessage
     lessonHandlers.ts        — handleAvviaLezione, handleChiudiLezione, handleRecordAttendanceForBlock, handleUpdateGroupsForBlock, handleAddActivity, ecc.
@@ -111,10 +111,10 @@ components/
     dataHandlers.ts          — handleExportData, handleAttemptImport, handleConfirmRestore, handleExportCourseBook, ecc.
     uiHandlers.ts            — handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal
   Sidebar.tsx                — navigazione, NavItem + CollapsibleSectionLabel + CollapsibleSection + accent line
-  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettore "Cosa" + "Come" + toggle isFslPeriod + campo "Obiettivo Didattico" (istituzionale, `block.objective`) + "Titolo" nell'header (`block.blockTitle`). Due pulsanti AI separati: ✦ nell'header → TitleSuggestionModal (Diretto/Narrativo/Evocativo); "Suggerisci obiettivo" nella sezione espansa → ObjectiveSuggestionModal (Sintetico/Bilanciato/Articolato). Il radar NON è più nell'header (spostato in GanttView — 2026-05-25).
+  StrategicDashboardView.tsx — "Progettazione del Corso": settimane (da routeCalendar), blocchi, progressStats; accordion blocco con selettori "Cosa" + "Come" + "Approccio" (metodologia) + toggle FSL / ESP / FUORI + badge contestuali nell'header + campi esperto/luogo nella sezione espansa + campo "Obiettivo Didattico" + "Titolo" nell'header. Due pulsanti AI: ✦ → TitleSuggestionModal; "Suggerisci obiettivo" → ObjectiveSuggestionModal. Il radar NON è nell'header (in GanttView).
   TitleSuggestionModal.tsx   — modal per generare titoli accattivanti del blocco (per gli studenti): tre varianti Diretto/Narrativo/Evocativo da `generateBlockTitleSuggestions`. Richiede `block.objective` compilato.
   ObjectiveSuggestionModal.tsx — modal per generare l'obiettivo didattico istituzionale: tre varianti Sintetico/Bilanciato/Articolato da `generateObjectiveSuggestions`. Richiede `block.module` selezionato.
-  GanttView.tsx              — "Analisi del Corso" (rinominato da "Gantt del Corso" 2026-05-25): layout a due colonne — Gantt moduli/attività (flex-1, scroll orizzontale) + pannello Radar equilibrio didattico (w-72, destra). Su schermi stretti: flex-col (gantt sopra, radar sotto). Calcola radarData e idealRadarData direttamente dalle conversations.
+  GanttView.tsx              — "Analisi del Corso": colonna sinistra = Gantt attività + SubjectHeatmap (Argomento×Tipologia) + ModuloMetodologiaMatrix (Modulo×Metodologia) + ContestoFisicoChart (in aula/fuori aula per modulo, visibile solo se isFuoriAula usato); colonna destra = ModuleDonut + DidacticRadarChart. Calcola radarData, heatmapRows, matrixRows, contestoRows direttamente dalle conversations.
   DidacticRadarChart.tsx     — componente panel del radar didattico (2026-05-25): pentagono fisso a 5 assi (ALL_TYPES — tutti i LessonType sempre visibili anche a 0); ideale = idealData se disponibile, altrimenti distribuzione uniforme 20% per tipo; score badge TVD verde/ambra/rosso; bar chart breakdown sotto il radar (indigo = attuale, sky = ideale). Non ha più la versione "compact" per l'header.
   InAulaView.tsx             — vista lezione unificata (view id: 'lezione'): tre tab Preparazione | In Corso | Archivio. Tab attivo di default segue lessonState. Il tab In Corso delega a LessonInCorsoTab; il tab Preparazione a LessonPreparationTab.
   LessonPreparationTab.tsx   — tab Preparazione: selector blocco, preview master content (collassabile), lista LessonMaterial + AddMaterialModal, sezione "Ada consiglia tool" collassabile (generateToolSuggestion). Default: blocco in_corso se presente.
@@ -136,11 +136,14 @@ hooks/
 
 services/
   db.ts                      — IndexedDB (idb)
-  gemini.ts                  — wrapper Gemini API; include generateDocumentContent, generateToolSuggestion(question, masterSnippet?), generateLessonNoteAnalysis(notes, students), generateGroupSuggestionWithCriteria(students, criteria, groupSize) oltre alle funzioni storiche. VALID_LESSON_TYPES set (5 voci, senza uda/fsl).
-  constitutionParser.ts      — parseConstitution(): splitta il Progetto Didattico in sezioni MODULO/UDA/EDUCAZIONE CIVICA/FSL, restituisce { modules, moduleMap, contentUnits: CourseContentUnit[] }. File CRITICO — importato da ConstitutionCacheContext.tsx.
+  gemini.ts                  — wrapper Gemini API; include generateDocumentContent, generateToolSuggestion, generateLessonNoteAnalysis, generateGroupSuggestionWithCriteria. VALID_LESSON_TYPES set (5 voci, senza uda/fsl).
+  progettazioneParser.ts     — parseProgettazione(): splitta il Progetto Didattico in sezioni MODULO/UDA/EDUCAZIONE CIVICA/FSL, restituisce { modules, moduleMap, contentUnits, parsedMethodologies }. parseMethodologiesFromText(): scansiona keyword multi-parola esplicite per trovare TeachingMethodology nel testo. File CRITICO — importato da ProgettazioneCacheContext.tsx.
+
+contexts/
+  ProgettazioneCacheContext.tsx — `useMemo` su `parseProgettazione`, espone `{ modules, moduleMap, contentUnits, parsedMethodologies }` via `useProgettazioneCache()`.
 
 types.ts                     — tutti i tipi (fonte della verità)
-constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LOCAL_STORAGE_ROUTE_CALENDAR_KEY, LESSON_TYPE_LABELS (5 voci), COURSE_CONTENT_TYPE_LABELS, ecc.
+constants.ts                 — ADA_QUICK_CHAT_ID, MODES, chiavi localStorage, LESSON_TYPE_LABELS (5 voci), COURSE_CONTENT_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS (13 voci), ACTIVITY_TYPE_LABELS, ecc.
 utils.ts                     — getBlockPlanningStatus, getExactDateForBlock, routeCalendarToWeekInfos, formatRouteWeekDates
 ```
 
@@ -333,8 +336,13 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
 ```ts
 {
   id, day, status: BlockStatus,     // 'normale'|'saltato'|'da definire'|'annullato'
-  tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione' — SOLO modalità pedagogica ("come")
+  tipologia?: LessonType,           // 'frontale_teorica'|'frontale_operativa'|'laboratorio'|'verifica'|'discussione' — SOLO modalità pedagogica ("come"), 5 voci fisse
+  metodologia?: TeachingMethodology, // approccio pedagogico ("metodo") — 13 voci, ortogonale a tipologia; dropdown contestuale dal Progetto Didattico
   isFslPeriod?: boolean,            // flag visivo ortogonale: badge sky "FSL" sul blocco, non altera status né tipologia
+  hasExternalExpert?: boolean,      // lezione/lab condotto da esperto esterno — badge "ESP" ambra
+  externalExpertName?: string,      // nome/ruolo esperto (campo visibile solo se hasExternalExpert=true)
+  isFuoriAula?: boolean,            // attività fuori dall'aula (uscita, lab esterno, ecc.) — badge "FUORI" teal
+  luogo?: string,                   // destinazione libera (es. "Museo del Design, Milano") — visibile solo se isFuoriAula=true
   lessonState?: LessonState,        // 'progettata'|'in_corso'|'archiviata'
   objective?,                       // Obiettivo didattico istituzionale (il "perché" formale, per documentazione)
   blockTitle?,                      // Titolo accattivante per gli studenti (generato da Ada, mostrato nell'header)
@@ -363,8 +371,9 @@ Salvata su DB con chiave `LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar
 
 I due array separati consentono statistiche di presenza (contare R come presenti) e tracking separato dei ritardi.
 `BlockStatus` = `'normale' | 'saltato' | 'da definire' | 'annullato'`.
-`LessonType` = modalità pedagogica ("come"), **5 voci**: `frontale_teorica · frontale_operativa · laboratorio · verifica · discussione`. UDA e FSL sono stati rimossi — non sono modalità di conduzione della lezione.
-`isFslPeriod` = flag ortogonale allo stato e alla tipologia: indica che il blocco è in un periodo FSL (badge `sky`), ma il blocco può avere qualsiasi status e qualsiasi tipologia.
+`LessonType` = modalità pedagogica ("come"), **5 voci fisse**: `frontale_teorica · frontale_operativa · laboratorio · verifica · discussione`. Alimenta il radar — non aggiungere voci.
+`TeachingMethodology` = approccio pedagogico ("metodo"), **13 voci**: `tradizionale · flipped_classroom · project_based · problem_based · cooperative_learning · peer_teaching · debate · design_thinking · gamification · studio_di_caso · inquiry_based · role_playing · jigsaw`. Ortogonale a tipologia. Il dropdown è contestuale: `parsedMethodologies` (dal Progetto Didattico) vengono in cima nel gruppo `· nel corso`; le altre in `· altre`. Se nessuna metodologia trovata nel testo, default UI su `tradizionale` (non auto-inserito nel DB). `tradizionale` non viene mai auto-rilevato dal parser.
+`isFslPeriod` / `hasExternalExpert` / `isFuoriAula` = flag ortogonali: non alterano `getBlockProgressState`, non entrano nel radar. Quando un toggle viene disattivato, il campo testo associato (`externalExpertName`, `luogo`) viene azzerato automaticamente dall'handler.
 
 ### Stato automatico blocco (derivato, non salvato)
 ```ts
@@ -376,9 +385,13 @@ const getBlockProgressState = (block): 'da_fare'|'in_corso'|'completato'|'specia
 }
 ```
 
-### Tipi "Cosa / Come" — separazione corso/didattica (2026-05-24)
+### Tipi "Cosa / Come / Metodo / Contesto" — separazione corso/didattica (2026-05-24 → 2026-05-30)
 
-La distinzione è architetturale: il **"cosa"** è la struttura del corso (modulo, UDA, EC, FSL definiti nel Progetto Didattico); il **"come"** è la modalità pedagogica di conduzione della lezione (frontale, laboratorio, ecc.).
+La distinzione è architetturale in quattro dimensioni ortogonali:
+- **"cosa"** = struttura del corso (modulo, UDA, EC, FSL — dal Progetto Didattico)
+- **"come"** = modalità pedagogica di conduzione dell'aula (5 LessonType fissi → radar)
+- **"metodo"** = approccio pedagogico (13 TeachingMethodology — contestuale al corso)
+- **"contesto"** = dove si svolge (in aula / fuori aula) + chi conduce (esperto esterno)
 
 ```ts
 // "Come" — modalità pedagogica (LessonType, 5 voci stabili)
@@ -397,11 +410,12 @@ interface CourseContentUnit {
   significance?: string;
 }
 
-// ParsedConstitution (esteso)
-interface ParsedConstitution {
+// ParsedProgettazione (da progettazioneParser.ts)
+interface ParsedProgettazione {
   modules: ModuleDetails[];          // retrocompatibilità — solo i MODULI
   moduleMap: Map<string, ModuleDetails>;
   contentUnits: CourseContentUnit[]; // TUTTE le unità (moduli + UDA + EC + FSL)
+  parsedMethodologies: TeachingMethodology[]; // metodologie trovate nel testo, ordinate per prima occorrenza
 }
 ```
 
@@ -414,21 +428,30 @@ In `StrategicDashboardView` l'accordion blocco ha questa struttura (2026-05-28):
 - `EditableField` → mostra `block.blockTitle || block.objective` (fallback per dati pre-refactoring)
 - Pulsante ✦ AI → apre `TitleSuggestionModal` (richiede `block.objective` compilato)
 
-**Riga select (header, seconda riga):**
+**Riga select + toggle (header, seconda riga):**
 - **Cosa** (primo select): opzioni raggruppate per `CourseContentType` via `<optgroup>`. Placeholder: `— unità didattica —`
 - **Come** (secondo select): `LessonType` 5 voci. Placeholder: `— tipologia di lezione —`
-- **Toggle FSL**: button `text-sky-400` che imposta `isFslPeriod`
+- **Approccio** (terzo select): `TeachingMethodology` con dropdown contestuale — gruppo `· nel corso` (da `parsedMethodologies`) in cima, gruppo `· altre` sotto. Default UI `tradizionale` se nessuna metodologia trovata. Placeholder: `— approccio —`
+- **Toggle FSL** `text-sky-400` · **Toggle ESP** `text-amber-400` · **Toggle FUORI** `text-teal-400` — affiancati, stesso stile
+
+**Badge nell'header collassato** (accanto allo stato):
+- `FSL` sky · `ESP` ambra (tooltip = externalExpertName) · `FUORI` teal (tooltip = luogo)
 
 **Sezione espansa:**
-- **Obiettivo Didattico** (`block.objective`): `EditableTextarea` + pulsante "Suggerisci obiettivo" → `ObjectiveSuggestionModal` (richiede `block.module`)
-- NON mostrare più "Estratto dalla Costituzione" né "Idea / Prompt per Ada" — rimossi (2026-05-28). Il `block.lessonTitle` continua a essere salvato silenziosamente da `handleModuleChange` per il contesto Ada, ma non va esposto in UI.
+- **Argomento** (`block.lessonSubject`): `EditableField` — usato da Ada per generare il titolo
+- **Obiettivo Didattico** (`block.objective`): `EditableTextarea` (auto-resize con rAF) + "Suggerisci obiettivo"
+- **Esperto esterno** (`block.externalExpertName`): `EditableField` con label ambra — visibile solo se `hasExternalExpert=true`
+- **Luogo** (`block.luogo`): `EditableField` con label teal — visibile solo se `isFuoriAula=true`
+- **Attività**: bottone "↗ Lancia attività" (form inline) — la chip list nella expanded è rimossa (ridondante con i dot nel summary)
 
-Handler in `MainApp`:
-- `handleUpdateBlockTipologia` — salva la `LessonType` selezionata (il "come")
-- `handleUpdateBlockModule` — salva il titolo dell'unità didattica in `block.module` + estrae `block.lessonTitle` dal Progetto Didattico (contesto silenzioso per Ada)
-- `handleUpdateBlockObjective` — salva l'obiettivo istituzionale in `block.objective`
-- `handleUpdateBlockTitle` — salva il titolo accattivante in `block.blockTitle`
-- `handleToggleFslPeriod` — imposta/rimuove `isFslPeriod` sul blocco
+Handler in `MainApp` (tutti in `blockHandlers_status.ts`):
+- `handleUpdateBlockTipologia` — salva la `LessonType` selezionata
+- `handleUpdateBlockMetodologia` — salva la `TeachingMethodology` selezionata
+- `handleUpdateBlockModule` — salva `block.module` + `block.lessonTitle` silenzioso per Ada
+- `handleUpdateBlockObjective` — salva `block.objective`
+- `handleUpdateBlockTitle` — salva `block.blockTitle`
+- `handleToggleFslPeriod` / `handleToggleExternalExpert` / `handleToggleFuoriAula` — flag ortogonali
+- `handleUpdateExternalExpertName` / `handleUpdateLuogo` — campi testo contestuali
 
 Migrazione one-shot (useEffect in MainApp): vecchio `tipologia: 'fsl'` → `isFslPeriod: true, tipologia: undefined`.
 
@@ -740,3 +763,15 @@ progettata → in_corso → archiviata
 - Non mostrare `block.objective` nell'header del blocco — dall'header si mostra `block.blockTitle || block.objective` (il titolo accattivante, con fallback per retrocompatibilità). L'obiettivo istituzionale vive solo nella sezione espansa.
 - Non generare il titolo del blocco (`TitleSuggestionModal`) se `block.objective` è vuoto — il titolo deve essere radicato nell'obiettivo pedagogico, non essere marketing vuoto. Il guard è obbligatorio.
 - Non dimenticare `onUpdateBlockTitle` quando si passa props a `StrategicDashboardView` — aggiunta (2026-05-28) insieme a `onUpdateBlockObjective`.
+- Non aggiungere `TeachingMethodology` a `LessonType` — sono dimensioni ortogonali. `LessonType` è il "come" (5 voci fisse, radar), `TeachingMethodology` è il "metodo" (13 voci, dropdown contestuale). Unirle romperebbe il radar.
+- Non aggiungere `uscita_didattica` a `LessonType` — le uscite si gestiscono con `isFuoriAula: boolean` + `luogo: string`. Sono logistica, non modalità pedagogica.
+- Non aggiungere un sesto tipo a `LessonType` per nessun motivo — il radar è un pentagono fisso (5 assi). Aggiungere voci cambia la geometria e invalida confronti storici.
+- Non auto-rilevare `tradizionale` in `parseMethodologiesFromText` — è il default UI implicito. Se il parser lo trovasse, apparirebbe in cima al dropdown di ogni corso, oscurando le metodologie innovative effettivamente usate.
+- Non usare keyword generiche (es. "progetto", "ricerca") in `METHODOLOGY_KEYWORDS` — causano falsi positivi. Usare solo frasi multi-parola esplicite (es. "project based learning", "ricerca-azione").
+- Non usare `isFuoriAula`, `hasExternalExpert` o `metodologia` in `getBlockProgressState` — sono dimensioni ortogonali allo stato di avanzamento del blocco.
+- Non includere `isFuoriAula` o `hasExternalExpert` nel calcolo del radar didattico — sono dati logistici, non pedagogici.
+- Non dimenticare le prop `onUpdateBlockMetodologia`, `parsedMethodologies`, `onToggleExternalExpert`, `onUpdateExternalExpertName`, `onToggleFuoriAula`, `onUpdateLuogo` quando si passa props a `StrategicDashboardView` (aggiunte 2026-05-30).
+- Non mostrare `externalExpertName` o `luogo` nell'expanded section se il rispettivo toggle è disattivo — i campi sono condizionali (`block.hasExternalExpert` / `block.isFuoriAula`).
+- Non azzerare manualmente `externalExpertName`/`luogo` nel codice chiamante — gli handler `handleToggleExternalExpert` e `handleToggleFuoriAula` lo fanno automaticamente quando il toggle passa a `false`.
+- Non mostrare la chip list delle attività lanciate nella sezione expanded del blocco — rimossa (2026-05-30) perché ridondante con i dot nel summary dell'accordion. Tenere solo il bottone "↗ Lancia attività".
+- Non usare `constitutionParser.ts` o `ConstitutionCacheContext.tsx` — i nomi corretti sono `progettazioneParser.ts` e `ProgettazioneCacheContext.tsx`. I nomi legacy non esistono nel codebase.

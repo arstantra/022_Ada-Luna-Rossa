@@ -22,13 +22,14 @@
 |---|---|
 | `components/InAulaView.tsx` | ~988 |
 | `services/gemini.ts` | ~863 |
-| `components/StrategicDashboardView.tsx` | ~687 |
+| `components/GanttView.tsx` | ~800+ |
+| `components/StrategicDashboardView.tsx` | ~800+ |
 | `components/BlockWorkspaceView.tsx` | ~601 |
 | `components/FoundingDocumentsView.tsx` | ~578 |
-| `components/GanttView.tsx` | ~560 |
-| `components/MainApp.tsx` | ~509 |
 | `hooks/usePlanning.ts` | ~462 |
 | `components/PlanningView.tsx` | ~482 |
+| `components/MainApp.tsx` | ~510 |
+| `components/handlers/blockHandlers_status.ts` | ~290 |
 
 Handler in `components/handlers/` (45–228 righe): sempre `Edit`, mai `Write` — sono file esistenti.
 
@@ -86,9 +87,10 @@ Implementazione: aggiungere `pendingContent?: DetachedLesson[]` su `Conversation
 - [ ] Dimensioni radar per studente: mappatura EQF vs dimensioni operative (partecipazione, autonomia, completamento, comprensione)
 - [ ] Formato `DetachedLesson` e punto di ingresso UI per la coda contenuti
 - [ ] URL Classroom costruibili dai dati ADA (classe, compito, attività asincrona)
-- [ ] Livello "Modulo" leggero nel dato — contenitore blocchi per Gantt e radar
 - [ ] Verifica sommativa in fase di progettazione (gap consapevole — ADA delega a Classroom via link)
+- [ ] `gemini.ts`: iniettare `metodologia` e `isFuoriAula`/`luogo` nel contesto AI dei blocchi (attualmente non passati al LLM)
+- [ ] `ContestoFisicoChart` in GanttView: aggiungere eventuale incrocio con metodologia (fuori aula × approccio)
 
 ---
 
-*Ultima revisione: 2026-05-27*
+*Ultima revisione: 2026-05-30*
