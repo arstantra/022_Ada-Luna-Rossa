@@ -650,27 +650,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             )}
                                                         </div>
                                                     </div>
-                                                    {/* Attività attive su questo blocco (summary) */}
-                                                    {blockActivities.length > 0 && (
-                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Attività:</span>
-                                                            {blockActivities.slice(0, 2).map(a => {
-                                                                const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
-                                                                const dueGlobal = launchGlobal + a.dueInBlocks;
-                                                                const isLaunch = blockGlobalIdx === launchGlobal;
-                                                                const isDue = blockGlobalIdx === dueGlobal;
-                                                                return (
-                                                                    <span key={a.id} className={`flex items-center gap-0.5 text-[9px] font-mono ${isDue ? 'text-amber-400' : 'text-rose-300/70'}`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDue ? 'bg-amber-400' : 'bg-rose-500'}`} />
-                                                                        {isLaunch && '↗ '}{isDue && '⚑ '}
-                                                                        <span className="max-w-[80px] truncate">{a.title}</span>
-                                                                        <span className="opacity-60 ml-0.5">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
-                                                                    </span>
-                                                                );
-                                                            })}
-                                                            {blockActivities.length > 2 && <span className="text-[9px] font-mono text-gray-600">+{blockActivities.length - 2}</span>}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </summary>
                                             {/* ── Sezione espansa ── */}
@@ -706,25 +685,47 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <EditableField value={block.luogo || ''} onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)} placeholder="Destinazione o luogo (es. Museo del Design, Milano)…" />
                                                     </div>
                                                 )}
-                                                {/* ATTIVITÀ */}
+                                                {/* ATTIVITÀ — canale parallelo, box dedicato */}
                                                 {onAddActivityForBlock && !isSpecialStatus && (() => {
                                                     const formKey = `${week.weekNumber}-${index}`;
                                                     const isFormOpen = activityFormKey === formKey;
                                                     return (
-                                                        <div className="pt-1">
-                                                            <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="rounded-lg border border-gray-700/40 bg-gray-900/50 p-3 space-y-2">
+                                                            {/* Header: etichetta + pulsante */}
+                                                            <div className="flex items-center justify-between">
                                                                 <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Attività</label>
                                                                 {!isFormOpen && (
                                                                     <button
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
-                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/10 hover:border-rose-400/25 transition-colors"
+                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/20 rounded hover:bg-rose-500/10 hover:border-rose-400/30 hover:text-rose-400/90 transition-colors"
                                                                     >
                                                                         ↗ Lancia attività
                                                                     </button>
                                                                 )}
                                                             </div>
+                                                            {/* Chip attività attive su questo blocco */}
+                                                            {blockActivities.length > 0 && (
+                                                                <div className="flex flex-col gap-1">
+                                                                    {blockActivities.map(a => {
+                                                                        const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
+                                                                        const dueGlobal = launchGlobal + a.dueInBlocks;
+                                                                        const isLaunch = blockGlobalIdx === launchGlobal;
+                                                                        const isDue = blockGlobalIdx === dueGlobal;
+                                                                        return (
+                                                                            <div key={a.id} className={`flex items-center gap-2 px-2 py-1 rounded-md border text-[10px] font-mono ${isDue ? 'border-amber-500/25 bg-amber-500/5 text-amber-300' : 'border-rose-500/15 bg-rose-500/5 text-rose-300/70'}`}>
+                                                                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDue ? 'bg-amber-400' : 'bg-rose-500'}`} />
+                                                                                {isLaunch && <span className="text-[9px] opacity-70">↗</span>}
+                                                                                {isDue && <span className="text-[9px] opacity-70">⚑</span>}
+                                                                                <span className="flex-grow truncate">{a.title}</span>
+                                                                                <span className="opacity-50 flex-shrink-0">{ACTIVITY_TYPE_LABELS[a.type]}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                            {/* Form nuova attività */}
                                                             {isFormOpen && (
-                                                                <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 space-y-2">
+                                                                <div className="space-y-2 pt-1">
                                                                     <div className="flex items-center gap-2">
                                                                         <input
                                                                             type="text"
