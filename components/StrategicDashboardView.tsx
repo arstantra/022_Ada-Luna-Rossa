@@ -673,18 +673,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 {/* TITOLO */}
                                                 {!isSpecialStatus && (
                                                     <div>
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Titolo</label>
-                                                            {block.blockTitle && !editingTitleKeys.has(ctxKey) && (
-                                                                <button
-                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
-                                                                    className="text-[10px] font-mono text-gray-500 hover:text-gray-300 transition-colors"
-                                                                    title="Modifica manualmente il titolo"
-                                                                >
-                                                                    ✏ modifica
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Titolo</label>
                                                         {editingTitleKeys.has(ctxKey) ? (
                                                             <EditableField
                                                                 value={block.blockTitle || ''}
@@ -695,7 +684,16 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 placeholder="Titolo accattivante per gli studenti…"
                                                             />
                                                         ) : block.blockTitle ? (
-                                                            <p className="text-sm text-white/90 font-sans leading-snug">{block.blockTitle}</p>
+                                                            <div className="flex items-center gap-2 group/title">
+                                                                <p className="flex-grow text-[13px] text-gray-400/80 font-sans leading-snug tracking-wide">{block.blockTitle}</p>
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
+                                                                    className="flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors opacity-0 group-hover/title:opacity-100"
+                                                                    title="Modifica manualmente il titolo"
+                                                                >
+                                                                    ✏
+                                                                </button>
+                                                            </div>
                                                         ) : (
                                                             <p className="text-xs text-gray-600 italic font-sans">— genera il titolo dall'argomento con Ada ✦ —</p>
                                                         )}
