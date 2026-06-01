@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology } from '../types';
+import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit } from '../types';
 import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
@@ -35,22 +35,17 @@ function moduleColor(idx: number): ModuleColor {
   return MODULE_PALETTE[idx % MODULE_PALETTE.length];
 }
 
-// ── Donut distribuzione moduli ────────────────────────────────────────────────
+// ── Donut distribuzione moduli (doppio anello: Moduli + UDA) ─────────────────
 
-const ModuleDonut: React.FC<{ modules: GanttModule[] }> = ({ modules }) => {
-  const [hovered, setHovered] = useState<string | null>(null);
-  if (modules.length === 0) return (
-    <div className="flex items-center justify-center py-6">
-      <p className="text-[10px] font-mono text-gray-600 text-center">
-        Assegna moduli ai blocchi per vedere la distribuzione
-      </p>
-    </div>
-  );
-
-  const total = modules.reduce((s, m) => s + m.blockCount, 0);
-  const R = 48; const r = 28; const cx = 60; const cy = 60;
-  let angle = -Math.PI / 2;
-  const slices = modules.map((mod, idx) => {
+function buildDonutSlices(
+  items: GanttModule[],
+  cx: number, cy: number,
+  R: number, r: number,
+  startAngle: number,
+): Array<{ mod: GanttModule; large: number; x1: number; y1: number; x2: number; y2: number; xi1: number; yi1: number; xi2: number; yi2: number; c: ModuleColor; idx: number }> {
+  const total = items.reduce((s, m) => s + m.blockCount, 0);
+  let angle = startAngle;
+  return items.map((mod, idx) => {
     const pct  = mod.blockCount / total;
     const span = pct * 2 * Math.PI;
     const x1 = cx + R * Math.cos(angle);
@@ -64,62 +59,146 @@ const ModuleDonut: React.FC<{ modules: GanttModule[] }> = ({ modules }) => {
     const yi2 = cy + r * Math.sin(angle - span);
     const large = span > Math.PI ? 1 : 0;
     const c = moduleColor(idx);
-    return { mod, pct, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c, idx };
+    return { mod, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c, idx };
   });
+}
 
-  const hoveredMod = hovered ? modules.find(m => m.name === hovered) : null;
+const DistribuzioneDonut: React.FC<{ modules: GanttModule[]; uda: GanttModule[] }> = ({ modules, uda }) => {
+  const [hovered, setHovered] = useState<string | null>(null);
+  const hasUda = uda.length > 0;
+
+  if (modules.length === 0) return (
+    <div className="flex items-center justify-center py-6">
+      <p className="text-[10px] font-mono text-gray-600 text-center">
+        Assegna moduli ai blocchi per vedere la distribuzione
+      </p>
+    </div>
+  );
+
+  const cx = 60; const cy = 60;
+  const START = -Math.PI / 2;
+
+  // Anello esterno: Moduli
+  const outerR = hasUda ? 52 : 48;
+  const outerr = hasUda ? 38 : 28;
+  const outerSlices = buildDonutSlices(modules, cx, cy, outerR, outerr, START);
+
+  // Anello interno: UDA (solo se presenti)
+  const innerR = 33;
+  const innerr = 20;
+  const innerSlices = hasUda ? buildDonutSlices(uda, cx, cy, innerR, innerr, START) : [];
+
+  const totalModuli = modules.reduce((s, m) => s + m.blockCount, 0);
+  const totalUda    = uda.reduce((s, m) => s + m.blockCount, 0);
+  const totalBl     = totalModuli + totalUda;
+
+  const hoveredMod = hovered
+    ? [...modules, ...uda].find(m => m.name === hovered)
+    : null;
 
   return (
     <div className="flex items-start gap-3">
-      {/* Donut SVG */}
+      {/* SVG doppio anello */}
       <svg width="120" height="120" viewBox="0 0 120 120" className="flex-shrink-0">
-        {slices.map(({ mod, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c }) => (
+        {/* Anello esterno — Moduli */}
+        {outerSlices.map(({ mod, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2, c }) => (
           <path
-            key={mod.name}
-            d={`M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${r} ${r} 0 ${large} 0 ${xi2} ${yi2} Z`}
+            key={`m-${mod.name}`}
+            d={`M ${x1} ${y1} A ${outerR} ${outerR} 0 ${large} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${outerr} ${outerr} 0 ${large} 0 ${xi2} ${yi2} Z`}
             fill={c.bg}
             stroke={c.border}
             strokeWidth="0.8"
-            opacity={hovered && hovered !== mod.name ? 0.35 : 1}
+            opacity={hovered && hovered !== mod.name ? 0.3 : 1}
             onMouseEnter={() => setHovered(mod.name)}
             onMouseLeave={() => setHovered(null)}
             style={{ cursor: 'default', transition: 'opacity 0.15s' }}
           />
         ))}
+        {/* Separatore tra anelli (solo se doppio) */}
+        {hasUda && (
+          <circle cx={cx} cy={cy} r={innerR + 1} fill="none" stroke="rgba(13,17,23,0.8)" strokeWidth="2" />
+        )}
+        {/* Anello interno — UDA */}
+        {innerSlices.map(({ mod, large, x1, y1, x2, y2, xi1, yi1, xi2, yi2 }, sliceIdx) => {
+          // UDA usano una palette sfumata diversa (shift di 4 indici)
+          const c = moduleColor(sliceIdx + 4);
+          return (
+            <path
+              key={`u-${mod.name}`}
+              d={`M ${x1} ${y1} A ${innerR} ${innerR} 0 ${large} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${innerr} ${innerr} 0 ${large} 0 ${xi2} ${yi2} Z`}
+              fill={c.bg}
+              stroke={c.border}
+              strokeWidth="0.8"
+              opacity={hovered && hovered !== mod.name ? 0.3 : 1}
+              onMouseEnter={() => setHovered(mod.name)}
+              onMouseLeave={() => setHovered(null)}
+              style={{ cursor: 'default', transition: 'opacity 0.15s' }}
+            />
+          );
+        })}
         {/* Label centrale */}
         <text x={cx} y={cy - 5} textAnchor="middle" fill="rgba(156,163,175,0.7)" fontSize="7" fontFamily="monospace">
-          {hoveredMod ? `${hoveredMod.blockCount}` : `${total}`}
+          {hoveredMod ? `${hoveredMod.blockCount}` : `${totalBl}`}
         </text>
         <text x={cx} y={cy + 5} textAnchor="middle" fill="rgba(107,114,128,0.6)" fontSize="6" fontFamily="monospace">
           {hoveredMod ? 'bl.' : 'tot.'}
         </text>
       </svg>
+
       {/* Legenda */}
-      <div className="flex flex-col gap-1 min-w-0 flex-1 pt-1">
-        {modules.map((mod, idx) => {
-          const c = moduleColor(idx);
-          const pct = Math.round((mod.blockCount / total) * 100);
-          const isHov = hovered === mod.name;
-          return (
-            <div
-              key={mod.name}
-              className="flex items-center gap-1.5 cursor-default"
-              onMouseEnter={() => setHovered(mod.name)}
-              onMouseLeave={() => setHovered(null)}
-              style={{ opacity: hovered && !isHov ? 0.4 : 1, transition: 'opacity 0.15s' }}
-            >
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: c.border }} />
-              <span
-                className="text-[9px] font-mono text-gray-500 truncate flex-1 min-w-0"
-                style={isHov ? { color: c.text } : {}}
-                title={mod.name}
-              >
-                {mod.name}
-              </span>
-              <span className="text-[9px] font-mono text-gray-700 flex-shrink-0 tabular-nums">{pct}%</span>
-            </div>
-          );
-        })}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1 pt-1">
+        {/* Sezione Moduli */}
+        {modules.length > 0 && (
+          <>
+            <span className="text-[8px] font-mono text-gray-700 uppercase tracking-wide mb-0.5">Moduli</span>
+            {modules.map((mod, idx) => {
+              const c = moduleColor(idx);
+              const pct = Math.round((mod.blockCount / totalModuli) * 100);
+              const isHov = hovered === mod.name;
+              return (
+                <div
+                  key={mod.name}
+                  className="flex items-center gap-1.5 cursor-default"
+                  onMouseEnter={() => setHovered(mod.name)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{ opacity: hovered && !isHov ? 0.4 : 1, transition: 'opacity 0.15s' }}
+                >
+                  <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: c.border }} />
+                  <span className="text-[9px] font-mono text-gray-500 truncate flex-1 min-w-0" style={isHov ? { color: c.text } : {}} title={mod.name}>
+                    {mod.name}
+                  </span>
+                  <span className="text-[9px] font-mono text-gray-700 flex-shrink-0 tabular-nums">{pct}%</span>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {/* Sezione UDA */}
+        {hasUda && (
+          <>
+            <span className="text-[8px] font-mono text-gray-700 uppercase tracking-wide mt-1.5 mb-0.5">UDA</span>
+            {uda.map((mod, idx) => {
+              const c = moduleColor(idx + 4);
+              const pct = Math.round((mod.blockCount / totalUda) * 100);
+              const isHov = hovered === mod.name;
+              return (
+                <div
+                  key={mod.name}
+                  className="flex items-center gap-1.5 cursor-default"
+                  onMouseEnter={() => setHovered(mod.name)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{ opacity: hovered && !isHov ? 0.4 : 1, transition: 'opacity 0.15s' }}
+                >
+                  <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: c.border }} />
+                  <span className="text-[9px] font-mono text-gray-500 truncate flex-1 min-w-0" style={isHov ? { color: c.text } : {}} title={mod.name}>
+                    {mod.name}
+                  </span>
+                  <span className="text-[9px] font-mono text-gray-700 flex-shrink-0 tabular-nums">{pct}%</span>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );
@@ -388,6 +467,7 @@ const STRIPE_CUR  = 'rgba(26,16,64,0.55)';  // settimana corrente — viola
 
 interface GanttViewProps {
   conversations: Conversation[];
+  contentUnits?: CourseContentUnit[];
   onClose: () => void;
   onNavigateToWeek: (weekNumber: number) => void;
   onMarkActivityDelivered?: (activityId: string) => void;
@@ -526,29 +606,48 @@ const ContestoFisicoChart: React.FC<{ rows: ContestoRow[] }> = ({ rows }) => {
 // ── Componente principale ─────────────────────────────────────────────────────
 
 const GanttView: React.FC<GanttViewProps> = ({
-  conversations, onClose, onNavigateToWeek, onMarkActivityDelivered,
+  conversations, contentUnits = [], onClose, onNavigateToWeek, onMarkActivityDelivered,
 }) => {
 
   // Hook prima di qualsiasi return condizionale (regola React)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(1);
 
-  // ── Deriva moduli (per bar chart) ─────────────────────────────────────────
-  const modules = useMemo((): GanttModule[] => {
-    const map = new Map<string, number>();
+  // ── Mappa titolo → tipo contentUnit per lookup O(1) ──────────────────────
+  const unitTypeByTitle = useMemo(() => {
+    const m = new Map<string, CourseContentUnit['type']>();
+    for (const u of contentUnits) m.set(u.title.trim(), u.type);
+    return m;
+  }, [contentUnits]);
+
+  // ── Deriva moduli e UDA separati (per doppio anello) ─────────────────────
+  const { modulesData, udaData } = useMemo(() => {
+    const modMap = new Map<string, number>();
+    const udaMap = new Map<string, number>();
 
     for (const conv of conversations) {
       if (!conv.weekPlan) continue;
       for (const block of conv.weekPlan.blocks) {
-        const name = block.module?.trim() || 'Senza modulo';
-        map.set(name, (map.get(name) ?? 0) + 1);
+        const name = block.module?.trim();
+        if (!name) continue;
+        const type = unitTypeByTitle.get(name) ?? 'modulo'; // fallback a modulo
+        if (type === 'uda') {
+          udaMap.set(name, (udaMap.get(name) ?? 0) + 1);
+        } else {
+          // modulo, educazione_civica, fsl → anello esterno
+          modMap.set(name, (modMap.get(name) ?? 0) + 1);
+        }
       }
     }
 
-    return [...map.entries()]
-      .map(([name, blockCount]) => ({ name, blockCount }))
-      .sort((a, b) => b.blockCount - a.blockCount);
-  }, [conversations]);
+    return {
+      modulesData: [...modMap.entries()].map(([name, blockCount]) => ({ name, blockCount })).sort((a, b) => b.blockCount - a.blockCount),
+      udaData:     [...udaMap.entries()].map(([name, blockCount]) => ({ name, blockCount })).sort((a, b) => b.blockCount - a.blockCount),
+    };
+  }, [conversations, unitTypeByTitle]);
+
+  // Tutti i moduli (per conteggio header) = moduli + uda
+  const modules = useMemo(() => [...modulesData, ...udaData], [modulesData, udaData]);
 
   const weekBlockCounts = useMemo(() => {
     const map = new Map<number, number>();
@@ -591,28 +690,34 @@ const GanttView: React.FC<GanttViewProps> = ({
   }, [conversations]);
 
   // ── Heatmap argomento × tipologia ─────────────────────────────────────────
+  // La chiave di raggruppamento è normalizzata (lowercase+trim) per evitare
+  // duplicati da refusi di maiuscole ("La cattedrale gotica" = "la cattedrale gotica").
+  // Il nome visualizzato è la prima occorrenza trovata (preserva la capitalizzazione originale).
   const heatmapRows = useMemo((): HeatmapRow[] => {
     const map = new Map<string, Record<LessonType, number>>();
+    const displayNames = new Map<string, string>(); // key normalizzata → nome display
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
       conv.weekPlan.blocks.forEach(block => {
         const subject = block.lessonSubject?.trim();
         if (!subject) return;
         if (block.status === 'saltato' || block.status === 'annullato') return;
-        if (!map.has(subject)) {
-          map.set(subject, {
+        const key = subject.toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, {
             frontale_teorica: 0, frontale_operativa: 0,
             laboratorio: 0, verifica: 0, discussione: 0,
           });
+          displayNames.set(key, subject); // prima occorrenza come nome display
         }
         if (block.tipologia) {
-          map.get(subject)![block.tipologia]++;
+          map.get(key)![block.tipologia]++;
         }
       });
     });
     return [...map.entries()]
-      .map(([subject, counts]) => ({
-        subject,
+      .map(([key, counts]) => ({
+        subject: displayNames.get(key)!,
         counts,
         total: Object.values(counts).reduce((a, b) => a + b, 0),
       }))
@@ -620,19 +725,23 @@ const GanttView: React.FC<GanttViewProps> = ({
   }, [conversations]);
 
   // ── Matrice modulo × metodologia ─────────────────────────────────────────
+  // Nota: i blocchi senza metodologia esplicita usano 'tradizionale' come default,
+  // coerentemente con il default UI nel dropdown (valore mostrato quando non ancora scelto).
+  // Inclusi solo blocchi con modulo assegnato (la matrice è "Modulo × Metodologia").
   const { matrixRows, usedMethods } = useMemo(() => {
     const map = new Map<string, Partial<Record<TeachingMethodology, number>>>();
     const methodSet = new Set<TeachingMethodology>();
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
       conv.weekPlan.blocks.forEach(block => {
-        if (!block.metodologia) return;
+        if (!block.module?.trim()) return; // solo blocchi con modulo assegnato
         if (block.status === 'saltato' || block.status === 'annullato') return;
-        const mod = block.module?.trim() || 'Senza modulo';
+        const mod = block.module.trim();
+        const met: TeachingMethodology = block.metodologia ?? 'tradizionale';
         if (!map.has(mod)) map.set(mod, {});
         const entry = map.get(mod)!;
-        entry[block.metodologia] = (entry[block.metodologia] ?? 0) + 1;
-        methodSet.add(block.metodologia);
+        entry[met] = (entry[met] ?? 0) + 1;
+        methodSet.add(met);
       });
     });
     // Ordine stabile: tradizionale prima, poi gli altri in ordine di TEACHING_METHODOLOGY_LABELS
@@ -890,15 +999,18 @@ const GanttView: React.FC<GanttViewProps> = ({
         {/* ── Colonna destra: donut moduli + radar ─────────────────────── */}
         <div className={`flex-shrink-0 w-full ${radarWidthClass} flex flex-col gap-4 overflow-y-auto custom-scrollbar`}>
 
-          {/* Donut distribuzione moduli */}
+          {/* Donut distribuzione moduli + UDA */}
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Moduli</span>
               {modules.length > 0 && (
                 <span className="text-[9px] font-mono text-gray-700">{modules.reduce((s, m) => s + m.blockCount, 0)} bl.</span>
               )}
+              {udaData.length > 0 && (
+                <span className="text-[9px] font-mono text-gray-700 ml-1">· {udaData.length} UDA</span>
+              )}
             </div>
-            <ModuleDonut modules={modules} />
+            <DistribuzioneDonut modules={modulesData} uda={udaData} />
           </div>
 
           {/* Radar equilibrio didattico */}
