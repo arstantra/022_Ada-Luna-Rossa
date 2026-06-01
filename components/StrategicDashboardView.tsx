@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityType, CourseContentUnit } from '../types';
 import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
-import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon } from './Icons';
+import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
@@ -531,45 +531,43 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180 ml-1" />
                                                         </div>
                                                     </div>
-                                                    {/* Riga 2: TITOLO label + testo display + genera + matitina */}
+                                                    {/* Riga 2: TITOLO label + testo display + matitina sempre visibile */}
                                                     {block.status === 'saltato' ? (
                                                         <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
                                                     ) : (
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80 flex-shrink-0">Titolo</span>
                                                             {editingTitleKeys.has(ctxKey) ? (
-                                                                <EditableField
-                                                                    value={block.blockTitle || ''}
-                                                                    onSave={(val) => {
-                                                                        onUpdateBlockTitle(week.weekNumber, index, val);
-                                                                        setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; });
-                                                                    }}
-                                                                    placeholder="Titolo accattivante per gli studenti…"
-                                                                />
+                                                                <div className="flex items-center gap-1.5 flex-grow min-w-0">
+                                                                    <EditableField
+                                                                        value={block.blockTitle || ''}
+                                                                        onSave={(val) => {
+                                                                            onUpdateBlockTitle(week.weekNumber, index, val);
+                                                                            setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; });
+                                                                        }}
+                                                                        placeholder="Titolo accattivante per gli studenti…"
+                                                                    />
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; }); }}
+                                                                        className="flex-shrink-0 text-blue-400 hover:text-blue-300 transition-colors p-0.5 no-print"
+                                                                        title="Chiudi modifica"
+                                                                    >
+                                                                        <PencilIcon className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
                                                             ) : (
-                                                                <>
-                                                                    <span className={`flex-grow min-w-0 text-sm font-display truncate leading-snug ${block.blockTitle ? 'text-gray-200' : 'text-gray-600 italic'}`}>
+                                                                <div className="flex items-center gap-1.5 flex-grow min-w-0">
+                                                                    <span className={`flex-grow min-w-0 text-sm font-display truncate leading-snug ${block.blockTitle ? 'text-gray-500' : 'text-gray-700 italic'}`}>
                                                                         {block.blockTitle || '— titolo da generare —'}
                                                                     </span>
-                                                                    <div className="flex items-center gap-1 flex-shrink-0 no-print">
-                                                                        <button
-                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
-                                                                            disabled={isSpecialStatus}
-                                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                            title="Genera il titolo accattivante per gli studenti"
-                                                                        >
-                                                                            <SparklesIcon className="h-3 w-3" />
-                                                                            Genera titolo
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
-                                                                            className="text-gray-600 hover:text-gray-400 transition-colors p-0.5"
-                                                                            title="Modifica il titolo"
-                                                                        >
-                                                                            ✏
-                                                                        </button>
-                                                                    </div>
-                                                                </>
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
+                                                                        className="flex-shrink-0 text-gray-600 hover:text-gray-400 transition-colors p-0.5 no-print"
+                                                                        title="Modifica il titolo"
+                                                                    >
+                                                                        <PencilIcon className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     )}
@@ -690,7 +688,18 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 </div>
                                                 {/* ARGOMENTO */}
                                                 <div>
-                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Argomento</label>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Argomento</label>
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
+                                                            disabled={isSpecialStatus}
+                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
+                                                            title="Genera il titolo accattivante per gli studenti (richiede argomento compilato)"
+                                                        >
+                                                            <SparklesIcon className="h-3 w-3" />
+                                                            Genera titolo
+                                                        </button>
+                                                    </div>
                                                     <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
                                                 </div>
                                                 {/* OBIETTIVO DIDATTICO */}
