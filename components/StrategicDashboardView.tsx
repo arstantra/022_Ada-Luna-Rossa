@@ -54,6 +54,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
     // Dropdown CONTESTO — chiave `${weekNumber}-${blockIndex}`
     const [openContextMenu, setOpenContextMenu] = useState<string | null>(null);
+    // Chiavi dei blocchi il cui TITOLO è in modalità modifica manuale
+    const [editingTitleKeys, setEditingTitleKeys] = useState<Set<string>>(new Set());
     const contextMenuRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
     // Chiudi CONTESTO dropdown su click fuori
@@ -520,11 +522,13 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        <div className="flex-grow min-w-0">
+                                                        <div className="flex-grow min-w-0 overflow-hidden">
                                                             {block.status === 'saltato' ? (
                                                                 <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
                                                             ) : (
-                                                                <EditableField value={block.blockTitle || block.objective || ''} onSave={(val) => onUpdateBlockTitle(week.weekNumber, index, val)} placeholder="Titolo del blocco (generalo con Ada ✦)..." />
+                                                                <span className={`block text-sm font-sans truncate leading-snug ${block.blockTitle || block.objective ? 'text-white/90' : 'text-gray-600 italic'}`}>
+                                                                    {block.blockTitle || block.objective || '— titolo da generare —'}
+                                                                </span>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-1 flex-shrink-0 no-print">
@@ -533,10 +537,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             ) : (
                                                                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'normale'); }} className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all">Ripristina</button>
                                                             )}
-                                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }} disabled={isSpecialStatus} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print" title="Suggerisci titolo con Ada">
-                                                                <SparklesIcon className="h-3.5 w-3.5" />
-                                                                AI
-                                                            </button>
                                                             <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
                                                         </div>
                                                     </div>
@@ -656,10 +656,51 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
                                                 {/* ARGOMENTO */}
                                                 <div>
-                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Argomento</label>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Argomento</label>
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
+                                                            disabled={isSpecialStatus}
+                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
+                                                            title="Genera il titolo accattivante per gli studenti"
+                                                        >
+                                                            <SparklesIcon className="h-3 w-3" />
+                                                            Genera titolo
+                                                        </button>
+                                                    </div>
                                                     <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
-                                                    <p className="text-[9px] font-mono text-gray-600 mt-0.5">Il soggetto concreto — Ada lo usa come base per generare il titolo</p>
                                                 </div>
+                                                {/* TITOLO */}
+                                                {!isSpecialStatus && (
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Titolo</label>
+                                                            {block.blockTitle && !editingTitleKeys.has(ctxKey) && (
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
+                                                                    className="text-[10px] font-mono text-gray-500 hover:text-gray-300 transition-colors"
+                                                                    title="Modifica manualmente il titolo"
+                                                                >
+                                                                    ✏ modifica
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {editingTitleKeys.has(ctxKey) ? (
+                                                            <EditableField
+                                                                value={block.blockTitle || ''}
+                                                                onSave={(val) => {
+                                                                    onUpdateBlockTitle(week.weekNumber, index, val);
+                                                                    setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; });
+                                                                }}
+                                                                placeholder="Titolo accattivante per gli studenti…"
+                                                            />
+                                                        ) : block.blockTitle ? (
+                                                            <p className="text-sm text-white/90 font-sans leading-snug">{block.blockTitle}</p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-600 italic font-sans">— genera il titolo dall'argomento con Ada ✦ —</p>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 {/* OBIETTIVO DIDATTICO */}
                                                 <div>
                                                     <div className="flex items-center justify-between mb-1">
@@ -747,7 +788,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                     <div className="flex items-center gap-2">
                                                                         <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
                                                                         <input type="number" min={1} max={20} value={activityDueInBlocks} onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
-                                                                        <span className="text-[9px] font-mono text-gray-500">blocchi</span>
+                                                                                                           <span className="text-[9px] font-mono text-gray-500">blocchi</span>
                                                                     </div>
                                                                 </div>
                                                             )}
