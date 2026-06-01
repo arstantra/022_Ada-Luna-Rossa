@@ -525,10 +525,28 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <div className="flex-grow min-w-0 overflow-hidden">
                                                             {block.status === 'saltato' ? (
                                                                 <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
+                                                            ) : editingTitleKeys.has(ctxKey) ? (
+                                                                <EditableField
+                                                                    value={block.blockTitle || ''}
+                                                                    onSave={(val) => {
+                                                                        onUpdateBlockTitle(week.weekNumber, index, val);
+                                                                        setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; });
+                                                                    }}
+                                                                    placeholder="Titolo accattivante per gli studenti…"
+                                                                />
                                                             ) : (
-                                                                <span className={`block text-sm font-sans truncate leading-snug ${block.blockTitle || block.objective ? 'text-white/90' : 'text-gray-600 italic'}`}>
-                                                                    {block.blockTitle || block.objective || '— titolo da generare —'}
-                                                                </span>
+                                                                <div className="flex items-center gap-1.5 group/title-hdr min-w-0">
+                                                                    <span className={`block text-sm truncate leading-snug ${block.blockTitle ? 'font-display text-gray-300/80' : block.objective ? 'font-sans text-gray-400/60 italic' : 'font-sans text-gray-600 italic'}`}>
+                                                                        {block.blockTitle || block.objective || '— titolo da generare —'}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
+                                                                        className="flex-shrink-0 text-gray-600 hover:text-gray-400 transition-colors opacity-0 group-hover/title-hdr:opacity-100 p-0.5 no-print"
+                                                                        title="Modifica il titolo"
+                                                                    >
+                                                                        ✏
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-1 flex-shrink-0 no-print">
@@ -670,35 +688,6 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     </div>
                                                     <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
                                                 </div>
-                                                {/* TITOLO */}
-                                                {!isSpecialStatus && (
-                                                    <div>
-                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Titolo</label>
-                                                        {editingTitleKeys.has(ctxKey) ? (
-                                                            <EditableField
-                                                                value={block.blockTitle || ''}
-                                                                onSave={(val) => {
-                                                                    onUpdateBlockTitle(week.weekNumber, index, val);
-                                                                    setEditingTitleKeys(prev => { const s = new Set(prev); s.delete(ctxKey); return s; });
-                                                                }}
-                                                                placeholder="Titolo accattivante per gli studenti…"
-                                                            />
-                                                        ) : block.blockTitle ? (
-                                                            <div className="flex items-center gap-2 group/title">
-                                                                <p className="flex-grow text-[13px] text-gray-400/80 font-sans leading-snug tracking-wide">{block.blockTitle}</p>
-                                                                <button
-                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
-                                                                    className="flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors opacity-0 group-hover/title:opacity-100"
-                                                                    title="Modifica manualmente il titolo"
-                                                                >
-                                                                    ✏
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-xs text-gray-600 italic font-sans">— genera il titolo dall'argomento con Ada ✦ —</p>
-                                                        )}
-                                                    </div>
-                                                )}
                                                 {/* OBIETTIVO DIDATTICO */}
                                                 <div>
                                                     <div className="flex items-center justify-between mb-1">
