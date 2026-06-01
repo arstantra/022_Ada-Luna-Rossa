@@ -557,7 +557,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center gap-1.5 flex-grow min-w-0">
-                                                                    <span className={`flex-grow min-w-0 text-sm font-display truncate leading-snug ${block.blockTitle ? 'text-gray-500' : 'text-gray-700 italic'}`}>
+                                                                    <span className={`flex-grow min-w-0 text-base font-display truncate leading-snug ${block.blockTitle ? 'text-gray-500' : 'text-gray-700 italic'}`}>
                                                                         {block.blockTitle || '— titolo da generare —'}
                                                                     </span>
                                                                     <button
@@ -688,19 +688,21 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                 </div>
                                                 {/* ARGOMENTO */}
                                                 <div>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Argomento</label>
+                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 block mb-1">Argomento</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex-grow min-w-0">
+                                                            <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
+                                                        </div>
                                                         <button
                                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
                                                             disabled={isSpecialStatus}
-                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
+                                                            className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
                                                             title="Genera il titolo accattivante per gli studenti (richiede argomento compilato)"
                                                         >
                                                             <SparklesIcon className="h-3 w-3" />
                                                             Genera titolo
                                                         </button>
                                                     </div>
-                                                    <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
                                                 </div>
                                                 {/* OBIETTIVO DIDATTICO */}
                                                 <div>
