@@ -614,9 +614,21 @@ const GanttView: React.FC<GanttViewProps> = ({
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(1);
 
   // ── Mappa titolo → tipo contentUnit per lookup O(1) ──────────────────────
+  // Mappa sia il titolo breve ("Verso il Moderno") sia il formato header completo
+  // legacy ("MODULO 5: Verso il Moderno" / "UDA 3: L'Alto Rinascimento")
+  // perché i dati storici potrebbero avere block.module nel formato esteso.
   const unitTypeByTitle = useMemo(() => {
     const m = new Map<string, CourseContentUnit['type']>();
-    for (const u of contentUnits) m.set(u.title.trim(), u.type);
+    const PREFIX: Record<CourseContentUnit['type'], string> = {
+      modulo: 'MODULO', uda: 'UDA', educazione_civica: 'EDUCAZIONE CIVICA', fsl: 'FSL',
+    };
+    for (const u of contentUnits) {
+      m.set(u.title.trim(), u.type);
+      // formato legacy: "MODULO 5: Titolo" / "UDA 3: Titolo"
+      m.set(`${PREFIX[u.type]} ${u.order}: ${u.title}`.trim(), u.type);
+      // formato senza numero (edge case): "MODULO: Titolo"
+      m.set(`${PREFIX[u.type]}: ${u.title}`.trim(), u.type);
+    }
     return m;
   }, [contentUnits]);
 
@@ -814,10 +826,10 @@ const GanttView: React.FC<GanttViewProps> = ({
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
 
         {/* ── Colonna sinistra: Gantt + heatmap ─────────────────────────── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
 
         {/* Card Gantt Attività */}
-        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ minHeight: 0, flex: '0 0 auto', maxHeight: '55%' }}>
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ minHeight: 0, flex: '0 0 auto', maxHeight: 340 }}>
 
           <div className="flex items-center px-5 pt-4 pb-3 flex-shrink-0">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">
