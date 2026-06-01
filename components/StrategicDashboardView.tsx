@@ -52,6 +52,20 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     const [activityTitle, setActivityTitle] = useState('');
     const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
     const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
+    // Dropdown CONTESTO — chiave `${weekNumber}-${blockIndex}`
+    const [openContextMenu, setOpenContextMenu] = useState<string | null>(null);
+    const contextMenuRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+    // Chiudi CONTESTO dropdown su click fuori
+    useEffect(() => {
+        if (!openContextMenu) return;
+        const handler = (e: MouseEvent) => {
+            const el = contextMenuRefs.current.get(openContextMenu);
+            if (el && !el.contains(e.target as Node)) setOpenContextMenu(null);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [openContextMenu]);
 
     const weekData = useMemo(() => {
         const convoMap = new Map<number, Conversation>();
@@ -490,160 +504,153 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                             return blockGlobalIdx >= launchGlobal && blockGlobalIdx <= dueGlobal;
                                         });
 
+                                        const ctxKey = `${week.weekNumber}-${index}`;
+                                        const isCtxOpen = openContextMenu === ctxKey;
+                                        const activeFlags = [
+                                            block.isFslPeriod && 'Periodo FSL',
+                                            block.hasExternalExpert && 'Esperto esterno',
+                                            block.isFuoriAula && 'Fuori aula',
+                                        ].filter(Boolean) as string[];
+
                                         return (
                                         <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-600/40">
-                                            <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start justify-between cursor-pointer hover:bg-gray-800/50 transition-colors select-none">
-                                                <div className="flex-grow flex flex-col gap-3">
+                                            <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-800/50 transition-colors select-none">
+                                                <div className="flex-grow flex flex-col gap-2 min-w-0">
+                                                    {/* Riga 1: label blocco · badge · titolo · pulsanti */}
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        <div className="flex-grow">
+                                                        <div className="flex-grow min-w-0">
                                                             {block.status === 'saltato' ? (
-                                                                <EditableField
-                                                                    value={block.reason || ''}
-                                                                    onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)}
-                                                                    placeholder="Motivo per cui il blocco è saltato..."
-                                                                    className="!text-red-400 placeholder:!text-red-400/50"
-                                                                />
+                                                                <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
                                                             ) : (
-                                                                <EditableField
-                                                                    value={block.blockTitle || block.objective || ''}
-                                                                    onSave={(val) => onUpdateBlockTitle(week.weekNumber, index, val)}
-                                                                    placeholder="Titolo del blocco (generalo con Ada ✦)..."
-                                                                />
+                                                                <EditableField value={block.blockTitle || block.objective || ''} onSave={(val) => onUpdateBlockTitle(week.weekNumber, index, val)} placeholder="Titolo del blocco (generalo con Ada ✦)..." />
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-1 no-print">
+                                                        <div className="flex items-center gap-1 flex-shrink-0 no-print">
                                                             {(block.status === 'da definire' || block.status === 'normale') ? (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        onUpdateBlockStatus(week.weekNumber, index, 'saltato');
-                                                                    }}
-                                                                    className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all"
-                                                                    title="Imposta blocco come saltato"
-                                                                >
-                                                                    Salta
-                                                                </button>
+                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'saltato'); }} className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all" title="Imposta blocco come saltato">Salta</button>
                                                             ) : (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        onUpdateBlockStatus(week.weekNumber, index, 'normale');
-                                                                    }}
-                                                                    className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all"
-                                                                >
-                                                                    Ripristina
-                                                                </button>
+                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'normale'); }} className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all">Ripristina</button>
+                                                            )}
+                                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }} disabled={isSpecialStatus} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print" title="Suggerisci titolo con Ada">
+                                                                <SparklesIcon className="h-3.5 w-3.5" />
+                                                                AI
+                                                            </button>
+                                                            <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
+                                                        </div>
+                                                    </div>
+                                                    {/* Riga 2: etichette colonne */}
+                                                    <div className={`grid grid-cols-4 gap-2 ${isSpecialStatus ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                        <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Cosa</span>
+                                                        <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Come</span>
+                                                        <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Approccio</span>
+                                                        <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Contesto</span>
+                                                    </div>
+                                                    {/* Riga 3: dropdown */}
+                                                    <div className={`grid grid-cols-4 gap-2 ${isSpecialStatus ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                        {/* COSA */}
+                                                        <select
+                                                            value={block.module || ''}
+                                                            onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={selectKeyDownHandler}
+                                                            disabled={isSpecialStatus || block.isLocked}
+                                                            className="w-full bg-gray-800 border border-gray-600/70 rounded-md px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                        >
+                                                            <option value="" disabled>— unità didattica —</option>
+                                                            {contentUnits.length > 0
+                                                                ? (['modulo', 'uda', 'educazione_civica', 'fsl'] as const).flatMap(type => {
+                                                                    const units = contentUnits.filter(u => u.type === type);
+                                                                    if (units.length === 0) return [];
+                                                                    return [
+                                                                        <optgroup key={type} label={COURSE_CONTENT_TYPE_LABELS[type]}>
+                                                                            {units.map(u => (
+                                                                                <option key={u.id} value={u.title}>{COURSE_CONTENT_TYPE_LABELS[u.type]} {u.order}: {u.title}</option>
+                                                                            ))}
+                                                                        </optgroup>
+                                                                    ];
+                                                                })
+                                                                : modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)
+                                                            }
+                                                        </select>
+                                                        {/* COME */}
+                                                        <select
+                                                            value={block.tipologia || ''}
+                                                            onChange={(e) => onUpdateBlockTipologia(week.weekNumber, index, e.target.value as LessonType | '')}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={selectKeyDownHandler}
+                                                            disabled={isSpecialStatus}
+                                                            className="w-full bg-gray-800 border border-gray-600/70 rounded-md px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                        >
+                                                            <option value="" disabled>— tipologia di lezione —</option>
+                                                            {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
+                                                                <option key={key} value={key}>{label}</option>
+                                                            ))}
+                                                        </select>
+                                                        {/* APPROCCIO */}
+                                                        <select
+                                                            value={block.metodologia || (parsedMethodologies.length === 0 ? 'tradizionale' : '')}
+                                                            onChange={(e) => onUpdateBlockMetodologia(week.weekNumber, index, e.target.value as TeachingMethodology | '')}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={selectKeyDownHandler}
+                                                            disabled={isSpecialStatus}
+                                                            className="w-full bg-gray-800 border border-gray-600/70 rounded-md px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                        >
+                                                            <option value="" disabled>— approccio —</option>
+                                                            {parsedMethodologies.length > 0 && (
+                                                                <optgroup label="· nel corso">
+                                                                    {parsedMethodologies.map(m => (
+                                                                        <option key={m} value={m}>{TEACHING_METHODOLOGY_LABELS[m]}</option>
+                                                                    ))}
+                                                                </optgroup>
+                                                            )}
+                                                            <optgroup label={parsedMethodologies.length > 0 ? '· altre' : ''}>
+                                                                {(Object.entries(TEACHING_METHODOLOGY_LABELS) as [TeachingMethodology, string][])
+                                                                    .filter(([key]) => !parsedMethodologies.includes(key))
+                                                                    .map(([key, label]) => (
+                                                                        <option key={key} value={key}>{label}</option>
+                                                                    ))
+                                                                }
+                                                            </optgroup>
+                                                        </select>
+                                                        {/* CONTESTO — dropdown custom multi-flag */}
+                                                        <div className="relative" ref={(el) => { if (el) contextMenuRefs.current.set(ctxKey, el); else contextMenuRefs.current.delete(ctxKey); }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenContextMenu(isCtxOpen ? null : ctxKey); }}
+                                                                disabled={isSpecialStatus}
+                                                                className={`w-full flex items-center justify-between gap-1 bg-gray-800 border rounded-md px-2 py-1.5 text-xs text-left focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-colors ${isCtxOpen ? 'border-blue-500/50' : 'border-gray-600/70'}`}
+                                                            >
+                                                                <span className={`truncate ${activeFlags.length > 0 ? 'text-white' : 'text-gray-500'}`}>
+                                                                    {activeFlags.length > 0 ? activeFlags.join(' · ') : '— nessuno —'}
+                                                                </span>
+                                                                <ChevronDownIcon className={`h-3 w-3 text-gray-500 flex-shrink-0 transition-transform ${isCtxOpen ? 'rotate-180' : ''}`} />
+                                                            </button>
+                                                            {isCtxOpen && (
+                                                                <div className="absolute z-50 top-full left-0 mt-1 w-full min-w-[185px] border border-gray-600/80 rounded-lg shadow-xl shadow-black/50 overflow-hidden" style={{backgroundColor: '#1c2333'}}>
+                                                                    {[
+                                                                        { key: 'fsl', label: 'Periodo FSL', activeColor: 'text-sky-400', active: !!block.isFslPeriod, onToggle: () => { onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); } },
+                                                                        { key: 'esp', label: 'Esperto esterno', activeColor: 'text-amber-400', active: !!block.hasExternalExpert, onToggle: () => { onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); } },
+                                                                        { key: 'fuori', label: 'Fuori aula', activeColor: 'text-teal-400', active: !!block.isFuoriAula, onToggle: () => { onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); } },
+                                                                    ].map(item => (
+                                                                        <button
+                                                                            key={item.key}
+                                                                            type="button"
+                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onToggle(); }}
+                                                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-gray-700/60 transition-colors text-left"
+                                                                        >
+                                                                            <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${item.active ? 'bg-blue-500 border-blue-500' : 'border-gray-600'}`}>
+                                                                                {item.active && <span className="text-white font-bold leading-none" style={{fontSize:'8px'}}>✓</span>}
+                                                                            </span>
+                                                                            <span className={item.active ? item.activeColor : 'text-gray-400'}>{item.label}</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className={`flex items-center gap-2 flex-wrap ${isSpecialStatus ? 'opacity-50 pointer-events-none' : ''}`}>
-                                                        {/* Cosa — unità di contenuto dal Progetto Didattico */}
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Cosa</span>
-                                                            <select
-                                                                value={block.module || ''}
-                                                                onChange={(e) => handleModuleChange(week.weekNumber, index, e.target.value)}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onKeyDown={selectKeyDownHandler}
-                                                                disabled={isSpecialStatus || block.isLocked}
-                                                                className="max-w-[220px] bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
-                                                            >
-                                                                <option value="" disabled>— unità didattica —</option>
-                                                                {contentUnits.length > 0
-                                                                    ? (['modulo', 'uda', 'educazione_civica', 'fsl'] as const).flatMap(type => {
-                                                                        const units = contentUnits.filter(u => u.type === type);
-                                                                        if (units.length === 0) return [];
-                                                                        return [
-                                                                            <optgroup key={type} label={COURSE_CONTENT_TYPE_LABELS[type]}>
-                                                                                {units.map(u => (
-                                                                                    <option key={u.id} value={u.title}>{u.title}</option>
-                                                                                ))}
-                                                                            </optgroup>
-                                                                        ];
-                                                                    })
-                                                                    : modules.map(m => <option key={m.name} value={m.name}>{m.name}</option>)
-                                                                }
-                                                            </select>
-                                                        </div>
-                                                        {/* Come — modalità pedagogica (5 voci stabili) */}
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Come</span>
-                                                            <select
-                                                                value={block.tipologia || ''}
-                                                                onChange={(e) => {
-                                                                    onUpdateBlockTipologia(week.weekNumber, index, e.target.value as LessonType | '');
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onKeyDown={selectKeyDownHandler}
-                                                                disabled={isSpecialStatus}
-                                                                className="bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
-                                                            >
-                                                                <option value="" disabled>— tipologia —</option>
-                                                                {(Object.entries(LESSON_TYPE_LABELS) as [LessonType, string][]).map(([key, label]) => (
-                                                                    <option key={key} value={key}>{label}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                        {/* Approccio — metodologia didattica, voci dal Progetto in cima */}
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Approccio</span>
-                                                            <select
-                                                                value={block.metodologia || (parsedMethodologies.length === 0 ? 'tradizionale' : '')}
-                                                                onChange={(e) => {
-                                                                    onUpdateBlockMetodologia(week.weekNumber, index, e.target.value as TeachingMethodology | '');
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onKeyDown={selectKeyDownHandler}
-                                                                disabled={isSpecialStatus}
-                                                                className="bg-gray-800 border border-gray-600/70 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
-                                                            >
-                                                                <option value="" disabled>— approccio —</option>
-                                                                {parsedMethodologies.length > 0 && (
-                                                                    <optgroup label="· nel corso">
-                                                                        {parsedMethodologies.map(m => (
-                                                                            <option key={m} value={m}>{TEACHING_METHODOLOGY_LABELS[m]}</option>
-                                                                        ))}
-                                                                    </optgroup>
-                                                                )}
-                                                                <optgroup label={parsedMethodologies.length > 0 ? '· altre' : ''}>
-                                                                    {(Object.entries(TEACHING_METHODOLOGY_LABELS) as [TeachingMethodology, string][])
-                                                                        .filter(([key]) => !parsedMethodologies.includes(key))
-                                                                        .map(([key, label]) => (
-                                                                            <option key={key} value={key}>{label}</option>
-                                                                        ))
-                                                                    }
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
-                                                        {/* Separatore visivo */}
-                                                        <span className="w-px h-4 bg-gray-700/60 flex-shrink-0" />
-                                                        {/* Contesto: toggle FSL · ESP · FUORI */}
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Contesto</span>
-                                                            <button
-                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); }}
-                                                                title={block.isFslPeriod ? 'Disattiva periodo FSL' : 'Attiva periodo FSL'}
-                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFslPeriod ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-600 border-gray-700/40 hover:text-sky-400/70 hover:border-sky-500/20'}`}
-                                                            >FSL</button>
-                                                            <button
-                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); }}
-                                                                title={block.hasExternalExpert ? 'Rimuovi esperto esterno' : 'Segna come lezione con esperto esterno'}
-                                                                disabled={isSpecialStatus}
-                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.hasExternalExpert ? 'text-amber-400 border-amber-500/40 bg-amber-500/10' : 'text-gray-600 border-gray-700/40 hover:text-amber-400/70 hover:border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
-                                                            >ESP</button>
-                                                            <button
-                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); }}
-                                                                title={block.isFuoriAula ? 'Riporta in aula' : 'Segna come attività fuori aula'}
-                                                                disabled={isSpecialStatus}
-                                                                className={`text-[10px] font-mono rounded px-1.5 py-0.5 border transition-all flex-shrink-0 ${block.isFuoriAula ? 'text-teal-400 border-teal-500/40 bg-teal-500/10' : 'text-gray-600 border-gray-700/40 hover:text-teal-400/70 hover:border-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed'}`}
-                                                            >FUORI</button>
-                                                        </div>
-                                                    </div>
-                                                    {/* Attività attive su questo blocco */}
+                                                    {/* Attività attive su questo blocco (summary) */}
                                                     {blockActivities.length > 0 && (
                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                             <span className="text-[9px] font-mono text-gray-600 flex-shrink-0">Attività:</span>
@@ -655,168 +662,91 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                 return (
                                                                     <span key={a.id} className={`flex items-center gap-0.5 text-[9px] font-mono ${isDue ? 'text-amber-400' : 'text-rose-300/70'}`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDue ? 'bg-amber-400' : 'bg-rose-500'}`} />
-                                                                        {isLaunch && '↗ '}
-                                                                        {isDue && '⚑ '}
+                                                                        {isLaunch && '↗ '}{isDue && '⚑ '}
                                                                         <span className="max-w-[80px] truncate">{a.title}</span>
                                                                         <span className="opacity-60 ml-0.5">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
                                                                     </span>
                                                                 );
                                                             })}
-                                                            {blockActivities.length > 2 && (
-                                                                <span className="text-[9px] font-mono text-gray-600">+{blockActivities.length - 2}</span>
-                                                            )}
+                                                            {blockActivities.length > 2 && <span className="text-[9px] font-mono text-gray-600">+{blockActivities.length - 2}</span>}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0 pl-4">
-                                                    {block.isLocked && !isSpecialStatus && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                onUpdateBlockDetails(week.weekNumber, index, { isLocked: false });
-                                                            }}
-                                                            className="px-3 py-1 text-xs font-medium text-yellow-300 bg-yellow-900/50 rounded hover:bg-yellow-900/80 no-print"
-                                                        >
-                                                            Modifica
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
-                                                        disabled={isSpecialStatus}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
-                                                        title="Suggerisci titolo con Ada"
-                                                    >
-                                                        <SparklesIcon className="h-3.5 w-3.5" />
-                                                        AI
-                                                    </button>
-                                                    <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
-                                                </div>
                                             </summary>
+                                            {/* ── Sezione espansa ── */}
                                             <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
-                                                {/* Campo Argomento — nucleo semantico della lezione */}
+                                                {/* ARGOMENTO */}
                                                 <div>
-                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">
-                                                        Argomento
-                                                    </label>
-                                                    <EditableField
-                                                        value={block.lessonSubject || ''}
-                                                        onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)}
-                                                        placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…"
-                                                        disabled={isSpecialStatus}
-                                                    />
-                                                    <p className="text-[9px] font-mono text-gray-600 mt-0.5">
-                                                        Il soggetto concreto — Ada lo usa come base per generare il titolo
-                                                    </p>
+                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Argomento</label>
+                                                    <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
+                                                    <p className="text-[9px] font-mono text-gray-600 mt-0.5">Il soggetto concreto — Ada lo usa come base per generare il titolo</p>
                                                 </div>
+                                                {/* OBIETTIVO DIDATTICO */}
                                                 <div>
                                                     <div className="flex items-center justify-between mb-1">
                                                         <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Obiettivo Didattico</label>
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateObjective(week.weekNumber, index); }}
-                                                            disabled={isSpecialStatus}
-                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
-                                                            title="Suggerisci obiettivo didattico con Ada"
-                                                        >
+                                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateObjective(week.weekNumber, index); }} disabled={isSpecialStatus} className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print" title="Suggerisci obiettivo didattico con Ada">
                                                             <SparklesIcon className="h-3 w-3" />
                                                             Suggerisci obiettivo
                                                         </button>
                                                     </div>
-                                                    <EditableTextarea
-                                                        value={block.objective || ''}
-                                                        onSave={(val) => onUpdateBlockObjective(week.weekNumber, index, val)}
-                                                        placeholder="Obiettivo pedagogico formale: cosa sapranno fare gli studenti al termine del blocco..."
-                                                        rows={2}
-                                                        disabled={isSpecialStatus}
-                                                    />
+                                                    <EditableTextarea value={block.objective || ''} onSave={(val) => onUpdateBlockObjective(week.weekNumber, index, val)} placeholder="Obiettivo pedagogico formale: cosa sapranno fare gli studenti al termine del blocco..." rows={2} disabled={isSpecialStatus} />
                                                 </div>
-                                                {/* Campo esperto esterno — visibile solo se attivo */}
+                                                {/* ESPERTO ESTERNO — solo se attivo */}
                                                 {block.hasExternalExpert && (
                                                     <div>
-                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-amber-500/60 mb-1 block">
-                                                            Esperto esterno
-                                                        </label>
-                                                        <EditableField
-                                                            value={block.externalExpertName || ''}
-                                                            onSave={(val) => onUpdateExternalExpertName(week.weekNumber, index, val)}
-                                                            placeholder="Nome e ruolo dell'esperto (es. Arch. Bianchi — Studio XY)…"
-                                                        />
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-amber-500/60 mb-1 block">Esperto esterno</label>
+                                                        <EditableField value={block.externalExpertName || ''} onSave={(val) => onUpdateExternalExpertName(week.weekNumber, index, val)} placeholder="Nome e ruolo dell'esperto (es. Arch. Bianchi — Studio XY)…" />
                                                     </div>
                                                 )}
-                                                {/* Campo luogo — visibile solo se fuori aula */}
+                                                {/* LUOGO — solo se fuori aula */}
                                                 {block.isFuoriAula && (
                                                     <div>
-                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-teal-500/60 mb-1 block">
-                                                            Luogo
-                                                        </label>
-                                                        <EditableField
-                                                            value={block.luogo || ''}
-                                                            onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)}
-                                                            placeholder="Destinazione o luogo (es. Museo del Design, Milano)…"
-                                                        />
+                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-teal-500/60 mb-1 block">Luogo</label>
+                                                        <EditableField value={block.luogo || ''} onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)} placeholder="Destinazione o luogo (es. Museo del Design, Milano)…" />
                                                     </div>
                                                 )}
-                                                {/* Sezione attività */}
+                                                {/* ATTIVITÀ */}
                                                 {onAddActivityForBlock && !isSpecialStatus && (() => {
                                                     const formKey = `${week.weekNumber}-${index}`;
                                                     const isFormOpen = activityFormKey === formKey;
-                                                    const blockConvo = conversations.find(c => c.weekPlan?.weekNumber === week.weekNumber);
-                                                    const launched = (blockConvo?.activities ?? []).filter(a => a.launchBlockId === block.id);
                                                     return (
                                                         <div className="pt-1">
-                                                            {!isFormOpen && (
-                                                                <div className="flex items-center justify-end mb-2">
+                                                            <div className="flex items-center justify-between mb-1.5">
+                                                                <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Attività</label>
+                                                                {!isFormOpen && (
                                                                     <button
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
-                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/8 hover:border-rose-400/25 transition-colors flex-shrink-0"
+                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/15 rounded hover:bg-rose-500/10 hover:border-rose-400/25 transition-colors"
                                                                     >
                                                                         ↗ Lancia attività
                                                                     </button>
-                                                                </div>
-                                                            )}
+                                                                )}
+                                                            </div>
                                                             {isFormOpen && (
-                                                                <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5">
-                                                                    <p className="text-[9px] font-mono text-rose-400/80 mb-2">↗ Nuova attività</p>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={activityTitle}
-                                                                        onChange={e => setActivityTitle(e.target.value)}
-                                                                        placeholder="Titolo dell'attività..."
-                                                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 mb-2"
-                                                                        autoFocus
-                                                                        onKeyDown={e => {
-                                                                            if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) {
-                                                                                e.preventDefault();
-                                                                                onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks);
-                                                                                setActivityTitle(''); setActivityFormKey(null);
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                    <div className="flex items-center gap-1 flex-wrap mb-2">
+                                                                <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 space-y-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={activityTitle}
+                                                                            onChange={e => setActivityTitle(e.target.value)}
+                                                                            placeholder="Titolo dell'attività..."
+                                                                            className="flex-grow bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
+                                                                            autoFocus
+                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) { e.preventDefault(); onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); } }}
+                                                                        />
+                                                                        <button onClick={() => { if (!activityTitle.trim()) return; onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); }} disabled={!activityTitle.trim()} className="px-2.5 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">Lancia</button>
+                                                                        <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); }} className="px-2.5 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors flex-shrink-0">Annulla</button>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 flex-wrap">
                                                                         {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
-                                                                            <button key={t} onClick={() => setActivityType(t)}
-                                                                                className={`px-2 py-0.5 text-[9px] font-mono rounded-full transition-colors ${activityType === t ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'text-gray-600 hover:text-gray-400 border border-transparent'}`}>
-                                                                                {ACTIVITY_TYPE_LABELS[t]}
-                                                                            </button>
+                                                                            <button key={t} onClick={() => setActivityType(t)} className={`px-2 py-0.5 text-[9px] font-mono rounded-full transition-colors ${activityType === t ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'text-gray-600 hover:text-gray-400 border border-transparent'}`}>{ACTIVITY_TYPE_LABELS[t]}</button>
                                                                         ))}
                                                                     </div>
-                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                        <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
-                                                                        <input type="number" min={1} max={20} value={activityDueInBlocks}
-                                                                            onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                                                                            className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
-                                                                        <span className="text-[9px] font-mono text-gray-500">blocchi</span>
-                                                                    </div>
                                                                     <div className="flex items-center gap-2">
-                                                                        <button
-                                                                            onClick={() => { if (!activityTitle.trim()) return; onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); }}
-                                                                            disabled={!activityTitle.trim()}
-                                                                            className="px-3 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                                                                            Lancia
-                                                                        </button>
-                                                                        <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); }} className="px-3 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors">
-                                                                            Annulla
-                                                                        </button>
+                                                                        <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
+                                                                        <input type="number" min={1} max={20} value={activityDueInBlocks} onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
+                                                                        <span className="text-[9px] font-mono text-gray-500">blocchi</span>
                                                                     </div>
                                                                 </div>
                                                             )}
