@@ -518,14 +518,26 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         <details key={block.id} className="group/inner bg-gray-900/50 rounded-lg border border-gray-600/40">
                                             <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-800/50 transition-colors select-none">
                                                 <div className="flex-grow flex flex-col gap-2 min-w-0">
-                                                    {/* Riga 1: label blocco · badge · titolo · pulsanti */}
+                                                    {/* Riga 1: label blocco · data · badge · Salta la lezione · chevron */}
                                                     <div className="flex items-center gap-2.5">
                                                         <span className="font-mono text-[11px] font-medium text-gray-500 flex-shrink-0 uppercase tracking-widest">Bl.{index + 1}{dateString}</span>
                                                         <BlockStateBadge state={blockState} />
-                                                        <div className="flex-grow min-w-0 overflow-hidden">
-                                                            {block.status === 'saltato' ? (
-                                                                <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
-                                                            ) : editingTitleKeys.has(ctxKey) ? (
+                                                        <div className="flex items-center gap-1 ml-auto flex-shrink-0 no-print">
+                                                            {(block.status === 'da definire' || block.status === 'normale') ? (
+                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'saltato'); }} className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all" title="Imposta blocco come saltato">Salta la lezione</button>
+                                                            ) : (
+                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'normale'); }} className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all">Ripristina</button>
+                                                            )}
+                                                            <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180 ml-1" />
+                                                        </div>
+                                                    </div>
+                                                    {/* Riga 2: TITOLO label + testo display + genera + matitina */}
+                                                    {block.status === 'saltato' ? (
+                                                        <EditableField value={block.reason || ''} onSave={(newReason) => onUpdateBlockStatus(week.weekNumber, index, 'saltato', newReason)} placeholder="Motivo per cui il blocco è saltato..." className="!text-red-400 placeholder:!text-red-400/50" />
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80 flex-shrink-0">Titolo</span>
+                                                            {editingTitleKeys.has(ctxKey) ? (
                                                                 <EditableField
                                                                     value={block.blockTitle || ''}
                                                                     onSave={(val) => {
@@ -535,38 +547,45 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                     placeholder="Titolo accattivante per gli studenti…"
                                                                 />
                                                             ) : (
-                                                                <div className="flex items-center gap-1.5 group/title-hdr min-w-0">
-                                                                    <span className={`block text-sm truncate leading-snug ${block.blockTitle ? 'font-display text-gray-300/80' : block.objective ? 'font-sans text-gray-400/60 italic' : 'font-sans text-gray-600 italic'}`}>
-                                                                        {block.blockTitle || block.objective || '— titolo da generare —'}
+                                                                <>
+                                                                    <span className={`flex-grow min-w-0 text-sm font-display truncate leading-snug ${block.blockTitle ? 'text-gray-200' : 'text-gray-600 italic'}`}>
+                                                                        {block.blockTitle || '— titolo da generare —'}
                                                                     </span>
-                                                                    <button
-                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
-                                                                        className="flex-shrink-0 text-gray-600 hover:text-gray-400 transition-colors opacity-0 group-hover/title-hdr:opacity-100 p-0.5 no-print"
-                                                                        title="Modifica il titolo"
-                                                                    >
-                                                                        ✏
-                                                                    </button>
-                                                                </div>
+                                                                    <div className="flex items-center gap-1 flex-shrink-0 no-print">
+                                                                        <button
+                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
+                                                                            disabled={isSpecialStatus}
+                                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                            title="Genera il titolo accattivante per gli studenti"
+                                                                        >
+                                                                            <SparklesIcon className="h-3 w-3" />
+                                                                            Genera titolo
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingTitleKeys(prev => new Set([...prev, ctxKey])); }}
+                                                                            className="text-gray-600 hover:text-gray-400 transition-colors p-0.5"
+                                                                            title="Modifica il titolo"
+                                                                        >
+                                                                            ✏
+                                                                        </button>
+                                                                    </div>
+                                                                </>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-1 flex-shrink-0 no-print">
-                                                            {(block.status === 'da definire' || block.status === 'normale') ? (
-                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'saltato'); }} className="px-2 py-1 text-xs font-medium text-red-400/70 border border-red-500/20 rounded-md hover:bg-red-500/15 hover:text-red-300 hover:border-red-400/35 transition-all" title="Imposta blocco come saltato">Salta</button>
-                                                            ) : (
-                                                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onUpdateBlockStatus(week.weekNumber, index, 'normale'); }} className="px-2 py-1 text-xs font-medium text-gray-400 border border-gray-600/40 rounded-md hover:bg-gray-700/50 hover:text-gray-200 transition-all">Ripristina</button>
-                                                            )}
-                                                            <ChevronDownIcon className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open/inner:rotate-180" />
-                                                        </div>
-                                                    </div>
-                                                    {/* Riga 2: etichette colonne */}
-                                                    <div className={`grid grid-cols-4 gap-2 ${isSpecialStatus ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                    )}
+                                                </div>
+                                            </summary>
+                                            {/* ── Sezione espansa ── */}
+                                            <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
+                                                {/* COSA / COME / APPROCCIO / CONTESTO */}
+                                                <div className={`space-y-1.5 ${isSpecialStatus ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                    <div className="grid grid-cols-4 gap-2">
                                                         <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Cosa</span>
                                                         <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Come</span>
                                                         <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Approccio</span>
                                                         <span className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-gray-500/80">Contesto</span>
                                                     </div>
-                                                    {/* Riga 3: dropdown */}
-                                                    <div className={`grid grid-cols-4 gap-2 ${isSpecialStatus ? 'opacity-40 pointer-events-none' : ''}`}>
+                                                    <div className="grid grid-cols-4 gap-2">
                                                         {/* COSA */}
                                                         <select
                                                             value={block.module || ''}
@@ -669,23 +688,9 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </summary>
-                                            {/* ── Sezione espansa ── */}
-                                            <div className="border-t border-gray-700/30 px-4 py-3 space-y-3 bg-gray-900/20">
                                                 {/* ARGOMENTO */}
                                                 <div>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Argomento</label>
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateTitle(week.weekNumber, index); }}
-                                                            disabled={isSpecialStatus}
-                                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-purple-400 border border-purple-500/25 rounded-md hover:bg-purple-500/10 hover:border-purple-400/40 hover:text-purple-300 transition-all disabled:opacity-30 disabled:cursor-not-allowed no-print"
-                                                            title="Genera il titolo accattivante per gli studenti"
-                                                        >
-                                                            <SparklesIcon className="h-3 w-3" />
-                                                            Genera titolo
-                                                        </button>
-                                                    </div>
+                                                    <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Argomento</label>
                                                     <EditableField value={block.lessonSubject || ''} onSave={(val) => onUpdateBlockSubject(week.weekNumber, index, val)} placeholder="Argomento specifico della lezione (es. Vetrate gotiche)…" disabled={isSpecialStatus} />
                                                 </div>
                                                 {/* OBIETTIVO DIDATTICO */}
