@@ -227,6 +227,18 @@ export interface ContentBlock {
     content: string;
 }
 
+export interface MasterLibraryEntry {
+    blockId: string;
+    conversationId: string;
+    weekNumber: number;
+    blockDay: string;
+    moduleRef?: string;      // block.module
+    type: 'lesson_content' | 'activity_content';
+    title: string;           // block.blockTitle || block.objective || 'Blocco senza titolo'
+    contentBlocks: ContentBlock[];
+    createdAt?: string;
+}
+
 // --- TIPI IN AULA ---
 
 export interface LessonMaterial {
