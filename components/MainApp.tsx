@@ -516,12 +516,3 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
 };
 
 export default MainApp;
-">No, grazie</button>
-        </div>
-      )}
-
-    </>
-  );
-};
-
-export default MainApp;

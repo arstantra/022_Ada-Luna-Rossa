@@ -38,6 +38,16 @@ Handler in `components/handlers/` (45–228 righe): sempre `Edit`, mai `Write` �
 2. Recuperare da git (GitHub Desktop → discard changes)
 3. Riapplicare le modifiche con `Edit` su base pulita
 
+### Bug ricorrente: coda duplicata in MainApp.tsx (Unterminated string literal)
+
+**Sintomo**: build fallisce con `Unterminated string literal` nelle ultime righe del file — frammento JSX corotto che segue un secondo `export default MainApp;`.
+
+**Causa**: un `Edit` che tocca la zona finale del file (ultimi ~20 righe) produce un duplicato parziale: il blocco `export default MainApp;` appare due volte, la seconda preceduta dal frammento di JSX che era il contesto `old_string`.
+
+**Fix immediato**: leggere le ultime 30 righe del file, identificare il blocco duplicato, eliminarlo con `Edit`. La firma corretta è una sola occorrenza di `export default MainApp;` in cima ultime righe.
+
+**Prevenzione**: dopo ogni `Edit` su `MainApp.tsx` che tocca le ultime 50 righe, verificare con `grep -n "export default MainApp" components/MainApp.tsx` — deve restituire esattamente **1 riga**. Se ne restituisce 2, eseguire subito il fix prima del commit.
+
 ---
 
 ## 3. Dove mettere file nuovi
