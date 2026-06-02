@@ -1,5 +1,5 @@
 // utils.ts
-import type { Attachment, WeekRouteInfo, WeekPlan, BlockDetails, Message, Conversation, Student, WeekEntry } from './types';
+import type { Attachment, WeekRouteInfo, WeekPlan, BlockDetails, Message, Conversation, Student, WeekEntry, FslPeriod } from './types';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 
@@ -208,6 +208,13 @@ export const generateExportContent = (plan: WeekPlan, block: BlockDetails, block
     return { prompt, filename };
 };
 
+/**
+ * Ritorna true se weekNumber cade dentro almeno uno dei periodi FSL globali.
+ * Usato per derivare automaticamente il badge FSL sui blocchi senza toggle manuale.
+ */
+export const isWeekInFslPeriod = (weekNumber: number, fslPeriods: FslPeriod[]): boolean =>
+    fslPeriods.some(p => weekNumber >= p.startWeek && weekNumber <= p.endWeek);
+
 export type BlockPlanningStatus = 'da_definire' | 'da_progettare' | 'in_progettazione' | 'in_revisione' | 'concluso' | 'saltato' | 'annullato' | 'sconosciuto';
 
 export const getBlockPlanningStatus = (block: BlockDetails | undefined): BlockPlanningStatus => {
@@ -379,6 +386,21 @@ export const generateCourseBookHtml = (
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
             <style>${styles}</style>
+        </head>
+        <body>
+            <div class="book-container">
+                ${coverPage}
+                ${adaPresentationHtml}
+                ${foundingDocsHtml}
+                ${tableOfContents}
+                ${chaptersHtml}
+                ${appendixHtml}
+            </div>
+        </body>
+        </html>
+    `;
+};
+${styles}</style>
         </head>
         <body>
             <div class="book-container">

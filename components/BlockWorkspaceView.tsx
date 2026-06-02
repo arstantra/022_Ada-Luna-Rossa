@@ -32,9 +32,11 @@ interface BlockWorkspaceViewProps {
     // Attività
     onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => void;
     blockActivities?: Activity[];
+    // FSL: derivato automaticamente in PlanningView, passato come booleano
+    isFslActive?: boolean;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities, isFslActive = false }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -355,7 +357,7 @@ ${htmlContent}
                                     </div>
                                 )}
                                 {/* Come · Approccio · Contesto — coerenza con Progettazione */}
-                                {(block.tipologia || block.metodologia || block.isFslPeriod || block.hasExternalExpert || block.isFuoriAula) && (
+                                {(block.tipologia || block.metodologia || isFslActive || block.hasExternalExpert || block.isFuoriAula) && (
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         {block.tipologia && (
                                             <span className="text-[9px] font-mono bg-gray-800/70 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40" title="Come">
@@ -367,10 +369,10 @@ ${htmlContent}
                                                 {TEACHING_METHODOLOGY_LABELS[block.metodologia as TeachingMethodology]}
                                             </span>
                                         )}
-                                        {(block.tipologia || block.metodologia) && (block.isFslPeriod || block.hasExternalExpert || block.isFuoriAula) && (
+                                        {(block.tipologia || block.metodologia) && (isFslActive || block.hasExternalExpert || block.isFuoriAula) && (
                                             <span className="w-px h-3 bg-gray-700/50" />
                                         )}
-                                        {block.isFslPeriod && (
+                                        {isFslActive && (
                                             <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5">FSL</span>
                                         )}
                                         {block.hasExternalExpert && (
@@ -600,6 +602,14 @@ ${htmlContent}
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default memo(BlockWorkspaceView);
+
                 </div>
             )}
         </div>

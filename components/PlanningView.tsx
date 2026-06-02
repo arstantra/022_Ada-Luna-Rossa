@@ -5,7 +5,7 @@ import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOp
 import BlockWorkspaceView from './BlockWorkspaceView';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
-import { getBlockPlanningStatus, getExactDateForBlock } from '../utils';
+import { getBlockPlanningStatus, getExactDateForBlock, isWeekInFslPeriod } from '../utils';
 import BlockEditModal from './BlockEditModal';
 import { LESSON_TYPE_LABELS } from '../constants';
 
@@ -422,6 +422,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onPromoteFonte={handlePromote}
                     onAddActivity={onAddActivity ? handleAddActivity : undefined}
                     blockActivities={activeBlockActivities}
+                    isFslActive={weekPlan ? isWeekInFslPeriod(weekPlan.weekNumber, masterContext.fslPeriods) : false}
                 />
             </main>
             {activeBlock && (
@@ -432,6 +433,15 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     blockIndex={weekPlan.activeBlockIndex}
                     onUpdateDay={(day) => handleUpdateBlockDetails({ day })}
                     onUpdateStatus={handleUpdateBlockStatus}
+                    onReset={handleResetBlock}
+                />
+            )}
+        </>
+    );
+};
+
+export default memo(PlanningView);
+
                     onReset={handleResetBlock}
                 />
             )}

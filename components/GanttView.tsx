@@ -809,11 +809,6 @@ const GanttView: React.FC<GanttViewProps> = ({
   // Hook prima di qualsiasi return condizionale (regola React)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(1);
-  // Stato form aggiunta periodo FSL
-  const [showFslForm, setShowFslForm] = useState(false);
-  const [fslFormStart, setFslFormStart] = useState('');
-  const [fslFormEnd, setFslFormEnd] = useState('');
-  const [fslFormLabel, setFslFormLabel] = useState('');
 
   // ── Mappa titolo → tipo contentUnit per lookup O(1) ──────────────────────
   // Mappa sia il titolo breve ("Verso il Moderno") sia il formato header completo
@@ -1006,23 +1001,7 @@ const GanttView: React.FC<GanttViewProps> = ({
     };
   }, [conversations, unitTypeByTitle]);
 
-  // ── Gestione periodi FSL ─────────────────────────────────────────────────
-  const handleAddFslPeriod = () => {
-    const start = parseInt(fslFormStart, 10);
-    const end   = parseInt(fslFormEnd,   10);
-    if (!start || !end || start > end) return;
-    const newPeriod: FslPeriod = {
-      id: `fsl-${Date.now()}`,
-      label: fslFormLabel.trim() || undefined,
-      startWeek: start,
-      endWeek: end,
-    };
-    onSaveFslPeriods?.([...fslPeriods, newPeriod].sort((a, b) => a.startWeek - b.startWeek));
-    setFslFormStart('');
-    setFslFormEnd('');
-    setFslFormLabel('');
-    setShowFslForm(false);
-  };
+  // ── Gestione periodi FSL — rimozione rapida inline ───────────────────────
   const handleRemoveFslPeriod = (id: string) => {
     onSaveFslPeriods?.(fslPeriods.filter(p => p.id !== id));
   };
@@ -1277,20 +1256,14 @@ const GanttView: React.FC<GanttViewProps> = ({
                     );
               })}
 
-            {/* ── Separatore + righe FSL ───────────────────────────────── */}
+            {/* ── Righe FSL (periodi globali da La Rotta) ───────────────── */}
+            {fslPeriods.length > 0 && (
             <div>
-              {/* Riga separatore FSL — sempre visibile con pulsante + */}
+              {/* Intestazione sezione FSL */}
               <div className="flex" style={{ height: 24 }}>
                 <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}
-                  className="flex items-center justify-between px-3">
+                  className="flex items-center px-3">
                   <span className="text-[8px] font-mono tracking-[0.12em] uppercase text-sky-600/70">Periodi FSL</span>
-                  {onSaveFslPeriods && (
-                    <button
-                      onClick={() => setShowFslForm(v => !v)}
-                      className="text-sky-500/60 hover:text-sky-400 text-[10px] leading-none rounded px-1"
-                      title="Aggiungi periodo FSL"
-                    >+</button>
-                  )}
                 </div>
                 <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}>
                   {weeks.map(w => (
@@ -1301,42 +1274,6 @@ const GanttView: React.FC<GanttViewProps> = ({
                   ))}
                 </div>
               </div>
-
-              {/* Form inline aggiunta periodo */}
-              {showFslForm && onSaveFslPeriods && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-900/80 border-b border-gray-700/40">
-                  <span className="text-[9px] font-mono text-sky-500/70 flex-shrink-0">Sett.</span>
-                  <input
-                    type="number" min={1} max={99} placeholder="inizio"
-                    value={fslFormStart}
-                    onChange={e => setFslFormStart(e.target.value)}
-                    className="w-14 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
-                  />
-                  <span className="text-[9px] font-mono text-gray-600">→</span>
-                  <input
-                    type="number" min={1} max={99} placeholder="fine"
-                    value={fslFormEnd}
-                    onChange={e => setFslFormEnd(e.target.value)}
-                    className="w-14 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
-                  />
-                  <input
-                    type="text" placeholder="etichetta (opzionale)"
-                    value={fslFormLabel}
-                    onChange={e => setFslFormLabel(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAddFslPeriod(); }}
-                    className="flex-1 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
-                  />
-                  <button
-                    onClick={handleAddFslPeriod}
-                    disabled={!fslFormStart || !fslFormEnd}
-                    className="text-[10px] font-mono text-sky-400 border border-sky-500/30 rounded px-2 py-0.5 hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >Aggiungi</button>
-                  <button
-                    onClick={() => setShowFslForm(false)}
-                    className="text-[10px] font-mono text-gray-600 hover:text-gray-400 px-1"
-                  >✕</button>
-                </div>
-              )}
 
               {/* Una riga per ogni periodo FSL */}
               {fslPeriods.map(period => (
@@ -1366,7 +1303,7 @@ const GanttView: React.FC<GanttViewProps> = ({
                       <div className="absolute inset-y-0 pointer-events-none"
                         style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
                     )}
-                    {/* Barra FSL — si estende dalla settimana startWeek a endWeek */}
+                    {/* Barra FSL */}
                     {period.startWeek <= maxWeek && (
                       <div
                         className="absolute rounded border border-sky-400/30"
@@ -1383,31 +1320,15 @@ const GanttView: React.FC<GanttViewProps> = ({
                 </div>
               ))}
 
-              {/* Messaggio vuoto se nessun periodo definito */}
-              {fslPeriods.length === 0 && !showFslForm && (
-                <div className="flex" style={{ height: ROW }}>
-                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.5)' }}
-                    className="flex items-center px-3">
-                    <span className="text-[9px] font-mono text-gray-700 italic">nessun periodo</span>
-                  </div>
-                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.5)' }}>
-                    {weeks.map(w => (
-                      <div key={w} className="absolute inset-y-0"
-                        style={{ left: colL(w), width: colW(),
-                          background: w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
-                          borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+            )}
 
             </div>
             )}
           </div>
         </div>{/* fine card Gantt */}
 
-        {/* Heatmap argomento × tipologia — sotto il Gantt */}
+        {/* Heatmap argomento x tipologia */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Argomento × Tipologia</span>
@@ -1418,7 +1339,7 @@ const GanttView: React.FC<GanttViewProps> = ({
           <SubjectHeatmap rows={heatmapRows} moduleColorMap={moduleColorIndexMap} />
         </div>
 
-        {/* Matrice Modulo × Metodologia — solo Moduli */}
+        {/* Matrice Modulo x Metodologia */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Modulo × Metodologia</span>
@@ -1429,7 +1350,6 @@ const GanttView: React.FC<GanttViewProps> = ({
           <ModuloMetodologiaMatrix rows={matrixRowsModuli} usedMethods={usedMethodsModuli} hasUnset={hasUnsetModuli} />
         </div>
 
-        {/* Matrice UDA × Metodologia — solo se ci sono UDA */}
         {udaData.length > 0 && (
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
@@ -1442,7 +1362,6 @@ const GanttView: React.FC<GanttViewProps> = ({
           </div>
         )}
 
-        {/* Distribuzione Temporale — solo Moduli */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Temporale Moduli</span>
@@ -1453,7 +1372,6 @@ const GanttView: React.FC<GanttViewProps> = ({
           <SettimanaModuloHeatmap rows={moduleWeekRowsModuli} weeks={weeks} currentWeek={currentWeek} />
         </div>
 
-        {/* Distribuzione Temporale — solo UDA */}
         {udaData.length > 0 && (
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
@@ -1466,7 +1384,6 @@ const GanttView: React.FC<GanttViewProps> = ({
           </div>
         )}
 
-        {/* Contesto fisico: in aula vs fuori aula per modulo */}
         {contestoRows.length > 0 && (
           <div className="rounded-xl border border-teal-600/25 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
@@ -1479,10 +1396,9 @@ const GanttView: React.FC<GanttViewProps> = ({
 
         </div>{/* fine colonna sinistra */}
 
-        {/* ── Colonna destra: donut moduli + radar ─────────────────────── */}
+        {/* Colonna destra: donut + radar */}
         <div className={`flex-shrink-0 w-full ${radarWidthClass} flex flex-col gap-4 overflow-y-auto custom-scrollbar`}>
 
-          {/* Donut distribuzione moduli + UDA */}
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Moduli</span>
@@ -1496,7 +1412,6 @@ const GanttView: React.FC<GanttViewProps> = ({
             <DistribuzioneDonut modules={modulesData} uda={udaData} />
           </div>
 
-          {/* Radar equilibrio didattico */}
           <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
             {radarData.length > 0 ? (
               <DidacticRadarChart data={radarData} />
@@ -1513,7 +1428,7 @@ const GanttView: React.FC<GanttViewProps> = ({
 
       </div>{/* fine layout */}
 
-      {/* ── Pannello dettaglio attività ───────────────────────────────────── */}
+      {/* Pannello dettaglio attivita */}
       {selectedActivity && (() => {
         const dueWeek = getActivityDueWeek(selectedActivity, weekBlockCounts);
         const effectiveStatus = getEffectiveActivityStatus(selectedActivity, dueWeek, currentWeek);

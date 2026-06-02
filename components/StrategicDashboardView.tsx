@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityType, CourseContentUnit } from '../types';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityType, CourseContentUnit, FslPeriod } from '../types';
 import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
@@ -7,7 +7,7 @@ import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
 import ObjectiveSuggestionModal from './ObjectiveSuggestionModal';
 import TitleSuggestionModal from './TitleSuggestionModal';
-import { getExactDateForBlock } from '../utils';
+import { getExactDateForBlock, isWeekInFslPeriod } from '../utils';
 
 interface StrategicDashboardViewProps {
     conversations: Conversation[];
@@ -31,7 +31,7 @@ interface StrategicDashboardViewProps {
     onUpdateBlockTipologia: (weekNumber: number, blockIndex: number, tipologia: LessonType | '') => void;
     onUpdateBlockMetodologia: (weekNumber: number, blockIndex: number, metodologia: TeachingMethodology | '') => void;
     parsedMethodologies: TeachingMethodology[]; // metodologie trovate nel Progetto Didattico
-    onToggleFslPeriod: (weekNumber: number, blockIndex: number, value: boolean) => void;
+    fslPeriods: FslPeriod[]; // periodi FSL globali — badge derivato automaticamente
     onToggleExternalExpert: (weekNumber: number, blockIndex: number, value: boolean) => void;
     onUpdateExternalExpertName: (weekNumber: number, blockIndex: number, name: string) => void;
     onToggleFuoriAula: (weekNumber: number, blockIndex: number, value: boolean) => void;
@@ -41,7 +41,7 @@ interface StrategicDashboardViewProps {
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, onToggleFslPeriod, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, onAddActivityForBlock, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, onAddActivityForBlock, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -245,7 +245,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     // Badges (FSL, ESP, FUORI, da-definire)
                     const badges: string[] = [];
                     if (isDaDefinire) badges.push('<span class="badge badge-da-definire">Da definire</span>');
-                    if (block.isFslPeriod) badges.push('<span class="badge badge-fsl">FSL</span>');
+                    if (isWeekInFslPeriod(week.weekNumber, fslPeriods)) badges.push('<span class="badge badge-fsl">FSL</span>');
                     if (block.hasExternalExpert) {
                         const expertLabel = block.externalExpertName ? ` (${escapeHtml(block.externalExpertName)})` : '';
                         badges.push(`<span class="badge badge-esp">ESP${expertLabel}</span>`);
@@ -562,7 +562,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const ctxKey = `${week.weekNumber}-${index}`;
                                         const isCtxOpen = openContextMenu === ctxKey;
                                         const activeFlags = [
-                                            block.isFslPeriod && 'Periodo FSL',
+                                            isWeekInFslPeriod(week.weekNumber, fslPeriods) && 'Periodo FSL',
                                             block.hasExternalExpert && 'Esperto esterno',
                                             block.isFuoriAula && 'Fuori aula',
                                         ].filter(Boolean) as string[];
@@ -717,8 +717,17 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             </button>
                                                             {isCtxOpen && (
                                                                 <div className="absolute z-50 top-full left-0 mt-1 w-full min-w-[185px] border border-gray-600/80 rounded-lg shadow-xl shadow-black/50 overflow-hidden" style={{backgroundColor: '#1c2333'}}>
+                                                                    {/* FSL: derivato automaticamente dai periodi globali — read-only */}
+                                                                    {isWeekInFslPeriod(week.weekNumber, fslPeriods) && (
+                                                                        <div className="flex items-center gap-2.5 px-3 py-2 text-xs border-b border-gray-700/50">
+                                                                            <span className="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center bg-sky-500/20 border-sky-500/40">
+                                                                                <span className="text-sky-400 font-bold leading-none" style={{fontSize:'8px'}}>✓</span>
+                                                                            </span>
+                                                                            <span className="text-sky-400">Periodo FSL</span>
+                                                                            <span className="ml-auto text-[9px] font-mono text-gray-600">auto</span>
+                                                                        </div>
+                                                                    )}
                                                                     {[
-                                                                        { key: 'fsl', label: 'Periodo FSL', activeColor: 'text-sky-400', active: !!block.isFslPeriod, onToggle: () => { onToggleFslPeriod(week.weekNumber, index, !block.isFslPeriod); } },
                                                                         { key: 'esp', label: 'Esperto esterno', activeColor: 'text-amber-400', active: !!block.hasExternalExpert, onToggle: () => { onToggleExternalExpert(week.weekNumber, index, !block.hasExternalExpert); } },
                                                                         { key: 'fuori', label: 'Fuori aula', activeColor: 'text-teal-400', active: !!block.isFuoriAula, onToggle: () => { onToggleFuoriAula(week.weekNumber, index, !block.isFuoriAula); } },
                                                                     ].map(item => (
@@ -909,3 +918,79 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 };
 
 export default StrategicDashboardView;
+-2.5 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors flex-shrink-0">Annulla</button>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                                        {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
+                                                                            <button key={t} onClick={() => setActivityType(t)} className={`px-2 py-0.5 text-[9px] font-mono rounded-full transition-colors ${activityType === t ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'text-gray-600 hover:text-gray-400 border border-transparent'}`}>{ACTIVITY_TYPE_LABELS[t]}</button>
+                                                                        ))}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
+                                                                        <input type="number" min={1} max={20} value={activityDueInBlocks} onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
+                                                                        <span className="text-[9px] font-mono text-gray-500">blocchi</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </details>
+                                    )})}
+                                    <div className="mt-3 pt-4 border-t border-gray-700/30">
+                                        <label className="text-[9px] font-sans font-medium tracking-[0.14em] uppercase text-gray-500/80 mb-1 block">Note sulla Settimana</label>
+                                        <EditableTextarea value={week.notes || ''} onSave={(val) => onUpdateWeekDetails(week.weekNumber, { notes: val })} placeholder="Appunti, promemoria, collegamenti interdisciplinari..." />
+                                    </div>
+                                </div>
+                            </details>
+                        )})}
+                    </div>
+                </div>
+            </main>
+            {objectiveModalInfo && (() => {
+                const week = weekData.find(w => w.weekNumber === objectiveModalInfo.weekNumber);
+                const block = week?.blocks[objectiveModalInfo.blockIndex];
+                if (!week || !block) return null;
+
+                return (
+                    <ObjectiveSuggestionModal
+                        isOpen={!!objectiveModalInfo}
+                        onClose={() => setObjectiveModalInfo(null)}
+                        onSelectObjective={(objective) => handleSelectObjective(objectiveModalInfo.weekNumber, objectiveModalInfo.blockIndex, objective)}
+                        weekNumber={objectiveModalInfo.weekNumber}
+                        blockIndex={objectiveModalInfo.blockIndex}
+                        theme={week.theme || 'Nessun tema definito'}
+                        moduleTitle={block.module || ''}
+                        moduleContext={block.lessonTitle || ''}
+                        tipologia={block.tipologia || ''}
+                        teacherProfile={teacherProfile}
+                    />
+                );
+            })()}
+            {titleModalInfo && (() => {
+                const week = weekData.find(w => w.weekNumber === titleModalInfo.weekNumber);
+                const block = week?.blocks[titleModalInfo.blockIndex];
+                if (!week || !block) return null;
+
+                return (
+                    <TitleSuggestionModal
+                        isOpen={!!titleModalInfo}
+                        onClose={() => setTitleModalInfo(null)}
+                        onSelectTitle={(title) => handleSelectTitle(titleModalInfo.weekNumber, titleModalInfo.blockIndex, title)}
+                        weekNumber={titleModalInfo.weekNumber}
+                        blockIndex={titleModalInfo.blockIndex}
+                        theme={week.theme || 'Nessun tema definito'}
+                        objective={block.objective || ''}
+                        moduleTitle={block.module || ''}
+                        tipologia={block.tipologia || ''}
+                        lessonSubject={block.lessonSubject || ''}
+                    />
+                );
+            })()}
+        </>
+    );
+};
+
+export default StrategicDashboardView;
+rt default StrategicDashboardView;
