@@ -61,6 +61,7 @@ import { createBlockNoteHandlers } from './handlers/blockNoteHandlers';
 import { createContentHandlers } from './handlers/contentHandlers';
 import { createDataHandlers } from './handlers/dataHandlers';
 import { createUiHandlers } from './handlers/uiHandlers';
+import { createActivityHandlers } from './handlers/activityHandlers';
 
 interface MainAppProps {
   masterContext: ReturnType<typeof useMasterContext>;
@@ -323,6 +324,11 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     conversationsRef, students, masterContext, addEvaluationToStudent,
     fileToImport, dataToRestore, studentForEvaluationImport, showToast,
   ]);
+
+  const {
+    createActivity, updateActivity, deleteActivity,
+    launchActivity, recordSubmission, addObservation,
+  } = useMemo(() => createActivityHandlers({ showToast, setViewFn }), [showToast]);
 
   const {
     handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal,
