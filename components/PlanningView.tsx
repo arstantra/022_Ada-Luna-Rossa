@@ -441,12 +441,3 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
 };
 
 export default memo(PlanningView);
-
-                    onReset={handleResetBlock}
-                />
-            )}
-        </>
-    );
-};
-
-export default memo(PlanningView);
