@@ -209,11 +209,24 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
           .week-header h2 { font-size: 1.75em; margin: 0; }
           .week-header p { font-style: italic; color: #6b7280; margin: 0.25rem 0 0; }
           .block { margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; page-break-inside: avoid; }
-          .block-header { background-color: #f9fafb; padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; }
+          .block-header { background-color: #f9fafb; padding: 0.5rem 1rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
           .block-header h3 { font-size: 1.25em; margin: 0; color: #111827; }
+          .block-saltato { background-color: #fef2f2; }
+          .block-saltato .block-header { background-color: #fee2e2; border-bottom-color: #fecaca; }
+          .block-saltato .block-header h3 { color: #b91c1c; }
+          .block-da-definire { background-color: #f9fafb; border-style: dashed; }
           .block-details { padding: 1rem; }
           .block-details h4 { margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1em; font-weight: 600; color: #4b5563; border-bottom: 1px dotted #d1d5db; padding-bottom: 0.25rem; }
           .block-details p { margin: 0 0 1rem 0; white-space: pre-wrap; font-size: 0.95em; }
+          .block-subject { font-style: italic; font-size: 0.9em; color: #6b7280; margin: 0.2rem 0 0.6rem; }
+          .meta-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+          .meta-pill { font-family: 'Inter', monospace; font-size: 0.8em; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.1em 0.5em; color: #374151; }
+          .badge { font-family: 'Inter', sans-serif; font-size: 0.72em; font-weight: 600; border-radius: 4px; padding: 0.15em 0.5em; white-space: nowrap; }
+          .badge-fsl { background: #e0f2fe; color: #0369a1; }
+          .badge-esp { background: #fef3c7; color: #92400e; }
+          .badge-fuori { background: #ccfbf1; color: #0f766e; }
+          .badge-da-definire { background: #f3f4f6; color: #6b7280; border: 1px dashed #d1d5db; }
+          .motivo { font-size: 0.88em; color: #b91c1c; font-style: italic; margin-top: 0.25rem; }
           .week-summary { margin-top: 2rem; padding-top: 1rem; border-top: 1px dashed #d1d5db; }
           .week-summary h4 { margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1em; font-weight: 600; color: #4b5563; }
         `;
@@ -224,19 +237,51 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     <h2>Settimana ${week.weekNumber}: ${escapeHtml(week.theme)}</h2>
                     <p>${escapeHtml(week.dates)}</p>
                 </div>
-                ${week.blocks.map((block, index) => `
-                    <div class="block">
+                ${week.blocks.filter(block => block.status !== 'annullato').map((block, index) => {
+                    const isSaltato = block.status === 'saltato';
+                    const isDaDefinire = block.status === 'da definire';
+                    const blockClass = isSaltato ? 'block block-saltato' : isDaDefinire ? 'block block-da-definire' : 'block';
+
+                    // Badges (FSL, ESP, FUORI, da-definire)
+                    const badges: string[] = [];
+                    if (isDaDefinire) badges.push('<span class="badge badge-da-definire">Da definire</span>');
+                    if (block.isFslPeriod) badges.push('<span class="badge badge-fsl">FSL</span>');
+                    if (block.hasExternalExpert) {
+                        const expertLabel = block.externalExpertName ? ` (${escapeHtml(block.externalExpertName)})` : '';
+                        badges.push(`<span class="badge badge-esp">ESP${expertLabel}</span>`);
+                    }
+                    if (block.isFuoriAula) {
+                        const luogoLabel = block.luogo ? ` (${escapeHtml(block.luogo)})` : '';
+                        badges.push(`<span class="badge badge-fuori">FUORI${luogoLabel}</span>`);
+                    }
+
+                    // Meta pills (tipologia + metodologia)
+                    const metaPills: string[] = [];
+                    if (block.tipologia) metaPills.push(`<span class="meta-pill">${escapeHtml(LESSON_TYPE_LABELS[block.tipologia])}</span>`);
+                    if (block.metodologia) metaPills.push(`<span class="meta-pill">${escapeHtml(TEACHING_METHODOLOGY_LABELS[block.metodologia])}</span>`);
+
+                    const titleLine = escapeHtml(block.blockTitle || block.objective) || (isSaltato ? 'Blocco saltato' : 'Blocco non definito');
+
+                    return `
+                    <div class="${blockClass}">
                         <div class="block-header">
-                            <h3>Blocco ${index + 1}: ${escapeHtml(block.blockTitle || block.objective)}</h3>
+                            <h3>Blocco ${index + 1}: ${titleLine}</h3>
+                            ${badges.length > 0 ? badges.join('') : ''}
                         </div>
                         <div class="block-details">
+                            ${block.lessonSubject ? `<p class="block-subject">${escapeHtml(block.lessonSubject)}</p>` : ''}
+                            ${metaPills.length > 0 ? `<div class="meta-row">${metaPills.join('')}</div>` : ''}
+                            ${isSaltato
+                                ? `<p class="motivo">${block.reason ? `Motivo: ${escapeHtml(block.reason)}` : 'Lezione saltata'}</p>`
+                                : `
                             <h4>Obiettivo Didattico</h4>
                             <p>${nl2br(block.objective) || '<em>Non definito</em>'}</p>
                             <h4>Unità Didattica</h4>
                             <p>${escapeHtml(block.module) || '<em>Non specificata</em>'}</p>
+                            `}
                         </div>
-                    </div>
-                `).join('')}
+                    </div>`;
+                }).join('')}
                 <div class="week-summary">
                     <h4>Note sulla Settimana</h4>
                     <p>${nl2br(week.notes) || '<em>Nessuna</em>'}</p>
