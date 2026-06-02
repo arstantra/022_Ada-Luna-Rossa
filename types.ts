@@ -478,3 +478,84 @@ export interface ToolkitShortcut {
   order: number;
 }
 
+// ── Attività ─────────────────────────────────────────────────────────────────
+
+export type ActivityFormaLavoro = 'individuale' | 'coppia' | 'gruppo' | 'classe';
+export type ActivityContesto = 'in_aula' | 'misto' | 'autonoma';
+export type ActivityDeliverable = 'elaborato' | 'presentazione' | 'prototipo' | 'performance' | 'altro';
+export type ActivityStatus = 'progettata' | 'lanciata' | 'in_corso' | 'consegnata' | 'scaduta' | 'annullata';
+
+export interface ActivityRubricCriteria {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface ActivityGroupAssignment {
+  groupId: string;
+  customInstructions?: string;
+}
+
+export interface ActivityStudentOverride {
+  studentId: string;
+  customInstructions?: string;
+  supportLevel?: 'standard' | 'semplificato' | 'avanzato';
+}
+
+export interface ActivitySubmissionRecord {
+  refId: string;
+  refType: 'student' | 'group';
+  submittedAt?: string;
+  outcome?: string;
+  classroomLink?: string;
+}
+
+export interface ActivityObservation {
+  id: string;
+  timestamp: string;
+  text: string;
+  refId?: string;
+  refType?: 'student' | 'group' | 'activity';
+  blockId?: string;
+  adaInsights?: {
+    sentiment?: 'positivo' | 'neutro' | 'critico';
+    tags?: string[];
+    alerts?: string[];
+  };
+}
+
+export interface Activity {
+  id: string;
+  blockId: string;
+  weekNumber: number;
+
+  // MASTER ACTIVITY (progettazione)
+  title: string;
+  description?: string;
+  objectiveLink?: string;
+  formaLavoro: ActivityFormaLavoro;
+  contesto: ActivityContesto;
+  deliverable: ActivityDeliverable;
+  rubric?: ActivityRubricCriteria[];
+  sourceBlockIds?: string[];
+
+  // DECLINAZIONE (preparazione)
+  groupAssignments?: ActivityGroupAssignment[];
+  studentOverrides?: ActivityStudentOverride[];
+  deadline?: string;
+  classroomAssignmentUrl?: string;
+  supportMaterials?: string[];
+  briefingContent?: string;
+
+  // LIFECYCLE
+  status: ActivityStatus;
+  launchedAt?: string;
+  submissionRecords?: ActivitySubmissionRecord[];
+
+  // OSSERVAZIONI
+  observations?: ActivityObservation[];
+
+  createdAt: string;
+  updatedAt: string;
+}
+

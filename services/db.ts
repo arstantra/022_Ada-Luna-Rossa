@@ -1,9 +1,9 @@
 // services/db.ts
 import { openDB, IDBPDatabase } from 'idb';
-import type { Conversation, Label, Student, Notebook, ToolkitShortcut, ToolkitCategory } from '../types';
+import type { Activity, Conversation, Label, Student, Notebook, ToolkitShortcut, ToolkitCategory } from '../types';
 
 const DB_NAME = 'AdaGeminiDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 // Store names
 const CONVERSATIONS_STORE = 'conversations';
@@ -13,6 +13,7 @@ const NOTEBOOKS_STORE = 'notebooks';
 const SETTINGS_STORE = 'settings';
 const TOOLKIT_SHORTCUTS_STORE = 'toolkit_shortcuts';
 const TOOLKIT_CATEGORIES_STORE = 'toolkit_categories';
+const ACTIVITIES_STORE = 'activities';
 
 
 export const ALL_STORES = [
@@ -23,6 +24,7 @@ export const ALL_STORES = [
     SETTINGS_STORE,
     TOOLKIT_SHORTCUTS_STORE,
     TOOLKIT_CATEGORIES_STORE,
+    ACTIVITIES_STORE,
 ];
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -56,6 +58,10 @@ const initDB = () => {
             // v4: blob PDF per l'Archivio Fonti — chiavi manuali (dbFileKey di BlockSource)
             if (!db.objectStoreNames.contains('blockFiles')) {
                 db.createObjectStore('blockFiles');
+            }
+            // v5: store Attività
+            if (!db.objectStoreNames.contains(ACTIVITIES_STORE)) {
+                db.createObjectStore(ACTIVITIES_STORE, { keyPath: 'id' });
             }
         },
     });
@@ -189,6 +195,19 @@ export const saveSetting = async (key: string, value: string): Promise<void> => 
     const db = await initDB();
     await db.put(SETTINGS_STORE, value, key);
 };
+
+// --- Activities ---
+export const saveActivity = (activity: Activity): Promise<void> => saveItem(ACTIVITIES_STORE, activity);
+export const getActivity = async (id: string): Promise<Activity | undefined> => {
+    const db = await initDB();
+    return db.get(ACTIVITIES_STORE, id);
+};
+export const getAllActivities = (): Promise<Activity[]> => getStore<Activity>(ACTIVITIES_STORE);
+export const getActivitiesByBlockId = async (blockId: string): Promise<Activity[]> => {
+    const all = await getAllActivities();
+    return all.filter(a => a.blockId === blockId);
+};
+export const deleteActivity = (id: string): Promise<void> => deleteItem(ACTIVITIES_STORE, id);
 
 // --- Block Files (PDF blob per Archivio Fonti) ---
 export async function saveBlockFile(key: string, blob: Blob): Promise<void> {
