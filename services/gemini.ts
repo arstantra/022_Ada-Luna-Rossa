@@ -956,6 +956,54 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
     throw new Error("L'AI non ha fornito i dettagli del blocco in un formato valido.");
 };
 
+export const generateActivityObservationInsights = async (
+    observations: import('../types').ActivityObservation[],
+    studentName: string,
+    activityTitle: string
+): Promise<{ sentiment: 'positivo' | 'neutro' | 'critico'; tags: string[]; alerts: string[]; summary: string }> => {
+    const obsText = observations.map((o, i) => `${i + 1}. [${o.timestamp.slice(0, 10)}] ${o.text}`).join('\n');
+    const prompt = `Sei Ada, assistente AI per un insegnante. Analizza le seguenti note di osservazione su uno studente relative all'attività indicata e restituisci un'analisi strutturata in JSON puro (senza markdown).
+
+STUDENTE: ${studentName}
+ATTIVITÀ: ${activityTitle}
+
+NOTE DI OSSERVAZIONE:
+${obsText || '(nessuna nota)'}
+
+Rispondi SOLO con un oggetto JSON con questa struttura:
+{
+  "sentiment": "positivo" | "neutro" | "critico",
+  "tags": ["<tag1>", "<tag2>"],
+  "alerts": ["<segnale che richiede attenzione>"],
+  "summary": "<sintesi in 2-3 righe, tono professionale, no voti>"
+}
+
+Regole:
+- sentiment: valutazione complessiva dell'andamento dello studente in questa attività
+- tags: max 5, brevi (es. "autonomia", "difficoltà organizzativa", "partecipazione attiva")
+- alerts: segnali che richiedono attenzione del docente; può essere array vuoto se nessuno
+- summary: sintetica e fattuale, senza giudizi valutativi numerici`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } }
+    });
+
+    try {
+        const cleaned = response.text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+            sentiment: (['positivo', 'neutro', 'critico'] as const).includes(parsed.sentiment) ? parsed.sentiment : 'neutro',
+            tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
+            alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
+            summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+        };
+    } catch {
+        throw new Error("L'AI non ha restituito un'analisi strutturata valida.");
+    }
+};
+
 export const generateActivityBriefing = async (
     activity: import('../types').Activity,
     teacherProfile: string

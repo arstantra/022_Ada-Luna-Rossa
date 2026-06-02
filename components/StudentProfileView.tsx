@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
-import type { Student, Evaluation, Conversation } from '../types';
+import type { Student, Evaluation, Conversation, Activity, ActivityObservation, LessonType } from '../types';
 import { XIcon, UserIcon, ChevronDownIcon, CheckCircleIcon, XCircleIcon, SparklesIcon, ClipboardDocumentCheckIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
+import * as db from '../services/db';
 import MarkdownRenderer from './MarkdownRenderer';
+import DidacticRadarChart, { type RadarDataPoint } from './DidacticRadarChart';
 
 
 interface StudentProfileViewProps {
@@ -61,6 +63,18 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
     const [currentNotes, setCurrentNotes] = useState(student.notes || '');
     const autosaveTimeoutRef = useRef<number | null>(null);
     const [isSummarizing, setIsSummarizing] = useState(false);
+
+    // ── Attività ────────────────────────────────────────────────────────────
+    const [allActivities, setAllActivities] = useState<Activity[]>([]);
+    const [newObsText, setNewObsText] = useState('');
+    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+    const [isAnalyzingObs, setIsAnalyzingObs] = useState(false);
+    const [obsInsights, setObsInsights] = useState<Record<string, { sentiment: 'positivo' | 'neutro' | 'critico'; tags: string[]; alerts: string[]; summary: string } | null>>({});
+    const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        db.getAllActivities().then(setAllActivities).catch(console.error);
+    }, [student.id]);
 
     useEffect(() => {
         setCurrentNotes(student.notes || '');
@@ -187,6 +201,121 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         }
         return signals.sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime());
     }, [conversations, student.id]);
+
+    const studentActivities = useMemo(() => {
+        return allActivities.filter(a =>
+            a.submissionRecords?.some(r => r.refType === 'student' && r.refId === student.id) ||
+            a.studentOverrides?.some(o => o.studentId === student.id)
+        );
+    }, [allActivities, student.id]);
+
+    const radarActualData = useMemo<RadarDataPoint[]>(() => {
+        const counts = new Map<LessonType, number>();
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const block of convo.weekPlan.blocks) {
+                if (block.lessonState !== 'archiviata') continue;
+                if (!(block.presentStudentIds ?? []).includes(student.id)) continue;
+                if (!block.tipologia) continue;
+                counts.set(block.tipologia, (counts.get(block.tipologia) ?? 0) + 1);
+            }
+        }
+        return Array.from(counts.entries()).map(([tipologia, count]) => ({ tipologia, count }));
+    }, [conversations, student.id]);
+
+    const radarIdealData = useMemo<RadarDataPoint[]>(() => {
+        const counts = new Map<LessonType, number>();
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const block of convo.weekPlan.blocks) {
+                if (!block.tipologia) continue;
+                counts.set(block.tipologia, (counts.get(block.tipologia) ?? 0) + 1);
+            }
+        }
+        return Array.from(counts.entries()).map(([tipologia, count]) => ({ tipologia, count }));
+    }, [conversations]);
+
+    const presenzaByWeek = useMemo(() => {
+        const weekMap = new Map<number, { present: number; total: number }>();
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const block of convo.weekPlan.blocks) {
+                if (block.lessonState !== 'archiviata') continue;
+                const presentIds = block.presentStudentIds ?? [];
+                const lateIds = block.lateStudentIds ?? [];
+                if (presentIds.length === 0 && lateIds.length === 0) continue;
+                const wn = convo.weekPlan.weekNumber;
+                if (!weekMap.has(wn)) weekMap.set(wn, { present: 0, total: 0 });
+                const entry = weekMap.get(wn)!;
+                entry.total++;
+                if (presentIds.includes(student.id)) entry.present++;
+            }
+        }
+        return Array.from(weekMap.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([week, { present, total }]) => ({ week, pct: total > 0 ? Math.round((present / total) * 100) : 0 }));
+    }, [conversations, student.id]);
+
+    const sentimentScore = useMemo<number | null>(() => {
+        const values: number[] = [];
+        for (const v of Object.values(obsInsights)) {
+            if (!v) continue;
+            values.push(v.sentiment === 'positivo' ? 100 : v.sentiment === 'neutro' ? 50 : 0);
+        }
+        if (values.length === 0) return null;
+        return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    }, [obsInsights]);
+
+    const allAlerts = useMemo(() => {
+        const result: { key: string; text: string; urgent: boolean }[] = [];
+        for (const [actId, insights] of Object.entries(obsInsights)) {
+            if (!insights) continue;
+            insights.alerts.forEach((alert, i) => {
+                result.push({
+                    key: `${actId}-${i}`,
+                    text: alert,
+                    urgent: /critico|urgente/i.test(alert),
+                });
+            });
+        }
+        return result;
+    }, [obsInsights]);
+
+    const handleAddObservation = async () => {
+        if (!selectedActivityId || !newObsText.trim()) return;
+        const activity = allActivities.find(a => a.id === selectedActivityId);
+        if (!activity) return;
+        const obs: ActivityObservation = {
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            text: newObsText.trim(),
+            refId: student.id,
+            refType: 'student',
+        };
+        const updated: Activity = {
+            ...activity,
+            observations: [...(activity.observations ?? []), obs],
+            updatedAt: new Date().toISOString(),
+        };
+        await db.saveActivity(updated);
+        setAllActivities(prev => prev.map(a => a.id === selectedActivityId ? updated : a));
+        setNewObsText('');
+    };
+
+    const handleAnalyzeObservations = async (activityId: string) => {
+        const activity = allActivities.find(a => a.id === activityId);
+        if (!activity) return;
+        const obs = (activity.observations ?? []).filter(o => o.refId === student.id && o.refType === 'student');
+        setIsAnalyzingObs(true);
+        try {
+            const insights = await GeminiService.generateActivityObservationInsights(obs, student.name, activity.title);
+            setObsInsights(prev => ({ ...prev, [activityId]: insights }));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsAnalyzingObs(false);
+        }
+    };
 
     return (
         <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
@@ -354,6 +483,191 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                                 ))}
                             </ul>
                         )}
+                    </div>
+                </div>
+
+                {/* ── Cruscotto Qualitativo ────────────────────────────── */}
+                <div className="mt-8">
+                    <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 mb-4">Cruscotto Qualitativo</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                        {/* Cella 1 — Radar competenze */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Radar Competenze</p>
+                            {radarActualData.length === 0 ? (
+                                <p className="text-xs text-gray-500">Nessuna lezione archiviata con presenza registrata.</p>
+                            ) : (
+                                <DidacticRadarChart data={radarActualData} idealData={radarIdealData} />
+                            )}
+                        </div>
+
+                        {/* Cella 2 — Trend partecipazione */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Trend Partecipazione</p>
+                            {presenzaByWeek.length < 3 ? (
+                                <p className="text-xs text-gray-500">Dati insufficienti (min. 3 settimane con presenze registrate).</p>
+                            ) : (() => {
+                                const n = presenzaByWeek.length;
+                                const W = 200, H = 62, padX = 20, padY = 8;
+                                const drawW = W - 2 * padX, drawH = H - padY - 12;
+                                const pts = presenzaByWeek.map((d, i) => ({
+                                    x: padX + (i / (n - 1)) * drawW,
+                                    y: padY + (1 - d.pct / 100) * drawH,
+                                }));
+                                const ptsArr = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+                                const polyline = ptsArr.join(' ');
+                                const area = [
+                                    `${pts[0].x.toFixed(1)},${(padY + drawH).toFixed(1)}`,
+                                    ...ptsArr,
+                                    `${pts[n - 1].x.toFixed(1)},${(padY + drawH).toFixed(1)}`,
+                                ].join(' ');
+                                const diff = presenzaByWeek[n - 1].pct - presenzaByWeek[0].pct;
+                                const trend = diff > 10 ? 'up' : diff < -10 ? 'down' : 'stable';
+                                const color = trend === 'up' ? '#10b981' : trend === 'down' ? '#f43f5e' : '#f59e0b';
+                                const trendLabel = trend === 'up' ? '↑ in crescita' : trend === 'down' ? '↓ in calo' : '→ stabile';
+                                const trendCls = trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-rose-400' : 'text-amber-400';
+                                return (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs text-gray-400">% presenze per settimana</span>
+                                            <span className={`text-[10px] font-mono ${trendCls}`}>{trendLabel}</span>
+                                        </div>
+                                        <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+                                            {[0, 50, 100].map(pct => {
+                                                const y = padY + (1 - pct / 100) * drawH;
+                                                return (
+                                                    <g key={pct}>
+                                                        <line x1={padX} y1={y} x2={W - padX} y2={y}
+                                                            stroke="rgba(255,255,255,0.05)" strokeWidth="0.7" />
+                                                        <text x={padX - 3} y={y} textAnchor="end"
+                                                            dominantBaseline="middle" fontSize="4.5"
+                                                            fill="rgba(156,163,175,0.5)" fontFamily="monospace">
+                                                            {pct}%
+                                                        </text>
+                                                    </g>
+                                                );
+                                            })}
+                                            <polygon points={area} fill={color} fillOpacity="0.08" />
+                                            <polyline points={polyline} fill="none" stroke={color}
+                                                strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                                            {pts.map((p, i) => (
+                                                <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
+                                            ))}
+                                            {presenzaByWeek.map((d, i) => (
+                                                <text key={i} x={pts[i].x} y={H - 1} textAnchor="middle"
+                                                    fontSize="4" fill="rgba(156,163,175,0.4)" fontFamily="monospace">
+                                                    S{d.week}
+                                                </text>
+                                            ))}
+                                        </svg>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Cella 3 — Sentiment attività */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Sentiment Attività</p>
+                            {(() => {
+                                const cx = 100, cy = 88, R = 60;
+                                const p33x = cx + R * Math.cos(Math.PI * 0.67);
+                                const p33y = cy - R * Math.sin(Math.PI * 0.67);
+                                const p66x = cx + R * Math.cos(Math.PI * 0.34);
+                                const p66y = cy - R * Math.sin(Math.PI * 0.34);
+                                const roseArc = `M 40 88 A 60 60 0 0 1 ${p33x.toFixed(1)} ${p33y.toFixed(1)}`;
+                                const amberArc = `M ${p33x.toFixed(1)} ${p33y.toFixed(1)} A 60 60 0 0 1 ${p66x.toFixed(1)} ${p66y.toFixed(1)}`;
+                                const emeraldArc = `M ${p66x.toFixed(1)} ${p66y.toFixed(1)} A 60 60 0 0 1 160 88`;
+                                let nx = cx, ny = cy - R * 0.78;
+                                if (sentimentScore !== null) {
+                                    const angle = Math.PI * (1 - sentimentScore / 100);
+                                    nx = cx + R * 0.78 * Math.cos(angle);
+                                    ny = cy - R * 0.78 * Math.sin(angle);
+                                }
+                                const analysisCount = Object.values(obsInsights).filter(v => v !== null).length;
+                                return (
+                                    <div>
+                                        <svg width="100%" viewBox="0 0 200 100">
+                                            <path d="M 40 88 A 60 60 0 0 1 160 88" fill="none"
+                                                stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+                                            <path d={roseArc} fill="none" stroke="#f43f5e"
+                                                strokeWidth="10" strokeOpacity="0.65" />
+                                            <path d={amberArc} fill="none" stroke="#f59e0b"
+                                                strokeWidth="10" strokeOpacity="0.65" />
+                                            <path d={emeraldArc} fill="none" stroke="#10b981"
+                                                strokeWidth="10" strokeOpacity="0.65" />
+                                            {sentimentScore !== null && (
+                                                <>
+                                                    <line x1={cx} y1={cy} x2={nx.toFixed(1)} y2={ny.toFixed(1)}
+                                                        stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                                    <circle cx={cx} cy={cy} r={4} fill="rgba(255,255,255,0.9)" />
+                                                </>
+                                            )}
+                                            <text x={cx} y={72} textAnchor="middle" fontSize="16"
+                                                fontWeight="700" fill="white" fontFamily="monospace">
+                                                {sentimentScore !== null ? sentimentScore : '–'}
+                                            </text>
+                                            <text x={cx} y={83} textAnchor="middle" fontSize="6"
+                                                fill="rgba(156,163,175,0.6)" fontFamily="monospace">
+                                                {sentimentScore === null ? 'nessuna analisi'
+                                                    : sentimentScore >= 66 ? 'positivo'
+                                                    : sentimentScore >= 33 ? 'neutro'
+                                                    : 'critico'}
+                                            </text>
+                                            <text x={36} y={97} textAnchor="middle" fontSize="5"
+                                                fill="rgba(244,63,94,0.55)" fontFamily="monospace">critico</text>
+                                            <text x={164} y={97} textAnchor="middle" fontSize="5"
+                                                fill="rgba(16,185,129,0.55)" fontFamily="monospace">positivo</text>
+                                        </svg>
+                                        <p className="text-[10px] font-mono text-gray-600 text-center mt-1">
+                                            {analysisCount === 0
+                                                ? 'Esegui "Analizza con ADA" sulle attività per popolare il gauge'
+                                                : `Basato su ${analysisCount} analisi Ada`}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Cella 4 — Alert ADA */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Alert ADA</p>
+                            {(() => {
+                                const visible = allAlerts.filter(a => !dismissedAlerts.has(a.key));
+                                if (visible.length === 0) {
+                                    return (
+                                        <p className="text-xs text-gray-500">
+                                            {allAlerts.length > 0
+                                                ? 'Tutti gli alert sono stati ignorati.'
+                                                : 'Nessun alert attivo. Esegui "Analizza con ADA" sulle attività per generarli.'}
+                                        </p>
+                                    );
+                                }
+                                return (
+                                    <ul className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                        {visible.map(alert => (
+                                            <li key={alert.key} className={`flex items-start gap-2 text-xs px-2.5 py-2 rounded-lg border ${alert.urgent ? 'bg-red-900/15 border-red-700/30' : 'bg-amber-900/15 border-amber-700/30'}`}>
+                                                <span className={`flex-shrink-0 mt-0.5 font-mono text-[10px] ${alert.urgent ? 'text-red-400' : 'text-amber-400'}`}>
+                                                    {alert.urgent ? '!!' : '⚠'}
+                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    {alert.urgent && (
+                                                        <span className="text-[9px] font-mono uppercase tracking-wider text-red-400 block mb-0.5">urgente</span>
+                                                    )}
+                                                    <p className={alert.urgent ? 'text-red-200' : 'text-amber-200'}>{alert.text}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setDismissedAlerts(prev => new Set([...prev, alert.key]))}
+                                                    className="flex-shrink-0 text-[9px] font-mono text-gray-600 hover:text-gray-400 ml-1 mt-0.5"
+                                                    title="Ignora alert"
+                                                >
+                                                    Ignora
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
             </div>
