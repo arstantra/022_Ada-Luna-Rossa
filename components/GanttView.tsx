@@ -283,6 +283,112 @@ const SubjectHeatmap: React.FC<{ rows: HeatmapRow[] }> = ({ rows }) => {
   );
 };
 
+// ── Heatmap Settimana × Modulo ────────────────────────────────────────────────
+
+interface ModuleWeekCell { count: number }
+interface ModuleWeekRow { module: string; cells: Map<number, number>; total: number; colorIdx: number }
+
+const SettimanaModuloHeatmap: React.FC<{
+  rows: ModuleWeekRow[];
+  weeks: number[];
+  currentWeek: number | null;
+}> = ({ rows, weeks, currentWeek }) => {
+  if (rows.length === 0) return (
+    <div className="flex items-center justify-center py-6">
+      <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
+        Assegna moduli ai blocchi per vedere la distribuzione temporale
+      </p>
+    </div>
+  );
+
+  const globalMax = Math.max(
+    ...rows.flatMap(r => [...r.cells.values()]),
+    1,
+  );
+
+  return (
+    <div className="overflow-x-auto custom-scrollbar">
+      <table className="border-collapse" style={{ minWidth: Math.max(260, 90 + weeks.length * 22) }}>
+        <thead>
+          <tr>
+            <th className="text-left pr-2 pb-1.5" style={{ width: 90 }} />
+            {weeks.map(w => {
+              const isCur = w === currentWeek;
+              return (
+                <th key={w} className="text-center pb-1.5 px-px" style={{ width: 22 }}>
+                  <span
+                    className="text-[8px] font-mono tabular-nums"
+                    style={{ color: isCur ? '#a78bfa' : '#374151' }}
+                  >
+                    {w}
+                  </span>
+                </th>
+              );
+            })}
+            <th className="text-center pb-1.5 pl-2">
+              <span className="text-[8px] font-mono text-gray-700">tot</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row => {
+            const c = moduleColor(row.colorIdx);
+            return (
+              <tr key={row.module} className="group">
+                <td className="pr-2 py-0.5">
+                  <span
+                    className="text-[9px] font-mono text-gray-500 group-hover:text-gray-300 truncate block transition-colors"
+                    style={{ maxWidth: 86 }}
+                    title={row.module}
+                  >
+                    {row.module}
+                  </span>
+                </td>
+                {weeks.map(w => {
+                  const v = row.cells.get(w) ?? 0;
+                  const isCur = w === currentWeek;
+                  const intensity = v / globalMax;
+                  const bg = v > 0
+                    ? `rgba(${hexToRgb(c.border)},${0.15 + intensity * 0.65})`
+                    : isCur
+                      ? 'rgba(124,58,237,0.08)'
+                      : 'rgba(17,24,39,0.4)';
+                  return (
+                    <td key={w} className="text-center py-0.5 px-px">
+                      <div
+                        className="mx-auto rounded-sm flex items-center justify-center transition-all"
+                        style={{ width: 20, height: 16, background: bg,
+                          outline: isCur ? '1px solid rgba(124,58,237,0.25)' : undefined }}
+                        title={v > 0 ? `${row.module} · sett. ${w}: ${v} bl.` : undefined}
+                      >
+                        {v > 0 && (
+                          <span className="text-[7px] font-mono tabular-nums" style={{ color: c.text, opacity: 0.9 }}>{v}</span>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+                <td className="text-center py-0.5 pl-2">
+                  <span className="text-[8px] font-mono text-gray-600 tabular-nums">{row.total}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Utility: estrae r,g,b da una stringa rgba(...) o #hex
+function hexToRgb(colorStr: string): string {
+  // Se è già rgba(...) prende solo i primi 3 valori
+  const rgbaMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbaMatch) return `${rgbaMatch[1]},${rgbaMatch[2]},${rgbaMatch[3]}`;
+  // fallback
+  return '148,163,184'; // slate-400
+}
+
 // ── Matrice Modulo × Metodologia ──────────────────────────────────────────────
 
 // Abbreviazioni compatte per le intestazioni di colonna
@@ -302,10 +408,18 @@ const METHOD_SHORT: Partial<Record<TeachingMethodology, string>> = {
   jigsaw:               'Jig.',
 };
 
-interface MatrixRow { module: string; counts: Partial<Record<TeachingMethodology, number>>; total: number }
+// Sentinel per i blocchi senza metodologia compilata
+const UNSET_METHOD = '__non_compilato__' as const;
+type MethodKey = TeachingMethodology | typeof UNSET_METHOD;
 
-const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: TeachingMethodology[] }> = ({ rows, usedMethods }) => {
-  if (rows.length === 0 || usedMethods.length === 0) return (
+interface MatrixRow { module: string; counts: Partial<Record<MethodKey, number>>; total: number; unset: number }
+
+const ModuloMetodologiaMatrix: React.FC<{
+  rows: MatrixRow[];
+  usedMethods: TeachingMethodology[];
+  hasUnset: boolean;
+}> = ({ rows, usedMethods, hasUnset }) => {
+  if (rows.length === 0 || (usedMethods.length === 0 && !hasUnset)) return (
     <div className="flex items-center justify-center py-6">
       <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
         Imposta modulo e approccio nei blocchi per vedere la matrice
@@ -313,7 +427,10 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
     </div>
   );
 
-  const globalMax = Math.max(...rows.flatMap(r => Object.values(r.counts) as number[]), 1);
+  const globalMax = Math.max(
+    ...rows.flatMap(r => [...usedMethods.map(m => r.counts[m] ?? 0), r.unset]),
+    1,
+  );
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
@@ -326,6 +443,12 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
                 <span className="text-[8px] font-mono text-gray-600">{METHOD_SHORT[m] ?? m.slice(0, 4)}</span>
               </th>
             ))}
+            {/* Colonna non compilato */}
+            {hasUnset && (
+              <th className="text-center pb-1.5 px-0.5 pl-1" title="Blocchi senza metodologia compilata">
+                <span className="text-[8px] font-mono text-gray-700">—</span>
+              </th>
+            )}
             <th className="text-center pb-1.5 pl-1.5">
               <span className="text-[8px] font-mono text-gray-700">tot</span>
             </th>
@@ -346,7 +469,6 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
               {usedMethods.map(m => {
                 const v = row.counts[m] ?? 0;
                 const intensity = v / globalMax;
-                // verde-teal per metodologie innovative, grigio per tradizionale
                 const isTradi = m === 'tradizionale';
                 const bg = v > 0
                   ? isTradi
@@ -367,6 +489,27 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
                   </td>
                 );
               })}
+              {/* Cella non compilato */}
+              {hasUnset && (() => {
+                const v = row.unset;
+                const intensity = v / globalMax;
+                const bg = v > 0
+                  ? `rgba(107,114,128,${0.12 + intensity * 0.45})`
+                  : 'rgba(17,24,39,0.4)';
+                return (
+                  <td className="text-center py-0.5 px-0.5 pl-1">
+                    <div
+                      className="mx-auto rounded-sm flex items-center justify-center transition-all group/cell"
+                      style={{ width: 22, height: 18, background: bg, border: v > 0 ? '1px dashed rgba(107,114,128,0.3)' : undefined }}
+                      title={v > 0 ? `${row.module} · non compilato: ${v} bl.` : undefined}
+                    >
+                      {v > 0 && (
+                        <span className="text-[8px] font-mono text-gray-500 tabular-nums opacity-0 group-hover/cell:opacity-100 transition-opacity">{v}</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              })()}
               <td className="text-center py-0.5 pl-1.5">
                 <span className="text-[8px] font-mono text-gray-600 tabular-nums">{row.total}</span>
               </td>
@@ -374,6 +517,13 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
           ))}
         </tbody>
       </table>
+      {/* Legenda colonna — */}
+      {hasUnset && (
+        <div className="mt-2 flex items-center gap-1.5">
+          <div className="w-3.5 h-3 rounded-sm border border-dashed border-gray-600/50 bg-gray-500/15 flex-shrink-0" />
+          <span className="text-[8px] font-mono text-gray-700">metodologia non compilata</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -745,37 +895,91 @@ const GanttView: React.FC<GanttViewProps> = ({
   }, [conversations]);
 
   // ── Matrice modulo × metodologia ─────────────────────────────────────────
-  // Nota: i blocchi senza metodologia esplicita usano 'tradizionale' come default,
-  // coerentemente con il default UI nel dropdown (valore mostrato quando non ancora scelto).
+  // I blocchi senza metodologia compilata vengono contati nella colonna "—" (unset)
+  // separata, NON aggregati in "tradizionale". Tradizionale compare solo se scelto
+  // esplicitamente dal docente.
   // Inclusi solo blocchi con modulo assegnato (la matrice è "Modulo × Metodologia").
-  const { matrixRows, usedMethods } = useMemo(() => {
-    const map = new Map<string, Partial<Record<TeachingMethodology, number>>>();
+  const { matrixRows, usedMethods, hasUnset } = useMemo(() => {
+    const map = new Map<string, { counts: Partial<Record<TeachingMethodology, number>>; unset: number }>();
     const methodSet = new Set<TeachingMethodology>();
+    let anyUnset = false;
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
       conv.weekPlan.blocks.forEach(block => {
-        if (!block.module?.trim()) return; // solo blocchi con modulo assegnato
+        if (!block.module?.trim()) return;
         if (block.status === 'saltato' || block.status === 'annullato') return;
         const mod = block.module.trim();
-        const met: TeachingMethodology = block.metodologia ?? 'tradizionale';
-        if (!map.has(mod)) map.set(mod, {});
+        if (!map.has(mod)) map.set(mod, { counts: {}, unset: 0 });
         const entry = map.get(mod)!;
-        entry[met] = (entry[met] ?? 0) + 1;
-        methodSet.add(met);
+        if (block.metodologia) {
+          entry.counts[block.metodologia] = (entry.counts[block.metodologia] ?? 0) + 1;
+          methodSet.add(block.metodologia);
+        } else {
+          entry.unset++;
+          anyUnset = true;
+        }
       });
     });
-    // Ordine stabile: tradizionale prima, poi gli altri in ordine di TEACHING_METHODOLOGY_LABELS
     const methodOrder = (Object.keys(TEACHING_METHODOLOGY_LABELS) as TeachingMethodology[])
       .filter(m => methodSet.has(m));
     const rows: MatrixRow[] = [...map.entries()]
-      .map(([module, counts]) => ({
+      .map(([module, { counts, unset }]) => ({
         module,
         counts,
-        total: Object.values(counts).reduce((a, b) => (a as number) + (b as number), 0) as number,
+        unset,
+        total: (Object.values(counts).reduce((a, b) => (a as number) + (b as number), 0) as number) + unset,
       }))
       .sort((a, b) => b.total - a.total);
-    return { matrixRows: rows, usedMethods: methodOrder };
+    return { matrixRows: rows, usedMethods: methodOrder, hasUnset: anyUnset };
   }, [conversations]);
+
+  // ── Blocchi FSL per il Gantt ──────────────────────────────────────────────
+  // Raccoglie i blocchi con isFslPeriod=true per mostrarli nel Gantt con barre sky.
+  const fslBlocks = useMemo(() => {
+    const result: Array<{ weekNumber: number; blockLabel: string; module: string }> = [];
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach((block, idx) => {
+        if (!block.isFslPeriod) return;
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        result.push({
+          weekNumber: conv.weekPlan!.weekNumber,
+          blockLabel: `Bl.${idx + 1}${block.blockTitle ? ` · ${block.blockTitle}` : block.module ? ` · ${block.module}` : ''}`,
+          module: block.module || '',
+        });
+      });
+    });
+    return result.sort((a, b) => a.weekNumber - b.weekNumber);
+  }, [conversations]);
+
+  // ── Heatmap settimana × modulo ────────────────────────────────────────────
+  const moduleWeekRows = useMemo((): ModuleWeekRow[] => {
+    // Raccoglie tutti i moduli distinti con il loro indice colore (stesso ordine del donut)
+    const modIndexMap = new Map<string, number>();
+    [...modulesData, ...udaData].forEach((m, i) => modIndexMap.set(m.name, i));
+
+    const rowMap = new Map<string, Map<number, number>>();
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      const wn = conv.weekPlan.weekNumber;
+      conv.weekPlan.blocks.forEach(block => {
+        const mod = block.module?.trim();
+        if (!mod) return;
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        if (!rowMap.has(mod)) rowMap.set(mod, new Map());
+        const cells = rowMap.get(mod)!;
+        cells.set(wn, (cells.get(wn) ?? 0) + 1);
+      });
+    });
+    return [...rowMap.entries()]
+      .map(([module, cells]) => ({
+        module,
+        cells,
+        total: [...cells.values()].reduce((a, b) => a + b, 0),
+        colorIdx: modIndexMap.get(module) ?? 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [conversations, modulesData, udaData]);
 
   // ── Contesto fisico per modulo ────────────────────────────────────────────
   const contestoRows = useMemo((): ContestoRow[] => {
@@ -976,6 +1180,60 @@ const GanttView: React.FC<GanttViewProps> = ({
                     );
               })}
 
+            {/* ── Separatore + righe FSL ───────────────────────────────── */}
+            {fslBlocks.length > 0 && (
+              <div>
+                {/* Riga separatore FSL */}
+                <div className="flex" style={{ height: 20 }}>
+                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}
+                    className="flex items-center px-5">
+                    <span className="text-[8px] font-mono tracking-[0.12em] uppercase text-sky-600/70">Periodi FSL</span>
+                  </div>
+                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}>
+                    {weeks.map(w => (
+                      <div key={w} className="absolute inset-y-0"
+                        style={{ left: colL(w), width: colW(),
+                          background: w === currentWeek ? 'rgba(26,16,64,0.3)' : 'transparent',
+                          borderLeft: '1px solid rgba(22,29,43,0.9)' }} />
+                    ))}
+                  </div>
+                </div>
+                {/* Una riga per ogni blocco FSL */}
+                {fslBlocks.map((fsl, fi) => (
+                  <div key={fi} className="flex" style={{ height: ROW }}>
+                    <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                      className="flex items-center px-5">
+                      <span className="text-xs font-display text-sky-400/70 truncate" title={fsl.blockLabel}>{fsl.blockLabel}</span>
+                    </div>
+                    <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}>
+                      {weeks.map(w => (
+                        <div key={w} className="absolute inset-y-0"
+                          style={{ left: colL(w), width: colW(),
+                            background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
+                            borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
+                      ))}
+                      {/* Linea settimana corrente */}
+                      {currentWeek && currentWeek <= maxWeek && (
+                        <div className="absolute inset-y-0 pointer-events-none"
+                          style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
+                      )}
+                      {/* Barra FSL — occupa solo la settimana del blocco */}
+                      <div
+                        className="absolute rounded border border-sky-500/25"
+                        style={{
+                          left: `calc(${barL(fsl.weekNumber)} + 4px)`,
+                          width: `calc(${barW(fsl.weekNumber, fsl.weekNumber)} - 8px)`,
+                          height: '48%', top: '26%', zIndex: 2,
+                          background: 'rgba(14,116,144,0.45)',
+                        }}
+                        title={`FSL · sett. ${fsl.weekNumber}${fsl.module ? ` · ${fsl.module}` : ''}`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             </div>
             )}
           </div>
@@ -1000,7 +1258,18 @@ const GanttView: React.FC<GanttViewProps> = ({
               <span className="text-[9px] font-mono text-gray-700">{usedMethods.length} met.</span>
             )}
           </div>
-          <ModuloMetodologiaMatrix rows={matrixRows} usedMethods={usedMethods} />
+          <ModuloMetodologiaMatrix rows={matrixRows} usedMethods={usedMethods} hasUnset={hasUnset} />
+        </div>
+
+        {/* Heatmap settimana × modulo */}
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Temporale Moduli</span>
+            {moduleWeekRows.length > 0 && (
+              <span className="text-[9px] font-mono text-gray-700">{moduleWeekRows.length} moduli · {maxWeek} sett.</span>
+            )}
+          </div>
+          <SettimanaModuloHeatmap rows={moduleWeekRows} weeks={weeks} currentWeek={currentWeek} />
         </div>
 
         {/* Contesto fisico: in aula vs fuori aula per modulo */}
