@@ -642,7 +642,15 @@ const GanttView: React.FC<GanttViewProps> = ({
       for (const block of conv.weekPlan.blocks) {
         const name = block.module?.trim();
         if (!name) continue;
-        const type = unitTypeByTitle.get(name) ?? 'modulo'; // fallback a modulo
+        // Prima prova la mappa da contentUnits; poi fallback sul prefisso nel nome stesso
+        // (compatibile con dati salvati nel formato "UDA 3: Titolo" o "MODULO 2: Titolo")
+        const typeFromMap = unitTypeByTitle.get(name);
+        const typeFromPrefix: CourseContentUnit['type'] =
+          /^UDA\s/i.test(name)               ? 'uda' :
+          /^EDUCAZIONE CIVICA/i.test(name)   ? 'educazione_civica' :
+          /^FSL\s/i.test(name)               ? 'fsl' :
+                                               'modulo';
+        const type = typeFromMap ?? typeFromPrefix;
         if (type === 'uda') {
           udaMap.set(name, (udaMap.get(name) ?? 0) + 1);
         } else {
