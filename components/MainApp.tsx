@@ -404,7 +404,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
         {
           {
             'lobby': <LobbyView teacherProfile={masterContext.teacherProfile} onStartChat={handleOpenChatFromLobby} />,
-            'gantt': <GanttView conversations={conversations} contentUnits={contentUnits} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} onMarkActivityDelivered={handleMarkActivityDelivered} />,
+            'gantt': <GanttView conversations={conversations} contentUnits={contentUnits} fslPeriods={masterContext.fslPeriods} onSaveFslPeriods={masterContext.handleSaveFslPeriods} onClose={() => setView('lobby')} onNavigateToWeek={(w) => { setView('strategic_dashboard'); }} onMarkActivityDelivered={handleMarkActivityDelivered} />,
             'founding_documents': <FoundingDocumentsView masterContext={masterContext} onClose={() => setView('lobby')} students={students} onAddStudent={addStructuredStudent} onUpdateStudent={updateStructuredStudent} onDeleteStudent={deleteStructuredStudent} />,
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
             'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,

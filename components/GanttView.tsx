@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit } from '../types';
+import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit, FslPeriod } from '../types';
 import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
@@ -641,6 +641,8 @@ const STRIPE_CUR  = 'rgba(26,16,64,0.55)';  // settimana corrente — viola
 interface GanttViewProps {
   conversations: Conversation[];
   contentUnits?: CourseContentUnit[];
+  fslPeriods?: FslPeriod[];
+  onSaveFslPeriods?: (periods: FslPeriod[]) => void;
   onClose: () => void;
   onNavigateToWeek: (weekNumber: number) => void;
   onMarkActivityDelivered?: (activityId: string) => void;
@@ -779,12 +781,18 @@ const ContestoFisicoChart: React.FC<{ rows: ContestoRow[] }> = ({ rows }) => {
 // ── Componente principale ─────────────────────────────────────────────────────
 
 const GanttView: React.FC<GanttViewProps> = ({
-  conversations, contentUnits = [], onClose, onNavigateToWeek, onMarkActivityDelivered,
+  conversations, contentUnits = [], fslPeriods = [], onSaveFslPeriods,
+  onClose, onNavigateToWeek, onMarkActivityDelivered,
 }) => {
 
   // Hook prima di qualsiasi return condizionale (regola React)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [splitPreset, setSplitPreset] = useState<0 | 1 | 2>(1);
+  // Stato form aggiunta periodo FSL
+  const [showFslForm, setShowFslForm] = useState(false);
+  const [fslFormStart, setFslFormStart] = useState('');
+  const [fslFormEnd, setFslFormEnd] = useState('');
+  const [fslFormLabel, setFslFormLabel] = useState('');
 
   // ── Mappa titolo → tipo contentUnit per lookup O(1) ──────────────────────
   // Mappa sia il titolo breve ("Verso il Moderno") sia il formato header completo
@@ -959,24 +967,26 @@ const GanttView: React.FC<GanttViewProps> = ({
     return { matrixRows: rows, usedMethods: methodOrder, hasUnset: anyUnset };
   }, [conversations]);
 
-  // ── Blocchi FSL per il Gantt ──────────────────────────────────────────────
-  // Raccoglie i blocchi con isFslPeriod=true per mostrarli nel Gantt con barre sky.
-  const fslBlocks = useMemo(() => {
-    const result: Array<{ weekNumber: number; blockLabel: string; module: string }> = [];
-    conversations.forEach(conv => {
-      if (!conv.weekPlan) return;
-      conv.weekPlan.blocks.forEach((block, idx) => {
-        if (!block.isFslPeriod) return;
-        if (block.status === 'saltato' || block.status === 'annullato') return;
-        result.push({
-          weekNumber: conv.weekPlan!.weekNumber,
-          blockLabel: `Bl.${idx + 1}${block.blockTitle ? ` · ${block.blockTitle}` : block.module ? ` · ${block.module}` : ''}`,
-          module: block.module || '',
-        });
-      });
-    });
-    return result.sort((a, b) => a.weekNumber - b.weekNumber);
-  }, [conversations]);
+  // ── Gestione periodi FSL ─────────────────────────────────────────────────
+  const handleAddFslPeriod = () => {
+    const start = parseInt(fslFormStart, 10);
+    const end   = parseInt(fslFormEnd,   10);
+    if (!start || !end || start > end) return;
+    const newPeriod: FslPeriod = {
+      id: `fsl-${Date.now()}`,
+      label: fslFormLabel.trim() || undefined,
+      startWeek: start,
+      endWeek: end,
+    };
+    onSaveFslPeriods?.([...fslPeriods, newPeriod].sort((a, b) => a.startWeek - b.startWeek));
+    setFslFormStart('');
+    setFslFormEnd('');
+    setFslFormLabel('');
+    setShowFslForm(false);
+  };
+  const handleRemoveFslPeriod = (id: string) => {
+    onSaveFslPeriods?.(fslPeriods.filter(p => p.id !== id));
+  };
 
   // ── Heatmap settimana × modulo ────────────────────────────────────────────
   const moduleWeekRows = useMemo((): ModuleWeekRow[] => {
@@ -1214,58 +1224,129 @@ const GanttView: React.FC<GanttViewProps> = ({
               })}
 
             {/* ── Separatore + righe FSL ───────────────────────────────── */}
-            {fslBlocks.length > 0 && (
-              <div>
-                {/* Riga separatore FSL */}
-                <div className="flex" style={{ height: 20 }}>
-                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}
-                    className="flex items-center px-5">
-                    <span className="text-[8px] font-mono tracking-[0.12em] uppercase text-sky-600/70">Periodi FSL</span>
+            <div>
+              {/* Riga separatore FSL — sempre visibile con pulsante + */}
+              <div className="flex" style={{ height: 24 }}>
+                <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}
+                  className="flex items-center justify-between px-3">
+                  <span className="text-[8px] font-mono tracking-[0.12em] uppercase text-sky-600/70">Periodi FSL</span>
+                  {onSaveFslPeriods && (
+                    <button
+                      onClick={() => setShowFslForm(v => !v)}
+                      className="text-sky-500/60 hover:text-sky-400 text-[10px] leading-none rounded px-1"
+                      title="Aggiungi periodo FSL"
+                    >+</button>
+                  )}
+                </div>
+                <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}>
+                  {weeks.map(w => (
+                    <div key={w} className="absolute inset-y-0"
+                      style={{ left: colL(w), width: colW(),
+                        background: w === currentWeek ? 'rgba(26,16,64,0.3)' : 'transparent',
+                        borderLeft: '1px solid rgba(22,29,43,0.9)' }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Form inline aggiunta periodo */}
+              {showFslForm && onSaveFslPeriods && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-900/80 border-b border-gray-700/40">
+                  <span className="text-[9px] font-mono text-sky-500/70 flex-shrink-0">Sett.</span>
+                  <input
+                    type="number" min={1} max={99} placeholder="inizio"
+                    value={fslFormStart}
+                    onChange={e => setFslFormStart(e.target.value)}
+                    className="w-14 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
+                  />
+                  <span className="text-[9px] font-mono text-gray-600">→</span>
+                  <input
+                    type="number" min={1} max={99} placeholder="fine"
+                    value={fslFormEnd}
+                    onChange={e => setFslFormEnd(e.target.value)}
+                    className="w-14 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
+                  />
+                  <input
+                    type="text" placeholder="etichetta (opzionale)"
+                    value={fslFormLabel}
+                    onChange={e => setFslFormLabel(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddFslPeriod(); }}
+                    className="flex-1 bg-gray-800 border border-gray-600/50 rounded px-1.5 py-0.5 text-[11px] text-gray-200 focus:outline-none focus:border-sky-500/50"
+                  />
+                  <button
+                    onClick={handleAddFslPeriod}
+                    disabled={!fslFormStart || !fslFormEnd}
+                    className="text-[10px] font-mono text-sky-400 border border-sky-500/30 rounded px-2 py-0.5 hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >Aggiungi</button>
+                  <button
+                    onClick={() => setShowFslForm(false)}
+                    className="text-[10px] font-mono text-gray-600 hover:text-gray-400 px-1"
+                  >✕</button>
+                </div>
+              )}
+
+              {/* Una riga per ogni periodo FSL */}
+              {fslPeriods.map(period => (
+                <div key={period.id} className="flex" style={{ height: ROW }}>
+                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                    className="flex items-center justify-between px-3 gap-1">
+                    <span className="text-[11px] font-mono text-sky-400/70 truncate">
+                      {period.label || `FSL sett. ${period.startWeek}–${period.endWeek}`}
+                    </span>
+                    {onSaveFslPeriods && (
+                      <button
+                        onClick={() => handleRemoveFslPeriod(period.id)}
+                        className="text-gray-700 hover:text-red-400/70 text-[9px] flex-shrink-0"
+                        title="Rimuovi periodo"
+                      >✕</button>
+                    )}
                   </div>
-                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(31,41,55,0.4)', background: '#0D1117' }}>
+                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}>
                     {weeks.map(w => (
                       <div key={w} className="absolute inset-y-0"
                         style={{ left: colL(w), width: colW(),
-                          background: w === currentWeek ? 'rgba(26,16,64,0.3)' : 'transparent',
-                          borderLeft: '1px solid rgba(22,29,43,0.9)' }} />
+                          background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
+                          borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
+                    ))}
+                    {/* Linea settimana corrente */}
+                    {currentWeek && currentWeek <= maxWeek && (
+                      <div className="absolute inset-y-0 pointer-events-none"
+                        style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
+                    )}
+                    {/* Barra FSL — si estende dalla settimana startWeek a endWeek */}
+                    {period.startWeek <= maxWeek && (
+                      <div
+                        className="absolute rounded border border-sky-400/30"
+                        style={{
+                          left: `calc(${barL(period.startWeek)} + 3px)`,
+                          width: `calc(${barW(period.startWeek, Math.min(period.endWeek, maxWeek))} - 6px)`,
+                          height: '50%', top: '25%', zIndex: 2,
+                          background: 'rgba(8,145,178,0.35)',
+                        }}
+                        title={`FSL · sett. ${period.startWeek}–${period.endWeek}${period.label ? ` · ${period.label}` : ''}`}
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Messaggio vuoto se nessun periodo definito */}
+              {fslPeriods.length === 0 && !showFslForm && (
+                <div className="flex" style={{ height: ROW }}>
+                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.5)' }}
+                    className="flex items-center px-3">
+                    <span className="text-[9px] font-mono text-gray-700 italic">nessun periodo</span>
+                  </div>
+                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.5)' }}>
+                    {weeks.map(w => (
+                      <div key={w} className="absolute inset-y-0"
+                        style={{ left: colL(w), width: colW(),
+                          background: w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
+                          borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
                     ))}
                   </div>
                 </div>
-                {/* Una riga per ogni blocco FSL */}
-                {fslBlocks.map((fsl, fi) => (
-                  <div key={fi} className="flex" style={{ height: ROW }}>
-                    <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
-                      className="flex items-center px-5">
-                      <span className="text-xs font-display text-sky-400/70 truncate" title={fsl.blockLabel}>{fsl.blockLabel}</span>
-                    </div>
-                    <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}>
-                      {weeks.map(w => (
-                        <div key={w} className="absolute inset-y-0"
-                          style={{ left: colL(w), width: colW(),
-                            background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
-                            borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
-                      ))}
-                      {/* Linea settimana corrente */}
-                      {currentWeek && currentWeek <= maxWeek && (
-                        <div className="absolute inset-y-0 pointer-events-none"
-                          style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
-                      )}
-                      {/* Barra FSL — occupa solo la settimana del blocco */}
-                      <div
-                        className="absolute rounded border border-sky-500/25"
-                        style={{
-                          left: `calc(${barL(fsl.weekNumber)} + 4px)`,
-                          width: `calc(${barW(fsl.weekNumber, fsl.weekNumber)} - 8px)`,
-                          height: '48%', top: '26%', zIndex: 2,
-                          background: 'rgba(14,116,144,0.45)',
-                        }}
-                        title={`FSL · sett. ${fsl.weekNumber}${fsl.module ? ` · ${fsl.module}` : ''}`}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
 
             </div>
             )}

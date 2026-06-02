@@ -188,6 +188,14 @@ export interface ModuleDetails {
     attivitaChiave: string[];
 }
 
+/** Periodo di Formazione Scuola-Lavoro definito a livello di corso */
+export interface FslPeriod {
+    id: string;
+    label?: string;      // es. "PCTO Anno 3" — opzionale
+    startWeek: number;   // settimana di inizio (inclusa)
+    endWeek: number;     // settimana di fine (inclusa)
+}
+
 export interface ParsedProgettazione {
     modules: ModuleDetails[];           // mantenuto per retrocompatibilità
     moduleMap: Map<string, ModuleDetails>;

@@ -1,7 +1,7 @@
 // hooks/useMasterContext.ts
 import { useState, useEffect, useCallback } from 'react';
 import * as db from '../services/db';
-import type { Mode, WeekEntry } from '../types';
+import type { Mode, WeekEntry, FslPeriod } from '../types';
 import {
   DEFAULT_SYSTEM_INSTRUCTION,
   DEFAULT_PROGETTAZIONE,
@@ -20,6 +20,7 @@ import {
   LOCAL_STORAGE_MODE_KEY,
   LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY,
   LOCAL_STORAGE_ROUTE_CALENDAR_KEY,
+  LOCAL_STORAGE_FSL_PERIODS_KEY,
   LOCAL_STORAGE_DISCIPLINA_KEY,
   DEFAULT_DISCIPLINA,
   LOCAL_STORAGE_PTOF_EXTRACT_KEY,
@@ -38,6 +39,7 @@ export const useMasterContext = () => {
     const [ptofNotebookUrl, setPtofNotebookUrl] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
     const [routeCalendar, setRouteCalendar] = useState<WeekEntry[]>([]);
+    const [fslPeriods, setFslPeriods] = useState<FslPeriod[]>([]);
     const [currentModeId, setCurrentModeId] = useState<Mode['id']>(DEFAULT_MODE_ID);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -72,6 +74,13 @@ export const useMasterContext = () => {
                 if (calendarJson) {
                     try { setRouteCalendar(JSON.parse(calendarJson)); }
                     catch (e) { console.error("Failed to parse route calendar, resetting.", e); setRouteCalendar([]); }
+                }
+
+                // Load FSL periods (JSON array of FslPeriod)
+                const fslJson = await db.getSetting(LOCAL_STORAGE_FSL_PERIODS_KEY);
+                if (fslJson) {
+                    try { setFslPeriods(JSON.parse(fslJson)); }
+                    catch (e) { console.error("Failed to parse FSL periods, resetting.", e); setFslPeriods([]); }
                 }
 
                 // Load block day defaults separately as it's JSON
@@ -199,6 +208,13 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save route calendar:", error); }
     }, []);
 
+    const handleSaveFslPeriods = useCallback(async (periods: FslPeriod[]) => {
+        setFslPeriods(periods);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_FSL_PERIODS_KEY, JSON.stringify(periods));
+        } catch (error) { console.error("Failed to save FSL periods:", error); }
+    }, []);
+
     const handleSaveMode = useCallback(async (value: Mode['id']) => {
         setCurrentModeId(value);
         try {
@@ -221,6 +237,7 @@ export const useMasterContext = () => {
         ptofNotebookUrl,
         blockDayDefaults,
         routeCalendar,
+        fslPeriods,
         currentModeId,
         isUninitialized,
         handleSaveInstructions,
@@ -234,6 +251,7 @@ export const useMasterContext = () => {
         handleSavePtofNotebookUrl,
         handleSaveBlockDayDefaults,
         handleSaveRouteCalendar,
+        handleSaveFslPeriods,
         handleSaveMode,
     };
 };
