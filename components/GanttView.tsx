@@ -1114,7 +1114,7 @@ const GanttView: React.FC<GanttViewProps> = ({
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden gap-4 p-4">
 
         {/* ── Colonna sinistra: Gantt + heatmap ─────────────────────────── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
         {/* Card Gantt Attività */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ minHeight: 0, flex: '0 0 auto', maxHeight: 340 }}>
@@ -1275,50 +1275,49 @@ const GanttView: React.FC<GanttViewProps> = ({
                 </div>
               </div>
 
-              {/* Una riga per ogni periodo FSL */}
-              {fslPeriods.map(period => (
-                <div key={period.id} className="flex" style={{ height: ROW }}>
-                  <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
-                    className="flex items-center justify-between px-3 gap-1">
-                    <span className="text-[11px] font-mono text-sky-400/70 truncate">
-                      {period.label || `FSL sett. ${period.startWeek}–${period.endWeek}`}
-                    </span>
-                    {onSaveFslPeriods && (
-                      <button
-                        onClick={() => handleRemoveFslPeriod(period.id)}
-                        className="text-gray-700 hover:text-red-400/70 text-[9px] flex-shrink-0"
-                        title="Rimuovi periodo"
-                      >✕</button>
-                    )}
-                  </div>
-                  <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}>
-                    {weeks.map(w => (
-                      <div key={w} className="absolute inset-y-0"
-                        style={{ left: colL(w), width: colW(),
-                          background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
-                          borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
-                    ))}
-                    {/* Linea settimana corrente */}
-                    {currentWeek && currentWeek <= maxWeek && (
-                      <div className="absolute inset-y-0 pointer-events-none"
-                        style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
-                    )}
-                    {/* Barra FSL */}
-                    {period.startWeek <= maxWeek && (
-                      <div
-                        className="absolute rounded border border-sky-400/30"
-                        style={{
-                          left: `calc(${barL(period.startWeek)} + 3px)`,
-                          width: `calc(${barW(period.startWeek, Math.min(period.endWeek, maxWeek))} - 6px)`,
-                          height: '50%', top: '25%', zIndex: 2,
-                          background: 'rgba(8,145,178,0.35)',
-                        }}
-                        title={`FSL · sett. ${period.startWeek}–${period.endWeek}${period.label ? ` · ${period.label}` : ''}`}
-                      />
-                    )}
-                  </div>
+              {/* Riga unica FSL — tutte le finestre su una sola riga */}
+              <div className="flex" style={{ height: ROW }}>
+                <div style={{ width: LEFT, flexShrink: 0, borderRight: '1px solid rgba(31,41,55,0.5)', borderBottom: '1px solid rgba(17,24,39,0.8)' }}
+                  className="flex items-center px-3 gap-1.5">
+                  <span className="text-[11px] font-mono text-sky-400/70">FSL</span>
+                  <span className="text-[8px] font-mono text-sky-700/60">{fslPeriods.length} per.</span>
                 </div>
-              ))}
+                <div className="flex-1 relative" style={{ borderBottom: '1px solid rgba(17,24,39,0.8)' }}>
+                  {weeks.map(w => (
+                    <div key={w} className="absolute inset-y-0"
+                      style={{ left: colL(w), width: colW(),
+                        background: w === currentWeek ? STRIPE_CUR : w % 2 !== 0 ? STRIPE_ODD : STRIPE_EVEN,
+                        borderLeft: '1px solid rgba(22,29,43,0.9)', pointerEvents: 'none' }} />
+                  ))}
+                  {currentWeek && currentWeek <= maxWeek && (
+                    <div className="absolute inset-y-0 pointer-events-none"
+                      style={{ left: curL(currentWeek), width: 1, background: 'rgba(124,58,237,0.45)', zIndex: 3 }} />
+                  )}
+                  {/* Barre FSL — una per finestra, stessa riga */}
+                  {fslPeriods.map(period => period.startWeek <= maxWeek && (
+                    <div
+                      key={period.id}
+                      className="absolute group/fslbar"
+                      style={{
+                        left: `calc(${barL(period.startWeek)} + 3px)`,
+                        width: `calc(${barW(period.startWeek, Math.min(period.endWeek, maxWeek))} - 6px)`,
+                        height: '50%', top: '25%', zIndex: 2,
+                      }}
+                      title={`FSL · sett. ${period.startWeek}–${period.endWeek}${period.label ? ` · ${period.label}` : ''}`}
+                    >
+                      <div className="w-full h-full rounded border border-sky-400/30"
+                        style={{ background: 'rgba(8,145,178,0.35)' }} />
+                      {onSaveFslPeriods && (
+                        <button
+                          onClick={() => handleRemoveFslPeriod(period.id)}
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-800 border border-gray-600/60 text-gray-500 hover:text-red-400/80 hover:border-red-500/40 text-[8px] leading-none flex items-center justify-center opacity-0 group-hover/fslbar:opacity-100 transition-opacity"
+                          title={`Rimuovi ${period.label || `sett. ${period.startWeek}–${period.endWeek}`}`}
+                        >✕</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
             </div>
             )}
