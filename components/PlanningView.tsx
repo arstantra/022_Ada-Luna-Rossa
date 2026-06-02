@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType, ActivityContext } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType, ActivityContext, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -62,6 +62,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
+    const [labMode, setLabMode] = useState<'lesson' | 'activity'>('lesson');
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -134,6 +135,11 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         }
     }, [initialTab, onInitialTabConsumed]);
 
+    // Reset labMode to 'lesson' whenever the active block changes
+    useEffect(() => {
+        setLabMode('lesson');
+    }, [weekPlan?.activeBlockIndex]);
+
     // --- Hooks moved above conditional returns (React Rules of Hooks) ---
 
     const activeBlock = useMemo(
@@ -193,6 +199,31 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
             description,
             status: 'in_corso',
         });
+    }, [weekPlan, activeBlock, onAddActivity]);
+
+    const handleCreateMasterActivity = useCallback((
+        title: string,
+        formaLavoro: ActivityFormaLavoro,
+        contesto: ActivityContesto,
+        deliverable: ActivityDeliverable,
+    ) => {
+        if (!weekPlan || !activeBlock || !onAddActivity) return;
+        onAddActivity({
+            title,
+            type: 'altro',
+            formaLavoro,
+            contesto,
+            deliverable,
+            blockId: activeBlock.id,
+            weekNumber: weekPlan.weekNumber,
+            launchBlockId: activeBlock.id,
+            launchWeekNumber: weekPlan.weekNumber,
+            launchBlockIndex: weekPlan.activeBlockIndex,
+            dueInBlocks: 0,
+            status: 'in_corso',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        } as any);
     }, [weekPlan, activeBlock, onAddActivity]);
 
     // Attività lanciate dal blocco attivo
@@ -423,6 +454,9 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onAddActivity={onAddActivity ? handleAddActivity : undefined}
                     blockActivities={activeBlockActivities}
                     isFslActive={weekPlan ? isWeekInFslPeriod(weekPlan.weekNumber, masterContext.fslPeriods) : false}
+                    labMode={labMode}
+                    onLabModeChange={setLabMode}
+                    onCreateActivity={onAddActivity ? handleCreateMasterActivity : undefined}
                 />
             </main>
             {activeBlock && (

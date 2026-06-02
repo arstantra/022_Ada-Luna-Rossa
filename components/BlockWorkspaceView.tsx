@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, TeachingMethodology, ActivityType, ActivityContext, ModuleDetails, Activity } from '../types';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, TeachingMethodology, ActivityType, ActivityContext, ModuleDetails, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable } from '../types';
 import { ACTIVITY_TYPE_LABELS, ACTIVITY_CONTEXT_LABELS, COURSE_CONTENT_TYPE_LABELS, LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
@@ -9,6 +9,16 @@ import DocumentEditor from './DocumentEditor';
 import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import FontiDrawer from './FontiDrawer';
+
+const FORMA_LAVORO_LABELS: Record<ActivityFormaLavoro, string> = {
+    individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe',
+};
+const ATTIVITA_CONTESTO_LABELS: Record<ActivityContesto, string> = {
+    in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma',
+};
+const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = {
+    elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro',
+};
 
 // --- MAIN WORKSPACE VIEW ---
 
@@ -29,14 +39,19 @@ interface BlockWorkspaceViewProps {
     onRemoveFonte?: (fonteId: string) => void;
     onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
     onPromoteFonte?: (url: string) => void;
-    // Attività
+    // Attività lanciate
     onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => void;
     blockActivities?: Activity[];
     // FSL: derivato automaticamente in PlanningView, passato come booleano
     isFslActive?: boolean;
+    // Lab mode toggle: Lezione / Attività
+    labMode: 'lesson' | 'activity';
+    onLabModeChange: (mode: 'lesson' | 'activity') => void;
+    onCreateActivity?: (title: string, formaLavoro: ActivityFormaLavoro, contesto: ActivityContesto, deliverable: ActivityDeliverable) => void;
+    onUpdateActivity?: (activityId: string, updates: Partial<Activity>) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities, isFslActive = false }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities, isFslActive = false, labMode, onLabModeChange, onCreateActivity, onUpdateActivity }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -47,6 +62,12 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
     const [activityDescription, setActivityDescription] = useState('');
     const [activityContext, setActivityContext] = useState<ActivityContext>('solo_in_classe');
+    // Master activity form state
+    const [masterTitle, setMasterTitle] = useState('');
+    const [masterFormaLavoro, setMasterFormaLavoro] = useState<ActivityFormaLavoro>('individuale');
+    const [masterContesto, setMasterContesto] = useState<ActivityContesto>('in_aula');
+    const [masterDeliverable, setMasterDeliverable] = useState<ActivityDeliverable>('elaborato');
+    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     const [isModuleExpanded, setIsModuleExpanded] = useState(false);
 
@@ -186,6 +207,28 @@ ${htmlContent}
         setActivityContext('solo_in_classe');
         setIsActivityFormOpen(false);
     }, [activityTitle, activityType, activityDueInBlocks, activityDescription, activityContext, onAddActivity]);
+
+    const handleSubmitMasterActivity = useCallback(() => {
+        if (!masterTitle.trim() || !onCreateActivity) return;
+        onCreateActivity(masterTitle.trim(), masterFormaLavoro, masterContesto, masterDeliverable);
+        setMasterTitle('');
+        setMasterFormaLavoro('individuale');
+        setMasterContesto('in_aula');
+        setMasterDeliverable('elaborato');
+    }, [masterTitle, masterFormaLavoro, masterContesto, masterDeliverable, onCreateActivity]);
+
+    // Wrap onSendMessage to inject activity context hint when in activity mode
+    const wrappedOnSendMessage = useCallback((content: string, file?: File, payload?: PlanningActionPayload) => {
+        if (labMode === 'activity' && content && !payload) {
+            const activeActivity = blockActivities?.find(a => a.id === selectedActivityId) ?? blockActivities?.[0];
+            const prefix = activeActivity
+                ? `[Contesto: sto lavorando sul master dell'attività "${activeActivity.title}"]\n\n`
+                : `[Contesto: sto progettando un'attività per questo blocco]\n\n`;
+            onSendMessage(prefix + content, file, payload);
+        } else {
+            onSendMessage(content, file, payload);
+        }
+    }, [labMode, blockActivities, selectedActivityId, onSendMessage]);
 
     const editorToolbarActions = useMemo(() => (
         <button
@@ -386,6 +429,111 @@ ${htmlContent}
                             </div>
                         </details>
                     )}
+                    {/* ── Lab mode toggle: Lezione / Attività ─────────────────── */}
+                    <div className="flex-shrink-0 px-4 pt-2 pb-2 flex items-center gap-3 border-b border-gray-800/30">
+                        <div className="flex items-center bg-gray-900/60 rounded-md p-0.5">
+                            <button
+                                onClick={() => onLabModeChange('lesson')}
+                                className={`px-2.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                                    labMode === 'lesson' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+                                }`}
+                            >
+                                Lezione
+                            </button>
+                            <button
+                                onClick={() => onLabModeChange('activity')}
+                                className={`px-2.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                                    labMode === 'activity' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+                                }`}
+                            >
+                                Attività
+                            </button>
+                        </div>
+                        {/* Activity pills selector — visible only in activity mode when activities exist */}
+                        {labMode === 'activity' && blockActivities && blockActivities.length > 0 && (
+                            <div className="flex items-center gap-1 flex-wrap">
+                                {blockActivities.map(a => (
+                                    <button
+                                        key={a.id}
+                                        onClick={() => setSelectedActivityId(a.id)}
+                                        className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono transition-colors ${
+                                            (selectedActivityId ?? blockActivities[0]?.id) === a.id
+                                                ? 'bg-gray-700 text-white'
+                                                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50'
+                                        }`}
+                                    >
+                                        {a.title}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Activity mode: mini-form quando non ci sono attività ── */}
+                    {labMode === 'activity' && (!blockActivities || blockActivities.length === 0) && (
+                        <div className="flex-shrink-0 px-4 py-3 border-b border-gray-800/40 bg-gray-900/30">
+                            <p className="text-[10px] font-mono text-gray-500 mb-2.5">↗ Nuova attività master</p>
+                            <input
+                                type="text"
+                                value={masterTitle}
+                                onChange={e => setMasterTitle(e.target.value)}
+                                placeholder="Titolo dell'attività..."
+                                className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/40 mb-2"
+                                autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitMasterActivity(); }}}
+                            />
+                            {/* Forma di lavoro */}
+                            <div className="flex items-center gap-1 flex-wrap mb-2">
+                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Forma:</span>
+                                {(Object.keys(FORMA_LAVORO_LABELS) as ActivityFormaLavoro[]).map(k => (
+                                    <button key={k} onClick={() => setMasterFormaLavoro(k)}
+                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                            masterFormaLavoro === k
+                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
+                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
+                                        }`}>
+                                        {FORMA_LAVORO_LABELS[k]}
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Contesto */}
+                            <div className="flex items-center gap-1 flex-wrap mb-2">
+                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Contesto:</span>
+                                {(Object.keys(ATTIVITA_CONTESTO_LABELS) as ActivityContesto[]).map(k => (
+                                    <button key={k} onClick={() => setMasterContesto(k)}
+                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                            masterContesto === k
+                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
+                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
+                                        }`}>
+                                        {ATTIVITA_CONTESTO_LABELS[k]}
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Deliverable */}
+                            <div className="flex items-center gap-1 flex-wrap mb-3">
+                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Deliverable:</span>
+                                {(Object.keys(DELIVERABLE_LABELS) as ActivityDeliverable[]).map(k => (
+                                    <button key={k} onClick={() => setMasterDeliverable(k)}
+                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                            masterDeliverable === k
+                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
+                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
+                                        }`}>
+                                        {DELIVERABLE_LABELS[k]}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={handleSubmitMasterActivity}
+                                disabled={!masterTitle.trim() || !onCreateActivity}
+                                className="px-3 py-1 text-[10px] font-mono text-purple-300 border border-purple-500/30 rounded hover:bg-purple-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Crea attività
+                            </button>
+                        </div>
+                    )}
+
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
                             {(block.messages || []).filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
@@ -394,7 +542,7 @@ ${htmlContent}
                                         message={msg}
                                         onShowToast={() => {}}
                                         isLastMessage={index === (block.messages?.length || 0) - 1}
-                                        onSendMessage={onSendMessage}
+                                        onSendMessage={wrappedOnSendMessage}
                                         highlightQuery={highlightQuery}
                                         isCurrentResult={msg.id === currentResultId}
                                         onShowConfirmation={onShowConfirmation}
@@ -503,7 +651,7 @@ ${htmlContent}
                                 </div>
                             )}
                             <ChatInput
-                                onSendMessage={onSendMessage}
+                                onSendMessage={wrappedOnSendMessage}
                                 isLoading={isLoading}
                                 onShowToast={() => {}}
                             />
