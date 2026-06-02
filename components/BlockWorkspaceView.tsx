@@ -609,11 +609,3 @@ ${htmlContent}
 };
 
 export default memo(BlockWorkspaceView);
-
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default memo(BlockWorkspaceView);
