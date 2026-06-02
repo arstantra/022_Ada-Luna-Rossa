@@ -332,16 +332,18 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
 
     // ── Progresso globale del corso ────────────────────────────────────────────
     const progressStats = useMemo(() => {
-        let completate = 0, inCorso = 0, daFare = 0;
+        let completate = 0, inCorso = 0, daFare = 0, saltate = 0;
         weekData.forEach(week => {
             const states = week.blocks.map(b => getBlockProgressState(b));
+            const allSpeciale = states.every(s => s === 'speciale');
             const allDone = states.every(s => s === 'completato' || s === 'speciale');
             const anyInCorso = states.some(s => s === 'in_corso');
-            if (allDone) completate++;
+            if (allSpeciale) saltate++;
+            else if (allDone) completate++;
             else if (anyInCorso) inCorso++;
             else daFare++;
         });
-        return { completate, inCorso, daFare, total: weekData.length };
+        return { completate, inCorso, daFare, saltate, total: weekData.length };
     }, [weekData]);
 
     // ── Attività — raccolta e mappa offset globale ──────────────────────────────
@@ -412,7 +414,13 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                     <span className="w-2 h-2 rounded-full flex-shrink-0 bg-slate-500" />
                                     da fare
                                 </span>
-                                <span className="text-[10px] text-gray-600 font-mono">{progressStats.completate + progressStats.inCorso + progressStats.daFare} / {progressStats.total}</span>
+                                {progressStats.saltate > 0 && (
+                                    <span className="flex items-center gap-1.5 text-[10px] font-mono text-gray-500/70 whitespace-nowrap">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-500" />
+                                        saltata{progressStats.saltate !== 1 ? 'e' : ''}
+                                    </span>
+                                )}
+                                <span className="text-[10px] text-gray-600 font-mono">{progressStats.completate + progressStats.inCorso + progressStats.daFare + progressStats.saltate} / {progressStats.total}</span>
                             </div>
                         )}
                         {pendingContentCount > 0 && (
