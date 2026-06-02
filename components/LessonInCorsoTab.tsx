@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { Conversation, BlockDetails, WeekPlan, Student, LessonEvaluation, LessonMaterial, LessonNoteAnalysis } from '../types';
+import type { Conversation, BlockDetails, WeekPlan, Student, LessonEvaluation, LessonMaterial, LessonNoteAnalysis, Activity, ActivityStatus, ActivitySubmissionRecord } from '../types';
 import {
     SparklesIcon, TrashIcon, ChevronDownIcon, LinkIcon,
     PlusCircleIcon, XCircleIcon, DocumentTextIcon,
@@ -16,6 +16,21 @@ const EVAL_TYPE_LABELS: Record<LessonEvaluation['type'], string> = {
 const MATERIAL_TYPE_LABELS: Record<LessonMaterial['type'], string> = {
     slide: 'Slide', video: 'Video', pdf: 'PDF', paper: 'Articolo',
     ricerca: 'Ricerca', stampa: 'Stampa', altro: 'Altro',
+};
+
+const ACTIVITY_STATUS_LABELS: Record<ActivityStatus, string> = {
+    progettata: 'Progettata', lanciata: 'Lanciata', in_corso: 'In Corso',
+    consegnata: 'Consegnata', scaduta: 'Scaduta', annullata: 'Annullata',
+};
+
+const activityStatusClasses = (status: ActivityStatus): string => {
+    switch (status) {
+        case 'lanciata': return 'text-amber-400 border-amber-700/40 bg-amber-900/20';
+        case 'in_corso': return 'text-emerald-400 border-emerald-700/40 bg-emerald-900/20';
+        case 'consegnata': return 'text-emerald-500 border-emerald-700/40 bg-emerald-900/20';
+        case 'scaduta': return 'text-red-400 border-red-700/40 bg-red-900/20';
+        default: return 'text-gray-500 border-gray-600/40 bg-gray-700/20';
+    }
 };
 
 const getInitials = (name: string) => name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
@@ -127,6 +142,10 @@ interface LessonInCorsoTabProps {
     onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
     onChiudiLezione?: (convoId: string, blockIndex: number) => void;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
+    activities?: Activity[];
+    onAddObservation?: (activityId: string, text: string, blockId: string) => Promise<void>;
+    onRecordSubmission?: (activityId: string, record: ActivitySubmissionRecord) => Promise<void>;
+    onLaunchActivity?: (activityId: string) => Promise<void>;
 }
 
 type ActiveBlockData = BlockDetails & { convoId: string; blockIndex: number; weekPlan: WeekPlan };
@@ -138,11 +157,20 @@ interface EvalFormState {
     notes: string;
 }
 
+interface SubmissionFormState {
+    refId: string;
+    refType: 'student' | 'group';
+    outcome: string;
+    date: string;
+    classroomLink: string;
+}
+
 const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
     conversations, students,
     onSetAttendance, onAddEvaluation, onRemoveEvaluation,
     onAutoSaveNotes, onGenerateLessonNoteAnalysis, analysisLoadingBlockId,
     onAddMaterial, onChiudiLezione, showToast,
+    activities, onAddObservation, onRecordSubmission, onLaunchActivity,
 }) => {
     // Derive active block
     const activeBlock = useMemo<ActiveBlockData | null>(() => {
@@ -164,6 +192,8 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [quickAddMat, setQuickAddMat] = useState<{ title: string; url: string } | null>(null);
+    const [submissionForms, setSubmissionForms] = useState<Record<string, SubmissionFormState | null>>({});
+    const [activityQuickNotes, setActivityQuickNotes] = useState<Record<string, string>>({});
 
     const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingNotesRef = useRef<string | null>(null);
@@ -227,6 +257,10 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
     const lateSet = new Set(activeBlock.lateStudentIds ?? []);
     const presentCount = [...presentSet].filter(id => !lateSet.has(id)).length;
     const lateCount = lateSet.size;
+    const blockActivities = (activities ?? []).filter(a =>
+        a.blockId === activeBlock.id &&
+        a.status !== 'annullata' && a.status !== 'consegnata'
+    );
     const materials = activeBlock.lessonMaterials ?? [];
     const evaluations = activeBlock.lessonEvaluations ?? [];
     const analysis = activeBlock.lessonNoteAnalysis ?? null;
@@ -412,6 +446,159 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
                             </div>
                         )}
                     </Section>
+
+                    {/* Attività attive */}
+                    {blockActivities.length > 0 && (
+                        <Section
+                            title={`Attività attive — ${blockActivities.length}`}
+                            collapsible
+                            defaultOpen={blockActivities.some(a => a.status === 'lanciata' || a.status === 'in_corso')}
+                        >
+                            <div className="mt-3 space-y-3">
+                                {blockActivities.map(activity => {
+                                    const form = submissionForms[activity.id] ?? null;
+                                    const quickNote = activityQuickNotes[activity.id] ?? '';
+                                    const deadline = activity.deadline
+                                        ? new Date(activity.deadline).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+                                        : null;
+                                    return (
+                                        <div key={activity.id} className="rounded-lg border border-gray-700/40 bg-gray-900/40 p-3 space-y-2">
+                                            {/* Header attività */}
+                                            <div className="flex items-start gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-gray-200 truncate">{activity.title}</p>
+                                                    {deadline && (
+                                                        <p className="text-[10px] font-mono text-gray-500 mt-0.5">Scadenza: {deadline}</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${activityStatusClasses(activity.status)}`}>
+                                                        {ACTIVITY_STATUS_LABELS[activity.status]}
+                                                    </span>
+                                                    {activity.status === 'progettata' && onLaunchActivity && (
+                                                        <button
+                                                            onClick={() => onLaunchActivity(activity.id)}
+                                                            className="text-[10px] font-mono text-amber-400 border border-amber-500/25 rounded px-1.5 py-0.5 hover:bg-amber-500/10 transition-colors"
+                                                        >
+                                                            Lancia
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Note rapide */}
+                                            {onAddObservation && (
+                                                <textarea
+                                                    value={quickNote}
+                                                    onChange={e => setActivityQuickNotes(n => ({ ...n, [activity.id]: e.target.value }))}
+                                                    onBlur={async () => {
+                                                        const text = quickNote.trim();
+                                                        if (text) {
+                                                            await onAddObservation(activity.id, text, activeBlock.id);
+                                                            setActivityQuickNotes(n => ({ ...n, [activity.id]: '' }));
+                                                        }
+                                                    }}
+                                                    rows={2}
+                                                    placeholder="Nota rapida (salvata al blur)..."
+                                                    className="w-full p-2 bg-gray-800/60 border border-gray-700/50 rounded-md text-xs text-gray-300 placeholder-gray-600 resize-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                                                />
+                                            )}
+
+                                            {/* Registra consegna */}
+                                            {onRecordSubmission && (
+                                                form ? (
+                                                    <div className="p-3 bg-gray-800/60 rounded-lg border border-gray-700/40 space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Studente / Gruppo</label>
+                                                                <select
+                                                                    value={form.refId}
+                                                                    onChange={e => setSubmissionForms(f => ({ ...f, [activity.id]: { ...f[activity.id]!, refId: e.target.value } }))}
+                                                                    className="w-full p-1.5 text-xs bg-gray-800 border border-gray-600 rounded-md text-gray-200"
+                                                                >
+                                                                    <option value="">— seleziona —</option>
+                                                                    {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Data consegna</label>
+                                                                <input
+                                                                    type="date"
+                                                                    value={form.date}
+                                                                    onChange={e => setSubmissionForms(f => ({ ...f, [activity.id]: { ...f[activity.id]!, date: e.target.value } }))}
+                                                                    className="w-full p-1.5 text-xs bg-gray-800 border border-gray-600 rounded-md text-gray-200"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Esito (libero)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={form.outcome}
+                                                                onChange={e => setSubmissionForms(f => ({ ...f, [activity.id]: { ...f[activity.id]!, outcome: e.target.value } }))}
+                                                                placeholder="Es: completato, parziale, in ritardo..."
+                                                                className="w-full p-1.5 text-xs bg-gray-800 border border-gray-600 rounded-md text-gray-200"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Link (opzionale)</label>
+                                                            <input
+                                                                type="url"
+                                                                value={form.classroomLink}
+                                                                onChange={e => setSubmissionForms(f => ({ ...f, [activity.id]: { ...f[activity.id]!, classroomLink: e.target.value } }))}
+                                                                placeholder="https://..."
+                                                                className="w-full p-1.5 text-xs bg-gray-800 border border-gray-600 rounded-md text-gray-200"
+                                                            />
+                                                        </div>
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => setSubmissionForms(f => ({ ...f, [activity.id]: null }))}
+                                                                className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-200"
+                                                            >
+                                                                Annulla
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!form.refId) { showToast('Seleziona un destinatario.', 'error'); return; }
+                                                                    await onRecordSubmission(activity.id, {
+                                                                        refId: form.refId,
+                                                                        refType: form.refType,
+                                                                        submittedAt: form.date ? new Date(form.date).toISOString() : new Date().toISOString(),
+                                                                        outcome: form.outcome || undefined,
+                                                                        classroomLink: form.classroomLink || undefined,
+                                                                    });
+                                                                    setSubmissionForms(f => ({ ...f, [activity.id]: null }));
+                                                                }}
+                                                                className="px-2.5 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                                                            >
+                                                                Salva
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setSubmissionForms(f => ({
+                                                            ...f,
+                                                            [activity.id]: {
+                                                                refId: students[0]?.id ?? '',
+                                                                refType: 'student',
+                                                                outcome: '',
+                                                                date: new Date().toISOString().slice(0, 10),
+                                                                classroomLink: '',
+                                                            },
+                                                        }))}
+                                                        className="text-xs text-blue-400/80 border border-blue-500/20 rounded-md px-2.5 py-1 hover:bg-blue-500/10 hover:border-blue-400/35 transition-colors"
+                                                    >
+                                                        Registra consegna
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Section>
+                    )}
 
                     {/* Valutazioni */}
                     <Section

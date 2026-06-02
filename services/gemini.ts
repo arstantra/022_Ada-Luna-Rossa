@@ -955,3 +955,29 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
     }
     throw new Error("L'AI non ha fornito i dettagli del blocco in un formato valido.");
 };
+
+export const generateActivityBriefing = async (
+    activity: import('../types').Activity,
+    teacherProfile: string
+): Promise<string> => {
+    const rubricLines = (activity.rubric ?? []).map(r => `- ${r.label}${r.description ? ': ' + r.description : ''}`).join('\n');
+    const prompt = `Sei Ada, assistente AI per la didattica. Genera un briefing chiaro e motivante per gli studenti su questa attività.
+
+**Attività:** ${activity.title}
+**Forma di lavoro:** ${activity.formaLavoro}
+**Contesto:** ${activity.contesto}
+**Deliverable atteso:** ${activity.deliverable}
+${activity.description ? `**Descrizione:** ${activity.description}` : ''}
+${activity.objectiveLink ? `**Collegamento all'obiettivo:** ${activity.objectiveLink}` : ''}
+${rubricLines ? `**Criteri di valutazione:**\n${rubricLines}` : ''}
+${teacherProfile ? `\n**Contesto del corso:**\n${teacherProfile.slice(0, 600)}` : ''}
+
+Scrivi un briefing per gli studenti (200-350 parole) che spieghi cosa fare, come farlo e perché è importante. Tono diretto e coinvolgente. Usa Markdown (titoletti H3, liste). Non includere criteri numerici, ma traduci la rubrica in aspettative di qualità comprensibili.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } }
+    });
+    return response.text.trim();
+};

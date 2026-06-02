@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity, ActivityType, ActivityContext } from '../../types';
+import type { Conversation, BlockDetails, LessonState, GroupDefinition, ConvActivity as Activity, ActivityType, ActivityContext } from '../../types';
 
 export interface LessonHandlerDeps {
   conversationsRef: React.MutableRefObject<Conversation[]>;

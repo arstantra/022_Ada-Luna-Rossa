@@ -293,6 +293,11 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
   }), [conversationsRef, conversations, updateConversation, handleSelectConversation, reEditBlockHandler, recordAttendanceForBlock, showToast, activeConversationId]);
 
   const {
+    createActivity, updateActivity, deleteActivity,
+    launchActivity, recordSubmission, addObservation,
+  } = useMemo(() => createActivityHandlers({ showToast, setViewFn }), [showToast]);
+
+  const {
     handleSaveLessonNotes, handleDeleteLessonNotes, handleGenerateAnalysis,
     handleAddLinkForBlock, handleDeleteLinkForBlock,
     handleUpdateBlockCloudLink, handleUpdateBlockLinkedNotebooks,
@@ -300,9 +305,11 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     handleAutoSaveLessonNotes, handleUpdateLiveAttendance,
     handleAddLessonEvaluation, handleRemoveLessonEvaluation,
     handleGenerateLessonNoteAnalysis, handleSaveClassroomUrl,
+    handleAddActivityObservation, handleRecordActivitySubmission,
   } = useMemo(() => createBlockNoteHandlers({
     conversationsRef, updateConversation, students, showToast, setAnalysisLoadingBlockId,
-  }), [conversationsRef, updateConversation, students, showToast, setAnalysisLoadingBlockId]);
+    addObservation, recordSubmission,
+  }), [conversationsRef, updateConversation, students, showToast, setAnalysisLoadingBlockId, addObservation, recordSubmission]);
 
   const {
     handleUpdateWeekPlan, handleExportContent, handleFormatBlocks,
@@ -325,10 +332,37 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     fileToImport, dataToRestore, studentForEvaluationImport, showToast,
   ]);
 
-  const {
-    createActivity, updateActivity, deleteActivity,
-    launchActivity, recordSubmission, addObservation,
-  } = useMemo(() => createActivityHandlers({ showToast, setViewFn }), [showToast]);
+  // ── Attività: stato React + caricamento da DB ────────────────────────────────
+  const [allActivities, setAllActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    db.getAllActivities().then(setAllActivities).catch(() => {});
+  }, []);
+
+  const handleUpdateActivity = useCallback(async (id: string, updates: Partial<Activity>) => {
+    await updateActivity(id, updates);
+    setAllActivities(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
+  }, [updateActivity]);
+
+  const handleLaunchActivity = useCallback(async (activityId: string): Promise<void> => {
+    await launchActivity(activityId, '');
+    setAllActivities(prev => prev.map(a =>
+      a.id === activityId ? { ...a, status: 'lanciata' as const, launchedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : a
+    ));
+  }, [launchActivity]);
+
+  const handleRecordActivitySubmissionFull = useCallback(async (activityId: string, record: import('../types').ActivitySubmissionRecord): Promise<void> => {
+    await handleRecordActivitySubmission(activityId, record);
+    const updated = await db.getActivity(activityId);
+    if (updated) setAllActivities(prev => prev.map(a => a.id === activityId ? updated : a));
+  }, [handleRecordActivitySubmission]);
+
+  const handleGenerateBriefing = useCallback(async (activityId: string): Promise<string> => {
+    const act = allActivities.find(a => a.id === activityId);
+    if (!act) throw new Error('Attività non trovata.');
+    const text = await GeminiService.generateActivityBriefing(act, masterContext.teacherProfile);
+    return text;
+  }, [allActivities, masterContext.teacherProfile]);
 
   const {
     handleSelectStudent, handleNavigateToBlock, handleOpenAddNotebookModal,
@@ -417,7 +451,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
             'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} contentUnits={contentUnits} progettazioneText={masterContext.progettazione} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onUpdateBlockSubject={handleUpdateBlockSubject} onUpdateBlockTitle={handleUpdateBlockTitle} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} onUpdateBlockMetodologia={handleUpdateBlockMetodologia} parsedMethodologies={parsedMethodologies} fslPeriods={masterContext.fslPeriods} onToggleExternalExpert={handleToggleExternalExpert} onUpdateExternalExpertName={handleUpdateExternalExpertName} onToggleFuoriAula={handleToggleFuoriAula} onUpdateLuogo={handleUpdateLuogo} onAddActivityForBlock={handleAddActivityForBlock} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
-            'lezione': <InAulaView conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} onAddMaterial={handleAddLessonMaterial} onRemoveMaterial={handleRemoveLessonMaterial} onSetAttendance={handleUpdateLiveAttendance} onAddEvaluation={handleAddLessonEvaluation} onRemoveEvaluation={handleRemoveLessonEvaluation} onAutoSaveNotes={handleAutoSaveLessonNotes} onGenerateLessonNoteAnalysis={handleGenerateLessonNoteAnalysis} onSaveClassroomUrl={handleSaveClassroomUrl} />,
+            'lezione': <InAulaView conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} onAddMaterial={handleAddLessonMaterial} onRemoveMaterial={handleRemoveLessonMaterial} onSetAttendance={handleUpdateLiveAttendance} onAddEvaluation={handleAddLessonEvaluation} onRemoveEvaluation={handleRemoveLessonEvaluation} onAutoSaveNotes={handleAutoSaveLessonNotes} onGenerateLessonNoteAnalysis={handleGenerateLessonNoteAnalysis} onSaveClassroomUrl={handleSaveClassroomUrl} activities={allActivities} onUpdateActivity={handleUpdateActivity} onGenerateBriefing={handleGenerateBriefing} onAddObservation={handleAddActivityObservation} onRecordSubmission={handleRecordActivitySubmissionFull} onLaunchActivity={handleLaunchActivity} />,
             'classroom_trend': <ClassroomTrendView conversations={conversations} students={students} onClose={() => setView('lobby')} />,
             'groups_archive': <GroupsArchiveView conversations={conversations} students={students} onClose={() => setView('lobby')} masterContext={masterContext} onUpdateBlock={handleUpdateBlockInConversation} />,
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} conversations={conversations} />,

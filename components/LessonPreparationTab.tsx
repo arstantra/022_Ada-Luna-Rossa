@@ -1,10 +1,173 @@
 import React, { useState, useMemo } from 'react';
-import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition } from '../types';
+import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus } from '../types';
 import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon } from './Icons';
+import EditableTextarea from './EditableTextarea';
 import * as GeminiService from '../services/gemini';
 import MarkdownRenderer from './MarkdownRenderer';
 import Modal from './Modal';
 import type { useMasterContext } from '../hooks/useMasterContext';
+
+// ── ActivityCard ──────────────────────────────────────────────────────────────
+
+interface ActivityCardProps {
+    activity: Activity;
+    isOpen: boolean;
+    onToggle: () => void;
+    blockGroups: GroupDefinition[];
+    onUpdate?: (id: string, updates: Partial<Activity>) => void;
+    onGenerateBriefing?: (id: string) => void;
+    isGeneratingBriefing?: boolean;
+    readOnly?: boolean;
+}
+
+const ActivityCard: React.FC<ActivityCardProps> = ({
+    activity, isOpen, onToggle, blockGroups, onUpdate, onGenerateBriefing, isGeneratingBriefing, readOnly = false,
+}) => {
+    const badge = STATUS_BADGE[activity.status] ?? STATUS_BADGE.progettata;
+    const deadlineDisplay = activity.deadline
+        ? new Date(activity.deadline).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+        : null;
+
+    const assignedGroupIds = (activity.groupAssignments ?? []).map(g => g.groupId);
+
+    const toggleGroup = (groupId: string) => {
+        if (readOnly || !onUpdate) return;
+        const current = activity.groupAssignments ?? [];
+        const already = current.some(g => g.groupId === groupId);
+        const next = already
+            ? current.filter(g => g.groupId !== groupId)
+            : [...current, { groupId }];
+        onUpdate(activity.id, { groupAssignments: next });
+    };
+
+    return (
+        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+            {/* Header */}
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center gap-2 px-4 py-3 text-left"
+                aria-expanded={isOpen}
+            >
+                <DocumentTextIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                <span className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-200 truncate block">{activity.title}</span>
+                    <span className="text-[10px] font-mono text-gray-500 flex items-center gap-1.5 mt-0.5">
+                        {FORMA_LAVORO_LABELS[activity.formaLavoro]}
+                        <span className="text-gray-700">·</span>
+                        {CONTESTO_LABELS[activity.contesto]}
+                        {deadlineDisplay && (
+                            <>
+                                <span className="text-gray-700">·</span>
+                                <span className="text-amber-500/80">{deadlineDisplay}</span>
+                            </>
+                        )}
+                    </span>
+                </span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${badge.cls}`}>
+                    {badge.label}
+                </span>
+                <ChevronDownIcon className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Expanded */}
+            {isOpen && (
+                <div className="px-4 pb-4 border-t border-gray-700/40 space-y-4 pt-3">
+
+                    {/* Deadline */}
+                    <div>
+                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Scadenza</label>
+                        <input
+                            type="date"
+                            value={activity.deadline ?? ''}
+                            disabled={readOnly}
+                            onChange={e => onUpdate?.(activity.id, { deadline: e.target.value || undefined })}
+                            className="p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                    </div>
+
+                    {/* Gruppi assegnati */}
+                    {blockGroups.length > 0 && (
+                        <div>
+                            <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Gruppi assegnati</label>
+                            <div className="flex flex-wrap gap-2">
+                                {blockGroups.map(g => {
+                                    const assigned = assignedGroupIds.includes(g.name);
+                                    return (
+                                        <button
+                                            key={g.name}
+                                            onClick={() => toggleGroup(g.name)}
+                                            disabled={readOnly}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors disabled:cursor-not-allowed ${
+                                                assigned
+                                                    ? 'bg-indigo-600/50 border-indigo-500/50 text-indigo-200'
+                                                    : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white disabled:opacity-60'
+                                            }`}
+                                        >
+                                            {assigned ? '✓ ' : ''}{g.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Briefing */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Briefing studenti</label>
+                            {!readOnly && onGenerateBriefing && (
+                                <button
+                                    onClick={() => onGenerateBriefing(activity.id)}
+                                    disabled={isGeneratingBriefing}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingBriefing
+                                        ? <><span className="h-3 w-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione...</>
+                                        : <><SparklesIcon className="h-3 w-3" />Genera con ADA</>
+                                    }
+                                </button>
+                            )}
+                        </div>
+                        <EditableTextarea
+                            value={activity.briefingContent ?? ''}
+                            onSave={val => onUpdate?.(activity.id, { briefingContent: val || undefined })}
+                            placeholder="Scrivi o genera un briefing per gli studenti…"
+                            disabled={readOnly || !onUpdate}
+                            rows={4}
+                        />
+                    </div>
+
+                    {/* Link Classroom */}
+                    <div>
+                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Link Classroom</label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="url"
+                                value={activity.classroomAssignmentUrl ?? ''}
+                                disabled={readOnly}
+                                onChange={e => onUpdate?.(activity.id, { classroomAssignmentUrl: e.target.value || undefined })}
+                                onBlur={e => onUpdate?.(activity.id, { classroomAssignmentUrl: e.target.value.trim() || undefined })}
+                                placeholder="https://classroom.google.com/..."
+                                className="flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            {activity.classroomAssignmentUrl && (
+                                <a
+                                    href={activity.classroomAssignmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
+                                >
+                                    <LinkIcon className="h-3.5 w-3.5" />
+                                    Apri
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 // ── AddMaterialModal ──────────────────────────────────────────────────────────
 
@@ -115,6 +278,26 @@ const AddMaterialModal: React.FC<{
     );
 };
 
+// ── Activity labels ───────────────────────────────────────────────────────────
+
+const FORMA_LAVORO_LABELS: Record<ActivityFormaLavoro, string> = {
+    individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe',
+};
+const CONTESTO_LABELS: Record<ActivityContesto, string> = {
+    in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma',
+};
+const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = {
+    elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro',
+};
+const STATUS_BADGE: Record<ActivityStatus, { label: string; cls: string }> = {
+    progettata: { label: 'Progettata', cls: 'text-slate-400 bg-slate-800/60' },
+    lanciata:   { label: 'Lanciata',   cls: 'text-amber-400 bg-amber-900/30' },
+    in_corso:   { label: 'In corso',   cls: 'text-blue-400 bg-blue-900/30' },
+    consegnata: { label: 'Consegnata', cls: 'text-emerald-400 bg-emerald-900/30' },
+    scaduta:    { label: 'Scaduta',    cls: 'text-red-400 bg-red-900/30' },
+    annullata:  { label: 'Annullata',  cls: 'text-gray-500 bg-gray-800/60' },
+};
+
 // ── Block option type ─────────────────────────────────────────────────────────
 
 interface BlockOption {
@@ -145,10 +328,14 @@ interface LessonPreparationTabProps {
     onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
     masterContext: ReturnType<typeof useMasterContext>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
+    activities?: Activity[];
+    onUpdateActivity?: (id: string, updates: Partial<Activity>) => void;
+    onGenerateBriefing?: (activityId: string) => Promise<string>;
 }
 
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     conversations, students, onAddMaterial, onRemoveMaterial, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
+    activities = [], onUpdateActivity, onGenerateBriefing,
 }) => {
     const blockOptions = useMemo<BlockOption[]>(() => {
         return conversations
@@ -196,6 +383,10 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     const [proposedGroups, setProposedGroups] = useState<GroupDefinition[]>([]);
     const [isLoadingGroupSuggestion, setIsLoadingGroupSuggestion] = useState(false);
 
+    // ── Activity state ────────────────────────────────────────────────────────
+    const [openActivityIds, setOpenActivityIds] = useState<Set<string>>(new Set());
+    const [generatingBriefingId, setGeneratingBriefingId] = useState<string | null>(null);
+
     // ── Classroom URL state ───────────────────────────────────────────────────
     const [classroomDraft, setClassroomDraft] = useState('');
 
@@ -203,6 +394,48 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
         () => blockOptions.find(o => o.key === selectedKey) ?? blockOptions[0] ?? null,
         [blockOptions, selectedKey]
     );
+
+    // ── Activity helpers ──────────────────────────────────────────────────────
+    const currentBlockActivities = useMemo(
+        () => activities.filter(a => a.blockId === selectedOption?.block.id),
+        [activities, selectedOption?.block.id]
+    );
+    const otherActiveActivities = useMemo(
+        () => activities.filter(a =>
+            a.blockId !== selectedOption?.block.id &&
+            (a.status === 'lanciata' || a.status === 'in_corso')
+        ),
+        [activities, selectedOption?.block.id]
+    );
+
+    const toggleActivityOpen = (id: string) =>
+        setOpenActivityIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+
+    const getBlockGroupsForActivity = (blockId: string): GroupDefinition[] => {
+        for (const c of conversations) {
+            if (!c.weekPlan) continue;
+            const b = c.weekPlan.blocks.find(bl => bl.id === blockId);
+            if (b) return b.lessonGroups ?? [];
+        }
+        return [];
+    };
+
+    const handleGenerateBriefingClick = async (activityId: string) => {
+        if (!onGenerateBriefing) return;
+        setGeneratingBriefingId(activityId);
+        try {
+            const text = await onGenerateBriefing(activityId);
+            onUpdateActivity?.(activityId, { briefingContent: text });
+        } catch {
+            showToast('Errore nella generazione del briefing.', 'error');
+        } finally {
+            setGeneratingBriefingId(null);
+        }
+    };
 
     const handleAskAda = async () => {
         if (!adaQuestion.trim()) return;
@@ -455,6 +688,52 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                     )}
                                 </div>
                             </div>
+
+                            {/* Attività */}
+                            {(currentBlockActivities.length > 0 || otherActiveActivities.length > 0) && (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-medium text-gray-300">Attività</h3>
+
+                                    {/* Gruppo 1: questo blocco */}
+                                    {currentBlockActivities.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Questo blocco</p>
+                                            {currentBlockActivities.map(act => (
+                                                <ActivityCard
+                                                    key={act.id}
+                                                    activity={act}
+                                                    isOpen={openActivityIds.has(act.id)}
+                                                    onToggle={() => toggleActivityOpen(act.id)}
+                                                    blockGroups={getBlockGroupsForActivity(act.blockId)}
+                                                    onUpdate={onUpdateActivity}
+                                                    onGenerateBriefing={handleGenerateBriefingClick}
+                                                    isGeneratingBriefing={generatingBriefingId === act.id}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Gruppo 2: in corso da altri blocchi */}
+                                    {otherActiveActivities.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">In corso da altri blocchi</p>
+                                            {otherActiveActivities.map(act => (
+                                                <ActivityCard
+                                                    key={act.id}
+                                                    activity={act}
+                                                    isOpen={openActivityIds.has(act.id)}
+                                                    onToggle={() => toggleActivityOpen(act.id)}
+                                                    blockGroups={getBlockGroupsForActivity(act.blockId)}
+                                                    onUpdate={onUpdateActivity}
+                                                    onGenerateBriefing={handleGenerateBriefingClick}
+                                                    isGeneratingBriefing={generatingBriefingId === act.id}
+                                                    readOnly
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Crea Gruppi con Ada */}
                             <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">

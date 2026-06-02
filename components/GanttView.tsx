@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { Conversation, Activity, ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit, FslPeriod } from '../types';
+import type { Conversation, ConvActivity as Activity, ConvActivityStatus as ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit, FslPeriod } from '../types';
 import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { XIcon, CalendarDaysIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';

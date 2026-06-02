@@ -142,6 +142,9 @@ export interface CourseModule {
   pillar?: string;
 }
 
+
+// ── Attività legacy (sistema basato su conversazioni — da migrare al sistema DB) ──
+
 export type ActivityType =
   | 'ricerca'
   | 'audiovisivo'
@@ -149,30 +152,30 @@ export type ActivityType =
   | 'progetto'
   | 'altro';
 
-export type ActivityStatus =
-  | 'in_corso'       // lanciata, scadenza non ancora raggiunta
-  | 'in_scadenza'    // mancano ≤ 1 blocco alla scadenza
-  | 'consegnata'     // docente ha marcato come consegnata
-  | 'scaduta';       // scadenza superata senza consegna
+export type ConvActivityStatus =
+  | 'in_corso'
+  | 'in_scadenza'
+  | 'consegnata'
+  | 'scaduta';
 
 export type ActivityContext =
-  | 'solo_in_classe'   // svolta interamente in aula
-  | 'classe_e_casa'    // inizia in aula, prosegue a casa
-  | 'solo_a_casa';     // assegnata in classe, svolta a casa
+  | 'solo_in_classe'
+  | 'classe_e_casa'
+  | 'solo_a_casa';
 
-export interface Activity {
+export interface ConvActivity {
   id: string;
   title: string;
   type: ActivityType;
-  context?: ActivityContext;     // dove si svolge l'attività
-  launchBlockId: string;        // id del BlockDetails da cui è stata lanciata
+  context?: ActivityContext;
+  launchBlockId: string;
   launchWeekNumber: number;
-  launchBlockIndex: number;     // indice blocco nella settimana (0-based)
-  dueInBlocks: number;          // scadenza: N blocchi dopo il lancio
+  launchBlockIndex: number;
+  dueInBlocks: number;
   moduleId?: string;
   description?: string;
-  status: ActivityStatus;
-  deliveredAt?: string;         // ISO date, se consegnata
+  status: ConvActivityStatus;
+  deliveredAt?: string;
 }
 
 export interface Pillar {
@@ -451,7 +454,7 @@ weekPlan?: WeekPlan;
   tempEvaluation?: Partial<Evaluation>;
   pendingContent?: DetachedLesson[];
   modules?: CourseModule[];   // estratti dal Profilo del Corso, confermati dal docente
-  activities?: Activity[];    // attività lanciate da blocchi di questa settimana
+  activities?: ConvActivity[];    // attività legacy (sistema basato su conversazioni)
 }
 
 export interface Mode {

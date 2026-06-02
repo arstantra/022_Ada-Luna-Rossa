@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial, LessonEvaluation } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial, LessonEvaluation, Activity } from '../types';
 import LessonPreparationTab from './LessonPreparationTab';
 import LessonInCorsoTab from './LessonInCorsoTab';
 import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon } from './Icons';
@@ -587,9 +587,15 @@ interface InAulaViewProps {
     onAutoSaveNotes: (convoId: string, blockIndex: number, notes: string) => void;
     onGenerateLessonNoteAnalysis: (convoId: string, blockIndex: number) => Promise<void>;
     onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
+    activities?: Activity[];
+    onUpdateActivity?: (id: string, updates: Partial<Activity>) => void;
+    onGenerateBriefing?: (activityId: string) => Promise<string>;
+    onAddObservation?: (activityId: string, text: string, blockId: string) => Promise<void>;
+    onRecordSubmission?: (activityId: string, record: import('../types').ActivitySubmissionRecord) => Promise<void>;
+    onLaunchActivity?: (activityId: string) => Promise<void>;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl, activities, onUpdateActivity, onGenerateBriefing, onAddObservation, onRecordSubmission, onLaunchActivity }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -747,6 +753,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         onSaveClassroomUrl={onSaveClassroomUrl}
                         masterContext={masterContext}
                         showToast={showToast}
+                        activities={activities}
+                        onUpdateActivity={onUpdateActivity}
+                        onGenerateBriefing={onGenerateBriefing}
                     />
                 )}
 
@@ -764,6 +773,10 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                     onAddMaterial={onAddMaterial}
                     onChiudiLezione={onChiudiLezione}
                     showToast={showToast}
+                    activities={activities}
+                    onAddObservation={onAddObservation}
+                    onRecordSubmission={onRecordSubmission}
+                    onLaunchActivity={onLaunchActivity}
                   />
                 )}
 

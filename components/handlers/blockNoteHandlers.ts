@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis } from '../../types';
+import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis, ActivityObservation, ActivitySubmissionRecord } from '../../types';
 import * as GeminiService from '../../services/gemini';
 
 export interface BlockNoteHandlerDeps {
@@ -8,10 +8,12 @@ export interface BlockNoteHandlerDeps {
   students: Student[];
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   setAnalysisLoadingBlockId: React.Dispatch<React.SetStateAction<string | null>>;
+  addObservation: (activityId: string, obs: Omit<ActivityObservation, 'id' | 'timestamp'>) => Promise<void>;
+  recordSubmission: (activityId: string, record: ActivitySubmissionRecord) => Promise<void>;
 }
 
 export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
-  const { conversationsRef, updateConversation, students, showToast, setAnalysisLoadingBlockId } = deps;
+  const { conversationsRef, updateConversation, students, showToast, setAnalysisLoadingBlockId, addObservation, recordSubmission } = deps;
 
   const handleSaveLessonNotes = (convoId: string, blockIndex: number, notes: string) => {
     updateConversation(convoId, convo => {
@@ -233,6 +235,22 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     }
   };
 
+  const handleAddActivityObservation = async (
+    activityId: string,
+    text: string,
+    blockId: string
+  ): Promise<void> => {
+    await addObservation(activityId, { text, refType: 'activity', blockId });
+  };
+
+  const handleRecordActivitySubmission = async (
+    activityId: string,
+    record: ActivitySubmissionRecord
+  ): Promise<void> => {
+    await recordSubmission(activityId, record);
+    showToast('Consegna registrata.', 'success');
+  };
+
   return {
     handleSaveLessonNotes,
     handleDeleteLessonNotes,
@@ -249,5 +267,7 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleRemoveLessonEvaluation,
     handleGenerateLessonNoteAnalysis,
     handleSaveClassroomUrl,
+    handleAddActivityObservation,
+    handleRecordActivitySubmission,
   };
 }
