@@ -435,6 +435,23 @@ const METHOD_SHORT: Partial<Record<TeachingMethodology, string>> = {
 const UNSET_METHOD = '__non_compilato__' as const;
 type MethodKey = TeachingMethodology | typeof UNSET_METHOD;
 
+// Palette colori vivaci per metodologia — un colore distinto per ciascuna
+const METHOD_COLORS: Record<TeachingMethodology, { rgb: string; text: string }> = {
+  tradizionale:         { rgb: '107,114,128', text: '#9ca3af' },  // gray
+  flipped_classroom:    { rgb: '99,102,241',  text: '#a5b4fc' },  // indigo
+  project_based:        { rgb: '59,130,246',  text: '#93c5fd' },  // blue
+  problem_based:        { rgb: '14,165,233',  text: '#7dd3fc' },  // sky
+  cooperative_learning: { rgb: '16,185,129',  text: '#6ee7b7' },  // emerald
+  peer_teaching:        { rgb: '52,211,153',  text: '#a7f3d0' },  // green
+  debate:               { rgb: '245,158,11',  text: '#fcd34d' },  // amber
+  design_thinking:      { rgb: '236,72,153',  text: '#f9a8d4' },  // pink
+  gamification:         { rgb: '168,85,247',  text: '#d8b4fe' },  // purple
+  studio_di_caso:       { rgb: '249,115,22',  text: '#fdba74' },  // orange
+  inquiry_based:        { rgb: '20,184,166',  text: '#5eead4' },  // teal
+  role_playing:         { rgb: '239,68,68',   text: '#fca5a5' },  // red
+  jigsaw:               { rgb: '234,179,8',   text: '#fde047' },  // yellow
+};
+
 interface MatrixRow { module: string; counts: Partial<Record<MethodKey, number>>; total: number; unset: number }
 
 const ModuloMetodologiaMatrix: React.FC<{
@@ -461,11 +478,14 @@ const ModuloMetodologiaMatrix: React.FC<{
         <thead>
           <tr>
             <th className="text-left pr-2 pb-1.5" style={{ width: '38%' }} />
-            {usedMethods.map(m => (
-              <th key={m} className="text-center pb-1.5 px-0.5" title={TEACHING_METHODOLOGY_LABELS[m]}>
-                <span className="text-[8px] font-mono text-gray-600">{METHOD_SHORT[m] ?? m.slice(0, 4)}</span>
-              </th>
-            ))}
+            {usedMethods.map(m => {
+              const mc = METHOD_COLORS[m];
+              return (
+                <th key={m} className="text-center pb-1.5 px-0.5" title={TEACHING_METHODOLOGY_LABELS[m]}>
+                  <span className="text-[8px] font-mono" style={{ color: mc.text }}>{METHOD_SHORT[m] ?? m.slice(0, 4)}</span>
+                </th>
+              );
+            })}
             {/* Colonna non compilato */}
             {hasUnset && (
               <th className="text-center pb-1.5 px-0.5 pl-1" title="Blocchi senza metodologia compilata">
@@ -492,11 +512,9 @@ const ModuloMetodologiaMatrix: React.FC<{
               {usedMethods.map(m => {
                 const v = row.counts[m] ?? 0;
                 const intensity = v / globalMax;
-                const isTradi = m === 'tradizionale';
+                const mc = METHOD_COLORS[m];
                 const bg = v > 0
-                  ? isTradi
-                    ? `rgba(75,85,99,${0.15 + intensity * 0.55})`
-                    : `rgba(20,184,166,${0.10 + intensity * 0.60})`
+                  ? `rgba(${mc.rgb},${0.12 + intensity * 0.70})`
                   : 'rgba(17,24,39,0.4)';
                 return (
                   <td key={m} className="text-center py-0.5 px-0.5">
@@ -506,7 +524,10 @@ const ModuloMetodologiaMatrix: React.FC<{
                       title={v > 0 ? `${row.module} · ${TEACHING_METHODOLOGY_LABELS[m]}: ${v} bl.` : undefined}
                     >
                       {v > 0 && (
-                        <span className={`text-[8px] font-mono tabular-nums opacity-0 group-hover/cell:opacity-100 transition-opacity ${isTradi ? 'text-gray-300' : 'text-teal-200'}`}>{v}</span>
+                        <span
+                          className="text-[8px] font-mono tabular-nums opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                          style={{ color: mc.text }}
+                        >{v}</span>
                       )}
                     </div>
                   </td>
@@ -928,44 +949,62 @@ const GanttView: React.FC<GanttViewProps> = ({
       .sort((a, b) => b.total - a.total);
   }, [conversations]);
 
-  // ── Matrice modulo × metodologia ─────────────────────────────────────────
-  // I blocchi senza metodologia compilata vengono contati nella colonna "—" (unset)
-  // separata, NON aggregati in "tradizionale". Tradizionale compare solo se scelto
-  // esplicitamente dal docente.
-  // Inclusi solo blocchi con modulo assegnato (la matrice è "Modulo × Metodologia").
-  const { matrixRows, usedMethods, hasUnset } = useMemo(() => {
-    const map = new Map<string, { counts: Partial<Record<TeachingMethodology, number>>; unset: number }>();
-    const methodSet = new Set<TeachingMethodology>();
-    let anyUnset = false;
-    conversations.forEach(conv => {
-      if (!conv.weekPlan) return;
-      conv.weekPlan.blocks.forEach(block => {
-        if (!block.module?.trim()) return;
-        if (block.status === 'saltato' || block.status === 'annullato') return;
-        const mod = block.module.trim();
-        if (!map.has(mod)) map.set(mod, { counts: {}, unset: 0 });
-        const entry = map.get(mod)!;
-        if (block.metodologia) {
-          entry.counts[block.metodologia] = (entry.counts[block.metodologia] ?? 0) + 1;
-          methodSet.add(block.metodologia);
-        } else {
-          entry.unset++;
-          anyUnset = true;
-        }
+  // ── Matrice modulo × metodologia (separata per Moduli e UDA) ────────────
+  // I blocchi senza metodologia compilata vengono contati nella colonna "—" (unset).
+  // Tradizionale compare solo se scelto esplicitamente dal docente.
+  const { matrixRowsModuli, matrixRowsUda, usedMethodsModuli, usedMethodsUda, hasUnsetModuli, hasUnsetUda } = useMemo(() => {
+    const buildMatrix = (isUda: boolean) => {
+      const map = new Map<string, { counts: Partial<Record<TeachingMethodology, number>>; unset: number }>();
+      const methodSet = new Set<TeachingMethodology>();
+      let anyUnset = false;
+      conversations.forEach(conv => {
+        if (!conv.weekPlan) return;
+        conv.weekPlan.blocks.forEach(block => {
+          if (!block.module?.trim()) return;
+          if (block.status === 'saltato' || block.status === 'annullato') return;
+          const name = block.module.trim();
+          const typeFromMap = unitTypeByTitle.get(name);
+          const typeFromPrefix: CourseContentUnit['type'] =
+            /^UDA\s/i.test(name)             ? 'uda' :
+            /^EDUCAZIONE CIVICA/i.test(name) ? 'educazione_civica' :
+            /^FSL\s/i.test(name)             ? 'fsl' : 'modulo';
+          const type = typeFromMap ?? typeFromPrefix;
+          const blockIsUda = type === 'uda';
+          if (blockIsUda !== isUda) return;
+          if (!map.has(name)) map.set(name, { counts: {}, unset: 0 });
+          const entry = map.get(name)!;
+          if (block.metodologia) {
+            entry.counts[block.metodologia] = (entry.counts[block.metodologia] ?? 0) + 1;
+            methodSet.add(block.metodologia);
+          } else {
+            entry.unset++;
+            anyUnset = true;
+          }
+        });
       });
-    });
-    const methodOrder = (Object.keys(TEACHING_METHODOLOGY_LABELS) as TeachingMethodology[])
-      .filter(m => methodSet.has(m));
-    const rows: MatrixRow[] = [...map.entries()]
-      .map(([module, { counts, unset }]) => ({
-        module,
-        counts,
-        unset,
-        total: (Object.values(counts).reduce((a, b) => (a as number) + (b as number), 0) as number) + unset,
-      }))
-      .sort((a, b) => b.total - a.total);
-    return { matrixRows: rows, usedMethods: methodOrder, hasUnset: anyUnset };
-  }, [conversations]);
+      const methodOrder = (Object.keys(TEACHING_METHODOLOGY_LABELS) as TeachingMethodology[])
+        .filter(m => methodSet.has(m));
+      const rows: MatrixRow[] = [...map.entries()]
+        .map(([module, { counts, unset }]) => ({
+          module,
+          counts,
+          unset,
+          total: (Object.values(counts).reduce((a, b) => (a as number) + (b as number), 0) as number) + unset,
+        }))
+        .sort((a, b) => b.total - a.total);
+      return { rows, usedMethods: methodOrder, hasUnset: anyUnset };
+    };
+    const moduli = buildMatrix(false);
+    const uda    = buildMatrix(true);
+    return {
+      matrixRowsModuli:   moduli.rows,
+      matrixRowsUda:      uda.rows,
+      usedMethodsModuli:  moduli.usedMethods,
+      usedMethodsUda:     uda.usedMethods,
+      hasUnsetModuli:     moduli.hasUnset,
+      hasUnsetUda:        uda.hasUnset,
+    };
+  }, [conversations, unitTypeByTitle]);
 
   // ── Gestione periodi FSL ─────────────────────────────────────────────────
   const handleAddFslPeriod = () => {
@@ -988,13 +1027,14 @@ const GanttView: React.FC<GanttViewProps> = ({
     onSaveFslPeriods?.(fslPeriods.filter(p => p.id !== id));
   };
 
-  // ── Heatmap settimana × modulo ────────────────────────────────────────────
-  const moduleWeekRows = useMemo((): ModuleWeekRow[] => {
-    // Raccoglie tutti i moduli distinti con il loro indice colore (stesso ordine del donut)
+  // ── Heatmap settimana × modulo (separata per Moduli e UDA) ──────────────
+  const { moduleWeekRowsModuli, moduleWeekRowsUda } = useMemo(() => {
     const modIndexMap = new Map<string, number>();
     [...modulesData, ...udaData].forEach((m, i) => modIndexMap.set(m.name, i));
 
-    const rowMap = new Map<string, Map<number, number>>();
+    const rowMapModuli = new Map<string, Map<number, number>>();
+    const rowMapUda    = new Map<string, Map<number, number>>();
+
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
       const wn = conv.weekPlan.weekNumber;
@@ -1002,20 +1042,34 @@ const GanttView: React.FC<GanttViewProps> = ({
         const mod = block.module?.trim();
         if (!mod) return;
         if (block.status === 'saltato' || block.status === 'annullato') return;
+        const typeFromMap = unitTypeByTitle.get(mod);
+        const typeFromPrefix: CourseContentUnit['type'] =
+          /^UDA\s/i.test(mod)             ? 'uda' :
+          /^EDUCAZIONE CIVICA/i.test(mod) ? 'educazione_civica' :
+          /^FSL\s/i.test(mod)             ? 'fsl' : 'modulo';
+        const type = typeFromMap ?? typeFromPrefix;
+        const rowMap = type === 'uda' ? rowMapUda : rowMapModuli;
         if (!rowMap.has(mod)) rowMap.set(mod, new Map());
         const cells = rowMap.get(mod)!;
         cells.set(wn, (cells.get(wn) ?? 0) + 1);
       });
     });
-    return [...rowMap.entries()]
-      .map(([module, cells]) => ({
-        module,
-        cells,
-        total: [...cells.values()].reduce((a, b) => a + b, 0),
-        colorIdx: modIndexMap.get(module) ?? 0,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [conversations, modulesData, udaData]);
+
+    const toRows = (rowMap: Map<string, Map<number, number>>): ModuleWeekRow[] =>
+      [...rowMap.entries()]
+        .map(([module, cells]) => ({
+          module,
+          cells,
+          total: [...cells.values()].reduce((a, b) => a + b, 0),
+          colorIdx: modIndexMap.get(module) ?? 0,
+        }))
+        .sort((a, b) => b.total - a.total);
+
+    return {
+      moduleWeekRowsModuli: toRows(rowMapModuli),
+      moduleWeekRowsUda:    toRows(rowMapUda),
+    };
+  }, [conversations, modulesData, udaData, unitTypeByTitle]);
 
   // ── Mappa modulo → indice colore (per SubjectHeatmap) ────────────────────
   const moduleColorIndexMap = useMemo(() => {
@@ -1364,27 +1418,53 @@ const GanttView: React.FC<GanttViewProps> = ({
           <SubjectHeatmap rows={heatmapRows} moduleColorMap={moduleColorIndexMap} />
         </div>
 
-        {/* Matrice modulo × metodologia */}
+        {/* Matrice Modulo × Metodologia — solo Moduli */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Modulo × Metodologia</span>
-            {usedMethods.length > 0 && (
-              <span className="text-[9px] font-mono text-gray-700">{usedMethods.length} met.</span>
+            {usedMethodsModuli.length > 0 && (
+              <span className="text-[9px] font-mono text-gray-700">{usedMethodsModuli.length} met.</span>
             )}
           </div>
-          <ModuloMetodologiaMatrix rows={matrixRows} usedMethods={usedMethods} hasUnset={hasUnset} />
+          <ModuloMetodologiaMatrix rows={matrixRowsModuli} usedMethods={usedMethodsModuli} hasUnset={hasUnsetModuli} />
         </div>
 
-        {/* Heatmap settimana × modulo */}
+        {/* Matrice UDA × Metodologia — solo se ci sono UDA */}
+        {udaData.length > 0 && (
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">UDA × Metodologia</span>
+              {usedMethodsUda.length > 0 && (
+                <span className="text-[9px] font-mono text-gray-700">{usedMethodsUda.length} met.</span>
+              )}
+            </div>
+            <ModuloMetodologiaMatrix rows={matrixRowsUda} usedMethods={usedMethodsUda} hasUnset={hasUnsetUda} />
+          </div>
+        )}
+
+        {/* Distribuzione Temporale — solo Moduli */}
         <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Temporale Moduli</span>
-            {moduleWeekRows.length > 0 && (
-              <span className="text-[9px] font-mono text-gray-700">{moduleWeekRows.length} moduli · {maxWeek} sett.</span>
+            {moduleWeekRowsModuli.length > 0 && (
+              <span className="text-[9px] font-mono text-gray-700">{moduleWeekRowsModuli.length} mod. · {maxWeek} sett.</span>
             )}
           </div>
-          <SettimanaModuloHeatmap rows={moduleWeekRows} weeks={weeks} currentWeek={currentWeek} />
+          <SettimanaModuloHeatmap rows={moduleWeekRowsModuli} weeks={weeks} currentWeek={currentWeek} />
         </div>
+
+        {/* Distribuzione Temporale — solo UDA */}
+        {udaData.length > 0 && (
+          <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 p-4 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">Distribuzione Temporale UDA</span>
+              {moduleWeekRowsUda.length > 0 && (
+                <span className="text-[9px] font-mono text-gray-700">{moduleWeekRowsUda.length} UDA · {maxWeek} sett.</span>
+              )}
+            </div>
+            <SettimanaModuloHeatmap rows={moduleWeekRowsUda} weeks={weeks} currentWeek={currentWeek} />
+          </div>
+        )}
 
         {/* Contesto fisico: in aula vs fuori aula per modulo */}
         {contestoRows.length > 0 && (
