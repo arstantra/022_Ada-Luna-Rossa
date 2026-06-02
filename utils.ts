@@ -400,18 +400,3 @@ export const generateCourseBookHtml = (
         </html>
     `;
 };
-${styles}</style>
-        </head>
-        <body>
-            <div class="book-container">
-                ${coverPage}
-                ${adaPresentationHtml}
-                ${foundingDocsHtml}
-                ${tableOfContents}
-                ${chaptersHtml}
-                ${appendixHtml}
-            </div>
-        </body>
-        </html>
-    `;
-};
