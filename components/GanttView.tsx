@@ -356,12 +356,12 @@ const ModuloMetodologiaMatrix: React.FC<{ rows: MatrixRow[]; usedMethods: Teachi
                 return (
                   <td key={m} className="text-center py-0.5 px-0.5">
                     <div
-                      className="mx-auto rounded-sm flex items-center justify-center transition-all"
+                      className="mx-auto rounded-sm flex items-center justify-center transition-all group/cell"
                       style={{ width: 22, height: 18, background: bg }}
                       title={v > 0 ? `${row.module} · ${TEACHING_METHODOLOGY_LABELS[m]}: ${v} bl.` : undefined}
                     >
                       {v > 0 && (
-                        <span className={`text-[8px] font-mono tabular-nums ${isTradi ? 'text-gray-400' : 'text-teal-300/80'}`}>{v}</span>
+                        <span className={`text-[8px] font-mono tabular-nums opacity-0 group-hover/cell:opacity-100 transition-opacity ${isTradi ? 'text-gray-300' : 'text-teal-200'}`}>{v}</span>
                       )}
                     </div>
                   </td>
