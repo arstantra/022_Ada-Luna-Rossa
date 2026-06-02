@@ -1,5 +1,5 @@
 {
-  "name": "ada---43-neuron",
+  "name": "ada",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "postinstall": "node scripts/fix-genai-exports.mjs"
+    "postinstall": "node scripts/fix-genai-exports.mjs",
+    "check": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
     "react": "^19.2.0",
