@@ -217,9 +217,9 @@ const TYPE_SHORT: Record<LessonType, string> = {
   discussione:        'Disc.',
 };
 
-interface HeatmapRow { subject: string; counts: Record<LessonType, number>; total: number }
+interface HeatmapRow { subject: string; module: string; counts: Record<LessonType, number>; total: number }
 
-const SubjectHeatmap: React.FC<{ rows: HeatmapRow[] }> = ({ rows }) => {
+const SubjectHeatmap: React.FC<{ rows: HeatmapRow[]; moduleColorMap: Map<string, number> }> = ({ rows, moduleColorMap }) => {
   if (rows.length === 0) return (
     <div className="flex items-center justify-center py-6">
       <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
@@ -232,51 +232,74 @@ const SubjectHeatmap: React.FC<{ rows: HeatmapRow[] }> = ({ rows }) => {
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
-      <table className="w-full border-collapse" style={{ minWidth: 260 }}>
+      <table className="w-full border-collapse" style={{ minWidth: 300 }}>
         <thead>
           <tr>
-            <th className="text-left pr-2 pb-1.5" style={{ width: '40%' }} />
+            <th className="text-left pr-1 pb-1.5" style={{ width: '20%' }}>
+              <span className="text-[8px] font-mono text-gray-600">Mod.</span>
+            </th>
+            <th className="text-left pr-2 pb-1.5" style={{ width: '30%' }} />
             {ALL_LESSON_TYPES.map(t => (
-              <th key={t} className="text-center pb-1.5" style={{ width: '12%' }}>
+              <th key={t} className="text-center pb-1.5" style={{ width: '10%' }}>
                 <span className="text-[8px] font-mono text-gray-600">{TYPE_SHORT[t]}</span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
-            <tr key={row.subject} className="group">
-              <td className="pr-2 py-0.5">
-                <span
-                  className="text-[9px] font-mono text-gray-500 group-hover:text-gray-300 truncate block transition-colors"
-                  style={{ maxWidth: 110 }}
-                  title={row.subject}
-                >
-                  {row.subject}
-                </span>
-              </td>
-              {ALL_LESSON_TYPES.map(t => {
-                const v = row.counts[t] ?? 0;
-                const intensity = v / globalMax;
-                const bg = v > 0
-                  ? `rgba(129,140,248,${0.12 + intensity * 0.65})`
-                  : 'rgba(17,24,39,0.4)';
-                return (
-                  <td key={t} className="text-center py-0.5 px-0.5">
-                    <div
-                      className="mx-auto rounded-sm flex items-center justify-center transition-all"
-                      style={{ width: 22, height: 18, background: bg }}
-                      title={v > 0 ? `${row.subject} · ${LESSON_TYPE_LABELS[t]}: ${v} bl.` : undefined}
+          {rows.map(row => {
+            const colorIdx = moduleColorMap.get(row.module);
+            const dotColor = colorIdx !== undefined
+              ? moduleColor(colorIdx).border
+              : 'transparent';
+            return (
+              <tr key={row.subject} className="group">
+                <td className="pr-1 py-0.5">
+                  <div className="flex items-center gap-1">
+                    <span
+                      style={{ width: 6, height: 6, background: dotColor, borderRadius: 1, flexShrink: 0, display: 'inline-block' }}
+                    />
+                    <span
+                      className="text-[8px] font-mono text-gray-600 truncate"
+                      style={{ maxWidth: 60 }}
+                      title={row.module || undefined}
                     >
-                      {v > 0 && (
-                        <span className="text-[8px] font-mono text-indigo-300/80 tabular-nums">{v}</span>
-                      )}
-                    </div>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                      {row.module || '—'}
+                    </span>
+                  </div>
+                </td>
+                <td className="pr-2 py-0.5">
+                  <span
+                    className="text-[9px] font-mono text-gray-500 group-hover:text-gray-300 truncate block transition-colors"
+                    style={{ maxWidth: 90 }}
+                    title={row.subject}
+                  >
+                    {row.subject}
+                  </span>
+                </td>
+                {ALL_LESSON_TYPES.map(t => {
+                  const v = row.counts[t] ?? 0;
+                  const intensity = v / globalMax;
+                  const bg = v > 0
+                    ? `rgba(129,140,248,${0.12 + intensity * 0.65})`
+                    : 'rgba(17,24,39,0.4)';
+                  return (
+                    <td key={t} className="text-center py-0.5 px-0.5">
+                      <div
+                        className="mx-auto rounded-sm flex items-center justify-center transition-all"
+                        style={{ width: 22, height: 18, background: bg }}
+                        title={v > 0 ? `${row.subject} · ${LESSON_TYPE_LABELS[t]}: ${v} bl.` : undefined}
+                      >
+                        {v > 0 && (
+                          <span className="text-[8px] font-mono text-indigo-300/80 tabular-nums">{v}</span>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -866,6 +889,7 @@ const GanttView: React.FC<GanttViewProps> = ({
   const heatmapRows = useMemo((): HeatmapRow[] => {
     const map = new Map<string, Record<LessonType, number>>();
     const displayNames = new Map<string, string>(); // key normalizzata → nome display
+    const moduleByKey = new Map<string, string>();  // key normalizzata → modulo (prima occorrenza)
     conversations.forEach(conv => {
       if (!conv.weekPlan) return;
       conv.weekPlan.blocks.forEach(block => {
@@ -879,6 +903,7 @@ const GanttView: React.FC<GanttViewProps> = ({
             laboratorio: 0, verifica: 0, discussione: 0,
           });
           displayNames.set(key, subject); // prima occorrenza come nome display
+          moduleByKey.set(key, block.module?.trim() || ''); // prima occorrenza come modulo
         }
         if (block.tipologia) {
           map.get(key)![block.tipologia]++;
@@ -888,6 +913,7 @@ const GanttView: React.FC<GanttViewProps> = ({
     return [...map.entries()]
       .map(([key, counts]) => ({
         subject: displayNames.get(key)!,
+        module: moduleByKey.get(key) ?? '',
         counts,
         total: Object.values(counts).reduce((a, b) => a + b, 0),
       }))
@@ -980,6 +1006,13 @@ const GanttView: React.FC<GanttViewProps> = ({
       }))
       .sort((a, b) => b.total - a.total);
   }, [conversations, modulesData, udaData]);
+
+  // ── Mappa modulo → indice colore (per SubjectHeatmap) ────────────────────
+  const moduleColorIndexMap = useMemo(() => {
+    const m = new Map<string, number>();
+    [...modulesData, ...udaData].forEach((mod, i) => m.set(mod.name, i));
+    return m;
+  }, [modulesData, udaData]);
 
   // ── Contesto fisico per modulo ────────────────────────────────────────────
   const contestoRows = useMemo((): ContestoRow[] => {
@@ -1247,7 +1280,7 @@ const GanttView: React.FC<GanttViewProps> = ({
               <span className="text-[9px] font-mono text-gray-700">{heatmapRows.length} arg.</span>
             )}
           </div>
-          <SubjectHeatmap rows={heatmapRows} />
+          <SubjectHeatmap rows={heatmapRows} moduleColorMap={moduleColorIndexMap} />
         </div>
 
         {/* Matrice modulo × metodologia */}
