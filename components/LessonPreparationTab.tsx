@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus } from '../types';
-import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon } from './Icons';
+import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon, FolderOpenIcon } from './Icons';
+import { LOCAL_STORAGE_COURSE_DRIVE_URL_KEY } from '../constants';
 import EditableTextarea from './EditableTextarea';
 import * as GeminiService from '../services/gemini';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -194,19 +195,18 @@ const AddMaterialModal: React.FC<{
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [type, setType] = useState<LessonMaterial['type']>('slide');
-    const [targetAudience, setTargetAudience] = useState<LessonMaterial['targetAudience']>('classe');
     const [notes, setNotes] = useState('');
     const [error, setError] = useState('');
 
     React.useEffect(() => {
-        if (isOpen) { setTitle(''); setUrl(''); setType('slide'); setTargetAudience('classe'); setNotes(''); setError(''); }
+        if (isOpen) { setTitle(''); setUrl(''); setType('slide'); setNotes(''); setError(''); }
     }, [isOpen]);
 
     const handleSave = () => {
         if (!title.trim()) { setError('Il titolo è obbligatorio.'); return; }
         if (!url.trim()) { setError("L'URL è obbligatorio."); return; }
         try { new URL(url); } catch { setError('URL non valido. Inserisci un link completo (es. https://...).'); return; }
-        onSave({ title: title.trim(), url: url.trim(), type, targetAudience, notes: notes.trim() || undefined });
+        onSave({ title: title.trim(), url: url.trim(), type, targetAudience: 'classe', notes: notes.trim() || undefined });
         onClose();
     };
 
@@ -240,27 +240,14 @@ const AddMaterialModal: React.FC<{
                         placeholder="https://..."
                     />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
-                        <select
-                            value={type} onChange={e => setType(e.target.value as LessonMaterial['type'])}
-                            className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm text-gray-200"
-                        >
-                            {MATERIAL_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Destinatari</label>
-                        <select
-                            value={targetAudience} onChange={e => setTargetAudience(e.target.value as LessonMaterial['targetAudience'])}
-                            className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm text-gray-200"
-                        >
-                            <option value="classe">Tutta la classe</option>
-                            <option value="gruppo">Gruppo specifico</option>
-                            <option value="studente">Studente specifico</option>
-                        </select>
-                    </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
+                    <select
+                        value={type} onChange={e => setType(e.target.value as LessonMaterial['type'])}
+                        className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm text-gray-200"
+                    >
+                        {MATERIAL_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -389,6 +376,24 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
 
     // ── Classroom URL state ───────────────────────────────────────────────────
     const [classroomDraft, setClassroomDraft] = useState('');
+
+    // ── Materiali unificati state ─────────────────────────────────────────────
+    const [isMaterialiOpen, setIsMaterialiOpen] = useState(true);
+    const [extraMasterKeys, setExtraMasterKeys] = useState<string[]>([]);
+    const [openExtraMasterKeys, setOpenExtraMasterKeys] = useState<Set<string>>(new Set());
+    const [courseDriveUrl, setCourseDriveUrl] = useState<string>(() => {
+        try { return localStorage.getItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY) ?? ''; } catch { return ''; }
+    });
+    const [driveLinkDraft, setDriveLinkDraft] = useState<string>(() => {
+        try { return localStorage.getItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY) ?? ''; } catch { return ''; }
+    });
+
+    const toggleExtraMaster = (key: string) =>
+        setOpenExtraMasterKeys(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
 
     const selectedOption = useMemo(
         () => blockOptions.find(o => o.key === selectedKey) ?? blockOptions[0] ?? null,
@@ -553,104 +558,189 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
 
                     {selectedOption && (
                         <>
-                            {/* Master Content collapsible */}
+                            {/* ── MATERIALI DI LEZIONE — sezione unificata ── */}
                             <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+                                {/* Header collassabile */}
                                 <button
-                                    onClick={() => setIsMasterOpen(o => !o)}
+                                    onClick={() => setIsMaterialiOpen(o => !o)}
                                     className="w-full flex items-center justify-between px-4 py-3 text-left"
-                                    aria-expanded={isMasterOpen}
+                                    aria-expanded={isMaterialiOpen}
                                 >
                                     <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
                                         <DocumentTextIcon className="h-4 w-4 text-gray-500" />
-                                        Contenuto Master
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        {!hasMasterContent && (
-                                            <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wide">vuoto</span>
+                                        Materiali di Lezione
+                                        {(materials.length + extraMasterKeys.length + (hasMasterContent ? 1 : 0)) > 0 && (
+                                            <span className="text-[10px] font-mono text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
+                                                {materials.length + extraMasterKeys.length + (hasMasterContent ? 1 : 0)}
+                                            </span>
                                         )}
-                                        <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isMasterOpen ? 'rotate-180' : ''}`} />
                                     </span>
+                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isMaterialiOpen ? 'rotate-180' : ''}`} />
                                 </button>
-                                {isMasterOpen && (
-                                    <div className="px-4 pb-4 border-t border-gray-700/40">
-                                        {hasMasterContent ? (
-                                            <div className="mt-3 space-y-3">
-                                                {block!.contentBlocks!.map((cb, i) => (
-                                                    <div key={i} className="bg-gray-900/50 rounded-lg p-3 text-sm text-gray-300 max-h-48 overflow-y-auto custom-scrollbar">
-                                                        <MarkdownRenderer content={cb.content} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="mt-3 text-sm text-gray-600 italic">
-                                                Nessun contenuto master trasferito. Vai al Laboratorio per preparare e trasferire il contenuto del blocco.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
 
-                            {/* Materials */}
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-sm font-medium text-gray-300">Materiali di Lezione</h3>
-                                    <button
-                                        onClick={() => setAddMaterialOpen(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/10 hover:border-blue-400/40 transition-colors"
-                                    >
-                                        <PlusCircleIcon className="h-3.5 w-3.5" />
-                                        Aggiungi
-                                    </button>
-                                </div>
+                                {isMaterialiOpen && (
+                                    <div className="border-t border-gray-700/40 divide-y divide-gray-700/30">
 
-                                {materials.length === 0 ? (
-                                    <div className="rounded-xl border border-dashed border-gray-700/50 p-6 text-center">
-                                        <p className="text-sm text-gray-600">Nessun materiale aggiunto.</p>
-                                        <p className="text-xs text-gray-700 mt-1">Aggiungi slide, video, PDF o altri link utili per questa lezione.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {materials.map(mat => (
-                                            <div
-                                                key={mat.id}
-                                                className="flex items-start gap-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/40 hover:border-gray-600/50 transition-colors"
+                                        {/* ── 1. Master blocco corrente ── */}
+                                        <div>
+                                            <button
+                                                onClick={() => setIsMasterOpen(o => !o)}
+                                                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-700/20 transition-colors"
+                                                aria-expanded={isMasterOpen}
                                             >
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-0.5">
-                                                        <span className="text-[10px] font-mono uppercase tracking-wide text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
-                                                            {MATERIAL_TYPE_LABELS[mat.type]}
-                                                        </span>
-                                                        {mat.targetAudience !== 'classe' && (
-                                                            <span className="text-[10px] font-mono uppercase tracking-wide text-sky-500 bg-sky-900/30 px-1.5 py-0.5 rounded">
-                                                                {mat.targetAudience === 'gruppo' ? 'Gruppo' : 'Studente'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm font-medium text-gray-200 truncate">{mat.title}</p>
-                                                    {mat.notes && (
-                                                        <p className="text-xs text-gray-500 mt-0.5 truncate">{mat.notes}</p>
+                                                <span className="text-xs text-gray-400 flex items-center gap-2">
+                                                    <span className="text-[10px] font-mono text-blue-400/80 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide">Master</span>
+                                                    <span className="truncate max-w-[260px]">{block?.blockTitle || block?.objective || 'Blocco corrente'}</span>
+                                                </span>
+                                                <span className="flex items-center gap-2 flex-shrink-0">
+                                                    {!hasMasterContent && <span className="text-[10px] font-mono text-gray-600 uppercase">vuoto</span>}
+                                                    <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${isMasterOpen ? 'rotate-180' : ''}`} />
+                                                </span>
+                                            </button>
+                                            {isMasterOpen && (
+                                                <div className="px-4 pb-3">
+                                                    {hasMasterContent ? (
+                                                        <div className="space-y-2">
+                                                            {block!.contentBlocks!.map((cb, i) => (
+                                                                <div key={i} className="bg-gray-900/50 rounded-lg p-3 text-sm text-gray-300 max-h-48 overflow-y-auto custom-scrollbar">
+                                                                    <MarkdownRenderer content={cb.content} />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-600 italic">
+                                                            Nessun contenuto master. Vai al Laboratorio per prepararlo.
+                                                        </p>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-1 flex-shrink-0">
-                                                    <a
-                                                        href={mat.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-1.5 rounded-md text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                                                        title="Apri link"
-                                                    >
-                                                        <LinkIcon className="h-4 w-4" />
-                                                    </a>
-                                                    <button
-                                                        onClick={() => onRemoveMaterial(selectedOption.convoId, selectedOption.blockIndex, mat.id)}
-                                                        className="p-1.5 rounded-md text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                                        title="Rimuovi materiale"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* ── 2. Altri master ── */}
+                                        <div className="px-4 py-3 space-y-2">
+                                            <select
+                                                value=""
+                                                onChange={e => {
+                                                    if (e.target.value && !extraMasterKeys.includes(e.target.value)) {
+                                                        setExtraMasterKeys(prev => [...prev, e.target.value]);
+                                                    }
+                                                }}
+                                                className="w-full p-1.5 bg-gray-900 border border-gray-700/60 rounded-lg text-xs text-gray-400 focus:ring-1 focus:ring-blue-500/50"
+                                            >
+                                                <option value="">+ Aggiungi master di un altro blocco…</option>
+                                                {blockOptions
+                                                    .filter(o => o.key !== selectedOption?.key && !extraMasterKeys.includes(o.key) && (o.block.contentBlocks?.length ?? 0) > 0)
+                                                    .map(o => (
+                                                        <option key={o.key} value={o.key}>{o.label}</option>
+                                                    ))
+                                                }
+                                            </select>
+                                            {extraMasterKeys.map(key => {
+                                                const opt = blockOptions.find(o => o.key === key);
+                                                if (!opt) return null;
+                                                const isOpen = openExtraMasterKeys.has(key);
+                                                return (
+                                                    <div key={key} className="rounded-lg border border-gray-700/40 bg-gray-900/30 overflow-hidden">
+                                                        <div className="flex items-center">
+                                                            <button
+                                                                onClick={() => toggleExtraMaster(key)}
+                                                                className="flex-1 flex items-center justify-between px-3 py-2 text-left hover:bg-gray-700/20 transition-colors"
+                                                            >
+                                                                <span className="text-xs text-gray-400 flex items-center gap-2">
+                                                                    <span className="text-[10px] font-mono text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded uppercase tracking-wide">Master</span>
+                                                                    <span className="truncate max-w-[220px]">{opt.block.blockTitle || opt.block.objective || opt.label}</span>
+                                                                </span>
+                                                                <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setExtraMasterKeys(prev => prev.filter(k => k !== key))}
+                                                                className="px-2.5 py-2 text-gray-600 hover:text-red-400 transition-colors"
+                                                                title="Rimuovi"
+                                                            >
+                                                                <XIcon className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        {isOpen && (
+                                                            <div className="px-3 pb-3 border-t border-gray-700/30 space-y-2 pt-2">
+                                                                {opt.block.contentBlocks?.map((cb, i) => (
+                                                                    <div key={i} className="bg-gray-900/50 rounded-lg p-3 text-sm text-gray-300 max-h-40 overflow-y-auto custom-scrollbar">
+                                                                        <MarkdownRenderer content={cb.content} />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* ── 3. Drive ── */}
+                                        <div className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <FolderOpenIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                                <input
+                                                    type="url"
+                                                    value={driveLinkDraft}
+                                                    onChange={e => setDriveLinkDraft(e.target.value)}
+                                                    onBlur={() => {
+                                                        const trimmed = driveLinkDraft.trim();
+                                                        if (trimmed !== courseDriveUrl) {
+                                                            setCourseDriveUrl(trimmed);
+                                                            try { localStorage.setItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY, trimmed); } catch { /* noop */ }
+                                                        }
+                                                    }}
+                                                    placeholder="Incolla URL cartella Drive del corso…"
+                                                    className="flex-1 p-1.5 bg-gray-900 border border-gray-700/60 rounded-lg text-xs text-gray-300 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50"
+                                                />
+                                                <a
+                                                    href={courseDriveUrl || 'https://drive.google.com'}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
+                                                >
+                                                    <FolderOpenIcon className="h-3.5 w-3.5" />
+                                                    Apri Drive
+                                                </a>
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {/* ── 4. Materiali aggiuntivi ── */}
+                                        <div className="px-4 py-3 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Materiali aggiuntivi</span>
+                                                <button
+                                                    onClick={() => setAddMaterialOpen(true)}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/10 hover:border-blue-400/40 transition-colors"
+                                                >
+                                                    <PlusCircleIcon className="h-3.5 w-3.5" />
+                                                    Aggiungi
+                                                </button>
+                                            </div>
+                                            {materials.length === 0 ? (
+                                                <p className="text-xs text-gray-600 italic">Slide, video, PDF, link utili per questa lezione.</p>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    {materials.map(mat => (
+                                                        <div key={mat.id} className="flex items-center gap-2 px-2 py-1.5 bg-gray-900/40 rounded-lg border border-gray-700/30 hover:border-gray-600/40 transition-colors">
+                                                            <span className="text-[10px] font-mono uppercase tracking-wide text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded flex-shrink-0">
+                                                                {MATERIAL_TYPE_LABELS[mat.type]}
+                                                            </span>
+                                                            <p className="text-xs font-medium text-gray-300 truncate flex-1">{mat.title}</p>
+                                                            {mat.notes && <p className="text-[10px] text-gray-600 truncate max-w-[100px]">{mat.notes}</p>}
+                                                            <a href={mat.url} target="_blank" rel="noopener noreferrer"
+                                                                className="p-1 text-gray-600 hover:text-blue-400 flex-shrink-0 transition-colors" title="Apri">
+                                                                <LinkIcon className="h-3.5 w-3.5" />
+                                                            </a>
+                                                            <button
+                                                                onClick={() => onRemoveMaterial(selectedOption!.convoId, selectedOption!.blockIndex, mat.id)}
+                                                                className="p-1 text-gray-600 hover:text-red-400 flex-shrink-0 transition-colors" title="Rimuovi">
+                                                                <TrashIcon className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

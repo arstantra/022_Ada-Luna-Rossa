@@ -615,10 +615,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
         [conversations]
     );
 
-    const [activeTab, setActiveTab] = useState<InAulaTab>(() => {
-        const hasInCorso = conversations.some(c => c.weekPlan?.blocks.some(b => b.lessonState === 'in_corso'));
-        return hasInCorso ? 'in_corso' : 'archivio';
-    });
+    const [activeTab, setActiveTab] = useState<InAulaTab>('preparazione');
 
     const { archivedWeeks, availableWeeks, availableModules } = useMemo(() => {
         const planningConvos = conversations.filter(c => c.weekPlan);

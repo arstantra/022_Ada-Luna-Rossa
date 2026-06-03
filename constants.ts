@@ -22,6 +22,7 @@ export const LOCAL_STORAGE_COURSE_MATERIA_KEY = 'ada-course-materia';
 export const LOCAL_STORAGE_COURSE_SCUOLA_KEY = 'ada-course-scuola';
 export const LOCAL_STORAGE_COURSE_ANNO_KEY = 'ada-course-anno';
 export const LOCAL_STORAGE_COURSE_DOCENTE_KEY = 'ada-course-docente';
+export const LOCAL_STORAGE_COURSE_DRIVE_URL_KEY = 'ada-course-drive-url';
 
 export const ADA_QUICK_CHAT_ID = 'ada-quick-chat';
 
