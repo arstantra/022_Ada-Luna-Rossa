@@ -48,6 +48,14 @@ interface SidebarProps {
   onExportCourseBook: () => void;
   onOpenApiSettings: () => void;
 
+  // Identità corso (strip sotto "Conversa con Ada")
+  courseInfo?: {
+    materia: string;
+    scuola: string;
+    anno: string;
+    docente: string;
+  };
+
   // Misc
   onShowToast: (message: string, type: 'success' | 'info' | 'error') => void;
 }
@@ -153,6 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenFoundingDocuments, onOpenLaRotta, onOpenAdaPersonality,
   onExportData, onImportData,
   onExportCourseBook, onOpenApiSettings,
+  courseInfo,
   onShowToast,
 }) => {
   const [contenutoOpen, setContenutoOpen] = useState(false);
@@ -177,6 +186,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span className="leading-tight">Conversa con Ada</span>
         </button>
       </div>
+
+      {/* ── Strip identità corso ──────────────────────────────────────── */}
+      {courseInfo && (courseInfo.materia || courseInfo.scuola || courseInfo.anno || courseInfo.docente) && (
+        <div className="flex-shrink-0 px-3 py-2 border-b border-gray-800/50 bg-gray-950/60">
+          {courseInfo.materia && (
+            <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-400/80 truncate leading-tight">
+              {courseInfo.materia}
+            </p>
+          )}
+          <p className="text-[9px] font-mono text-gray-600 truncate leading-tight mt-0.5">
+            {[courseInfo.scuola, courseInfo.anno, courseInfo.docente].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      )}
 
       {/* ── Navigazione ───────────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto no-scrollbar px-3 pb-4">
@@ -297,12 +320,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       </nav>
 
-      {/* ── Footer ───────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 px-4 py-3 border-t border-gray-800/30">
-        <p className="text-[10px] text-center text-gray-700 font-mono">
-          Ada · NuovaDidattica.eu
-        </p>
-      </div>
     </div>
   );
 };

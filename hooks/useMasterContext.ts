@@ -25,6 +25,10 @@ import {
   DEFAULT_DISCIPLINA,
   LOCAL_STORAGE_PTOF_EXTRACT_KEY,
   LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY,
+  LOCAL_STORAGE_COURSE_MATERIA_KEY,
+  LOCAL_STORAGE_COURSE_SCUOLA_KEY,
+  LOCAL_STORAGE_COURSE_ANNO_KEY,
+  LOCAL_STORAGE_COURSE_DOCENTE_KEY,
 } from '../constants';
 
 export const useMasterContext = () => {
@@ -37,6 +41,10 @@ export const useMasterContext = () => {
     const [disciplina, setDisciplina] = useState('');
     const [ptofExtract, setPtofExtract] = useState('');
     const [ptofNotebookUrl, setPtofNotebookUrl] = useState('');
+    const [courseMateria, setCourseMateria] = useState('');
+    const [courseScuola, setCourseScuola] = useState('');
+    const [courseAnno, setCourseAnno] = useState('');
+    const [courseDocente, setCourseDocente] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
     const [routeCalendar, setRouteCalendar] = useState<WeekEntry[]>([]);
     const [fslPeriods, setFslPeriods] = useState<FslPeriod[]>([]);
@@ -67,6 +75,10 @@ export const useMasterContext = () => {
                     loadOrSeedSetting(LOCAL_STORAGE_DISCIPLINA_KEY, DEFAULT_DISCIPLINA, setDisciplina),
                     loadOrSeedSetting(LOCAL_STORAGE_PTOF_EXTRACT_KEY, '', setPtofExtract),
                     loadOrSeedSetting(LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY, '', setPtofNotebookUrl),
+                    loadOrSeedSetting(LOCAL_STORAGE_COURSE_MATERIA_KEY, '', setCourseMateria),
+                    loadOrSeedSetting(LOCAL_STORAGE_COURSE_SCUOLA_KEY, '', setCourseScuola),
+                    loadOrSeedSetting(LOCAL_STORAGE_COURSE_ANNO_KEY, '', setCourseAnno),
+                    loadOrSeedSetting(LOCAL_STORAGE_COURSE_DOCENTE_KEY, '', setCourseDocente),
                 ]);
 
                 // Load route calendar (JSON array of WeekEntry)
@@ -122,6 +134,10 @@ export const useMasterContext = () => {
                 setDisciplina(DEFAULT_DISCIPLINA);
                 setPtofExtract('');
                 setPtofNotebookUrl('');
+                setCourseMateria('');
+                setCourseScuola('');
+                setCourseAnno('');
+                setCourseDocente('');
                 setBlockDayDefaults({});
                 setCurrentModeId(DEFAULT_MODE_ID);
             } finally {
@@ -194,6 +210,30 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save PTOF notebook URL:", error); }
     }, []);
 
+    const handleSaveCourseMateria = useCallback(async (value: string) => {
+        setCourseMateria(value);
+        try { await db.saveSetting(LOCAL_STORAGE_COURSE_MATERIA_KEY, value); }
+        catch (error) { console.error("Failed to save course materia:", error); }
+    }, []);
+
+    const handleSaveCourseScuola = useCallback(async (value: string) => {
+        setCourseScuola(value);
+        try { await db.saveSetting(LOCAL_STORAGE_COURSE_SCUOLA_KEY, value); }
+        catch (error) { console.error("Failed to save course scuola:", error); }
+    }, []);
+
+    const handleSaveCourseAnno = useCallback(async (value: string) => {
+        setCourseAnno(value);
+        try { await db.saveSetting(LOCAL_STORAGE_COURSE_ANNO_KEY, value); }
+        catch (error) { console.error("Failed to save course anno:", error); }
+    }, []);
+
+    const handleSaveCourseDocente = useCallback(async (value: string) => {
+        setCourseDocente(value);
+        try { await db.saveSetting(LOCAL_STORAGE_COURSE_DOCENTE_KEY, value); }
+        catch (error) { console.error("Failed to save course docente:", error); }
+    }, []);
+
     const handleSaveBlockDayDefaults = useCallback(async (defaults: Record<string, string>) => {
         setBlockDayDefaults(defaults);
         try {
@@ -235,6 +275,10 @@ export const useMasterContext = () => {
         disciplina,
         ptofExtract,
         ptofNotebookUrl,
+        courseMateria,
+        courseScuola,
+        courseAnno,
+        courseDocente,
         blockDayDefaults,
         routeCalendar,
         fslPeriods,
@@ -249,6 +293,10 @@ export const useMasterContext = () => {
         handleSaveDisciplina,
         handleSavePtofExtract,
         handleSavePtofNotebookUrl,
+        handleSaveCourseMateria,
+        handleSaveCourseScuola,
+        handleSaveCourseAnno,
+        handleSaveCourseDocente,
         handleSaveBlockDayDefaults,
         handleSaveRouteCalendar,
         handleSaveFslPeriods,

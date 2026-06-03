@@ -440,6 +440,12 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
           onExportCourseBook={handleExportCourseBook}
           onOpenApiSettings={onOpenApiSettings}
           onShowToast={showToast}
+          courseInfo={{
+            materia: masterContext.courseMateria,
+            scuola: masterContext.courseScuola,
+            anno: masterContext.courseAnno,
+            docente: masterContext.courseDocente,
+          }}
         />
         {
           {

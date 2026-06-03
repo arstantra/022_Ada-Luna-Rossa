@@ -16,6 +16,12 @@ export const DEFAULT_DISCIPLINA = '';
 export const LOCAL_STORAGE_PTOF_EXTRACT_KEY = 'ada-ptof-extract';
 export const LOCAL_STORAGE_PTOF_NOTEBOOK_URL_KEY = 'ada-ptof-notebook-url';
 
+// Campi strutturati identità corso (mostrati nella strip sidebar)
+export const LOCAL_STORAGE_COURSE_MATERIA_KEY = 'ada-course-materia';
+export const LOCAL_STORAGE_COURSE_SCUOLA_KEY = 'ada-course-scuola';
+export const LOCAL_STORAGE_COURSE_ANNO_KEY = 'ada-course-anno';
+export const LOCAL_STORAGE_COURSE_DOCENTE_KEY = 'ada-course-docente';
+
 export const ADA_QUICK_CHAT_ID = 'ada-quick-chat';
 
 export const DEFAULT_SYSTEM_INSTRUCTION = `Sei Ada, un'assistente AI avanzata specializzata in pedagogia, didattica e design thinking. Il tuo obiettivo è supportare docenti e formatori nel progettare esperienze di apprendimento innovative, inclusive e personalizzate.

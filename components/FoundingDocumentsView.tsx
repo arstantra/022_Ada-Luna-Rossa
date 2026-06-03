@@ -420,6 +420,11 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
                         </div>
                     )}
 
+                    {/* ── Card Identità del Corso (4 campi strutturati per la strip sidebar) ── */}
+                    {!isInitialSetup && (
+                        <CourseIdentityCard masterContext={masterContext} />
+                    )}
+
                     {/* ── Card Equipaggio (lista strutturata, NON DocumentEditor) ── */}
                     {(() => {
                         const equipState = cardStates['equipaggio'];
@@ -572,6 +577,44 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
                 </div>
             )}
         </main>
+    );
+};
+
+// ── Card Identità del Corso ──────────────────────────────────────────────────
+type MasterCtx = ReturnType<typeof import('../hooks/useMasterContext').useMasterContext>;
+const CourseIdentityCard: React.FC<{ masterContext: MasterCtx }> = ({ masterContext }) => {
+    const fields: { label: string; placeholder: string; value: string; handler: (v: string) => Promise<void> }[] = [
+        { label: 'Materia',  placeholder: "es. Storia dell'arte",        value: masterContext.courseMateria,  handler: masterContext.handleSaveCourseMateria },
+        { label: 'Scuola',   placeholder: 'es. Liceo Dosso Dossi, Ferrara', value: masterContext.courseScuola, handler: masterContext.handleSaveCourseScuola },
+        { label: 'Anno sc.', placeholder: 'es. 2026/2027',               value: masterContext.courseAnno,     handler: masterContext.handleSaveCourseAnno },
+        { label: 'Docente',  placeholder: 'es. A. Poletti',              value: masterContext.courseDocente,  handler: masterContext.handleSaveCourseDocente },
+    ];
+
+    return (
+        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+            <div className="px-5 py-3.5 flex items-center gap-2.5">
+                <span className="text-sm font-semibold text-white">Identità del Corso</span>
+                <span className="text-[9px] font-mono tracking-[0.1em] uppercase text-gray-500/70">— mostrata nella barra laterale</span>
+            </div>
+            <div className="border-t border-gray-700/40 px-5 pb-4 pt-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    {fields.map(({ label, placeholder, value, handler }) => (
+                        <div key={label}>
+                            <label className="block text-[10px] font-mono uppercase tracking-[0.1em] text-gray-500 mb-1">
+                                {label}
+                            </label>
+                            <input
+                                type="text"
+                                defaultValue={value}
+                                placeholder={placeholder}
+                                onBlur={(e) => { handler(e.target.value); }}
+                                className="w-full bg-gray-900/60 border border-gray-700/50 rounded-md px-2.5 py-1.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 };
 
