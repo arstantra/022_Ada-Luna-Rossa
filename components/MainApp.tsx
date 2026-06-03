@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import type { Conversation, Message, Attachment, Mode, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource, LessonType, DetachedLesson, CourseModule, Activity } from '../types';
+import type { Conversation, Message, ContentBlock, Attachment, Mode, WeekRouteInfo, WeekPlan, BlockDetails, Student, Notebook, PlanningActionPayload, GroupDefinition, Evaluation, AdaAnalysis, ToolkitShortcut, ValidateAndArchivePayload, ToolkitCategory, BlockStatus, LessonState, GroundingSource, LessonType, DetachedLesson, CourseModule, Activity } from '../types';
 import type { ActiveView } from './Sidebar';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import TurndownService from 'turndown';
@@ -345,6 +345,28 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     db.getAllActivities().then(setAllActivities).catch(() => {});
   }, [updateActivity]);
 
+  // Aggiorna i messaggi chat di un'attività nella conversazione attiva
+  const handleUpdateActivityMessages = useCallback((activityId: string, messages: Message[]) => {
+    if (!activeConversationId) return;
+    updateConversation(activeConversationId, c => ({
+      ...c,
+      activities: (c.activities ?? []).map(a =>
+        a.id === activityId ? { ...a, messages } : a
+      ),
+    }));
+  }, [activeConversationId, updateConversation]);
+
+  // Aggiorna il contenuto master di un'attività nella conversazione attiva
+  const handleUpdateActivityContent = useCallback((activityId: string, content: ContentBlock[]) => {
+    if (!activeConversationId) return;
+    updateConversation(activeConversationId, c => ({
+      ...c,
+      activities: (c.activities ?? []).map(a =>
+        a.id === activityId ? { ...a, masterContent: content } : a
+      ),
+    }));
+  }, [activeConversationId, updateConversation]);
+
   const handleLaunchActivity = useCallback(async (activityId: string): Promise<void> => {
     await launchActivity(activityId, '');
     setAllActivities(prev => prev.map(a =>
@@ -457,7 +479,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
             'ada_personality': <AdaPersonalityView masterContext={masterContext} onClose={() => setView('lobby')} />,
             'la_rotta': <RouteView masterContext={masterContext} onClose={() => setView('lobby')} />,
 // FIX: Corrected prop name from `onUpdateBlockStatus` to `handleUpdateBlockStatus`
-            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} contentUnits={contentUnits} progettazioneText={masterContext.progettazione} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onUpdateBlockSubject={handleUpdateBlockSubject} onUpdateBlockTitle={handleUpdateBlockTitle} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} onUpdateBlockMetodologia={handleUpdateBlockMetodologia} parsedMethodologies={parsedMethodologies} fslPeriods={masterContext.fslPeriods} onToggleExternalExpert={handleToggleExternalExpert} onUpdateExternalExpertName={handleUpdateExternalExpertName} onToggleFuoriAula={handleToggleFuoriAula} onUpdateLuogo={handleUpdateLuogo} allActivities={allActivities} onCreateActivity={async (blockId, weekNumber, data) => { const act = await createActivity(blockId, weekNumber, data); db.getAllActivities().then(setAllActivities).catch(() => {}); return act; }} onDeleteActivity={async (id) => { await deleteActivity(id); db.getAllActivities().then(setAllActivities).catch(() => {}); }} showToast={showToast} />,
+            'strategic_dashboard': <StrategicDashboardView conversations={conversations} weeks={availableWeeks} modules={modules} contentUnits={contentUnits} progettazioneText={masterContext.progettazione} teacherProfile={masterContext.teacherProfile} onClose={() => setView('lobby')} onUpdateWeekTheme={handleUpdateWeekTheme} onUpdateBlockObjective={handleUpdateBlockObjective} onUpdateBlockSubject={handleUpdateBlockSubject} onUpdateBlockTitle={handleUpdateBlockTitle} onGenerateStrategicSuggestions={handleGenerateStrategicSuggestions} onSaveStrategicData={handleUpdateStrategicData} onGenerateBlockDetails={handleGenerateBlockDetails} onUpdateWeekDetails={handleUpdateWeekDetails} onUpdateBlockDetails={handleUpdateBlockDetails} onStartPlanning={handleStartPlanningForWeek} onUpdateBlockModule={handleUpdateBlockModule} onUpdateBlockStatus={handleUpdateBlockStatus} onUpdateBlockTipologia={handleUpdateBlockTipologia} onUpdateBlockMetodologia={handleUpdateBlockMetodologia} parsedMethodologies={parsedMethodologies} fslPeriods={masterContext.fslPeriods} onToggleExternalExpert={handleToggleExternalExpert} onUpdateExternalExpertName={handleUpdateExternalExpertName} onToggleFuoriAula={handleToggleFuoriAula} onUpdateLuogo={handleUpdateLuogo} allActivities={allActivities} showToast={showToast} />,
             'toolkit': <ToolkitView shortcuts={shortcuts} categories={categories} onClose={() => setView('lobby')} onAddShortcut={addShortcut} onUpdateShortcut={updateShortcut} onDeleteShortcut={deleteShortcut} onAddCategory={addCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory} onBulkUpdateShortcuts={bulkUpdateShortcuts} onBulkUpdateCategories={bulkUpdateCategories} showToast={showToast} />,
             'lezione': <InAulaView conversations={conversations} onClose={() => setView('lobby')} students={students} onNavigateToBlock={handleNavigateToBlock} onFormatMultipleBlocks={handleFormatBlocks} onRecordAttendance={handleRecordAttendanceForBlock} onSaveGroups={handleSaveGroupsForBlock} onAddArtifact={handleAddArtifactForBlock} onDeleteArtifact={handleDeleteArtifactForBlock} onOpenLessonNotesModal={setLessonNotesModalInfo} onDeleteLessonNotes={handleDeleteLessonNotes} onGenerateAnalysis={handleGenerateAnalysis} analysisLoadingBlockId={analysisLoadingBlockId} onUpdateGroups={handleUpdateGroupsForBlock} onUpdateGroupNotes={handleUpdateGroupNotesForBlock} showToast={showToast} masterContext={masterContext} onUpdateBlockStatus={handleUpdateBlockStatus} onAddLink={handleAddLinkForBlock} onDeleteLink={handleDeleteLinkForBlock} onUpdateCloudLink={handleUpdateBlockCloudLink} notebooks={notebooks} onAddNotebook={addNotebook} onUpdateLinkedNotebooks={handleUpdateBlockLinkedNotebooks} onAvviaLezione={handleAvviaLezione} onChiudiLezione={handleChiudiLezione} onAddMaterial={handleAddLessonMaterial} onRemoveMaterial={handleRemoveLessonMaterial} onSetAttendance={handleUpdateLiveAttendance} onAddEvaluation={handleAddLessonEvaluation} onRemoveEvaluation={handleRemoveLessonEvaluation} onAutoSaveNotes={handleAutoSaveLessonNotes} onGenerateLessonNoteAnalysis={handleGenerateLessonNoteAnalysis} onSaveClassroomUrl={handleSaveClassroomUrl} activities={allActivities} onUpdateActivity={handleUpdateActivity} onGenerateBriefing={handleGenerateBriefing} onAddObservation={handleAddActivityObservation} onRecordSubmission={handleRecordActivitySubmissionFull} onLaunchActivity={handleLaunchActivity} />,
             'classroom_trend': <ClassroomTrendView conversations={conversations} students={students} onClose={() => setView('lobby')} />,
@@ -465,7 +487,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} conversations={conversations} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
-            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} onAddActivity={handleAddActivity} />,
+            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} onAddActivity={handleAddActivity} onUpdateActivityMessages={handleUpdateActivityMessages} onUpdateActivityContent={handleUpdateActivityContent} />,
             'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onOpenImageGenerator={openImageModal} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} pendingFirstMessage={pendingFirstMessage} onConsumeFirstMessage={() => setPendingFirstMessage(null)} />
           }[currentView]
         }
@@ -549,7 +571,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
       />
 
       {notebookSuggestion && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out bg-gray-700 border border-gray-600 animate-fade-in-down">
+        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out bg-gray-700r border-gray-600 animate-fade-in-down">
             <div>
                 <p className="font-semibold">Contenuto preparato per NotebookLM!</p>
                 <p className="text-xs text-gray-300">Vuoi salvare il notebook in cui lavorerai?</p>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, TeachingMethodology, ActivityType, ActivityContext, ModuleDetails, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable } from '../types';
-import { ACTIVITY_TYPE_LABELS, ACTIVITY_CONTEXT_LABELS, COURSE_CONTENT_TYPE_LABELS, LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
+import type { BlockDetails, PlanningActionPayload, BlockSource, LessonType, TeachingMethodology, ModuleDetails, Activity, ActivityContesto, ContentBlock, Message } from '../types';
+import { COURSE_CONTENT_TYPE_LABELS, LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import MessageView from './MessageView';
@@ -10,14 +10,10 @@ import { ArrowDownTrayIcon, WebIcon, BookOpenIcon } from './Icons';
 import ModePills from './ModePills';
 import FontiDrawer from './FontiDrawer';
 
-const FORMA_LAVORO_LABELS: Record<ActivityFormaLavoro, string> = {
-    individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe',
-};
 const ATTIVITA_CONTESTO_LABELS: Record<ActivityContesto, string> = {
-    in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma',
-};
-const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = {
-    elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro',
+    in_aula: 'In aula',
+    misto: 'Misto',
+    autonoma: 'Autonoma',
 };
 
 // --- MAIN WORKSPACE VIEW ---
@@ -39,61 +35,70 @@ interface BlockWorkspaceViewProps {
     onRemoveFonte?: (fonteId: string) => void;
     onUpdateFonte?: (fonteId: string, patch: Partial<BlockSource>) => void;
     onPromoteFonte?: (url: string) => void;
-    // Attività lanciate
-    onAddActivity?: (title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => void;
+    // Attività del blocco (solo lettura — creazione avviene tramite form in activity mode)
     blockActivities?: Activity[];
     // FSL: derivato automaticamente in PlanningView, passato come booleano
     isFslActive?: boolean;
-    // Lab mode toggle: Lezione / Attività
+    // Lab mode — controllato da PlanningView
     labMode: 'lesson' | 'activity';
-    onLabModeChange: (mode: 'lesson' | 'activity') => void;
-    onCreateActivity?: (title: string, formaLavoro: ActivityFormaLavoro, contesto: ActivityContesto, deliverable: ActivityDeliverable) => void;
-    onUpdateActivity?: (activityId: string, updates: Partial<Activity>) => void;
+    // Attività selezionata nel laboratorio (Opzione A)
+    selectedActivity?: Activity;
+    isActivityLoading?: boolean;
+    onSendActivityMessage?: (content: string) => void;
+    onSaveActivityContent?: (content: ContentBlock[]) => void;
+    // Creazione nuova attività dal laboratorio (form semplificato)
+    onCreateActivityInLab?: (title: string, durationInBlocks: number, contesto: ActivityContesto) => void;
 }
 
-const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMessage, isLoading, highlightQuery, currentResultId, activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte, onAddActivity, blockActivities, isFslActive = false, labMode, onLabModeChange, onCreateActivity, onUpdateActivity }) => {
+const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({
+    block, onSendMessage, isLoading, highlightQuery, currentResultId,
+    activeTab, useGoogleSearch, onGoogleSearchChange, onShowConfirmation,
+    currentModeId, onModeChange,
+    onAddFonte, onRemoveFonte, onUpdateFonte, onPromoteFonte,
+    blockActivities, isFslActive = false,
+    labMode, selectedActivity, isActivityLoading = false,
+    onSendActivityMessage, onSaveActivityContent, onCreateActivityInLab,
+}) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isExportingHtml, setIsExportingHtml] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    // Attività form state — Step 8
-    const [isActivityFormOpen, setIsActivityFormOpen] = useState(false);
-    const [activityTitle, setActivityTitle] = useState('');
-    const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
-    const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
-    const [activityDescription, setActivityDescription] = useState('');
-    const [activityContext, setActivityContext] = useState<ActivityContext>('solo_in_classe');
-    // Master activity form state
-    const [masterTitle, setMasterTitle] = useState('');
-    const [masterFormaLavoro, setMasterFormaLavoro] = useState<ActivityFormaLavoro>('individuale');
-    const [masterContesto, setMasterContesto] = useState<ActivityContesto>('in_aula');
-    const [masterDeliverable, setMasterDeliverable] = useState<ActivityDeliverable>('elaborato');
-    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+    // Form creazione nuova attività (semplificato)
+    const [newActivityTitle, setNewActivityTitle] = useState('');
+    const [newActivityDuration, setNewActivityDuration] = useState(3);
+    const [newActivityContesto, setNewActivityContesto] = useState<ActivityContesto>('in_aula');
     const editorRef = useRef<HTMLDivElement>(null);
+    const activityEditorRef = useRef<HTMLDivElement>(null);
     const [isModuleExpanded, setIsModuleExpanded] = useState(false);
 
     const { contentUnits, moduleMap } = useProgettazioneCache();
 
     const prevMsgCountRef = useRef(0);
 
+    // Messaggi correnti: attività o blocco in base al mode
+    const activeMessages: Message[] = useMemo(() => {
+        if (labMode === 'activity' && selectedActivity) {
+            return selectedActivity.messages ?? [];
+        }
+        return block.messages ?? [];
+    }, [labMode, selectedActivity, block.messages]);
+
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
         if (!scrollContainer || highlightQuery) return;
-        const msgCount = block.messages?.length ?? 0;
+        const msgCount = activeMessages.length;
         const newMessageAdded = msgCount > prevMsgCountRef.current;
         prevMsgCountRef.current = msgCount;
-
         const isNearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
-        const shouldScroll = newMessageAdded || (isLoading && isNearBottom);
-
+        const shouldScroll = newMessageAdded || ((isLoading || isActivityLoading) && isNearBottom);
         if (shouldScroll) {
             const timer = setTimeout(() => {
                 scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
             }, 80);
             return () => clearTimeout(timer);
         }
-    }, [block.messages, isLoading, highlightQuery]);
+    }, [activeMessages, isLoading, isActivityLoading, highlightQuery]);
 
-    // URL estratti dalle fonti di grounding dei messaggi del blocco (prima del return condizionale)
+    // URL estratti dalle fonti di grounding dei messaggi del blocco
     const webliografiaRilevata = useMemo(() => {
         if (!block?.messages) return [];
         const uris = new Set<string>();
@@ -103,14 +108,13 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         return Array.from(uris);
     }, [block?.messages]);
 
-    // Trova l'unità didattica del Progetto Didattico corrispondente al blocco corrente
+    // Unità didattica del Progetto Didattico corrispondente al blocco
     const matchingUnit = useMemo(() =>
         contentUnits?.find(u => u.title === block?.module),
         [contentUnits, block?.module]
     );
 
-    // Trova i dettagli completi del modulo (Concetti Chiave, Competenze, Attività Chiave)
-    // disponibili solo per i MODULI (non UDA/FSL/EC) tramite moduleMap
+    // Dettagli completi del modulo (solo per MODULI)
     const matchingModule = useMemo((): ModuleDetails | null => {
         if (!block?.module || !moduleMap) return null;
         const entry = [...moduleMap.entries()].find(([key]) => key.includes(block.module!));
@@ -118,10 +122,13 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     }, [moduleMap, block?.module]);
 
     const mergedContentHtml = useMemo(() => {
-        return (block.contentBlocks || [])
-            .map(cb => cb.content)
-            .join('<hr class="page-break">');
+        return (block.contentBlocks || []).map(cb => cb.content).join('<hr class="page-break">');
     }, [block.contentBlocks]);
+
+    const activityMasterHtml = useMemo(() => {
+        if (!selectedActivity?.masterContent?.length) return '';
+        return selectedActivity.masterContent.map(cb => cb.content).join('<hr class="page-break">');
+    }, [selectedActivity?.masterContent]);
 
     const allSources = useMemo(() => {
         if (!block.messages) return [];
@@ -129,9 +136,7 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         block.messages.forEach(message => {
             if (message.sources) {
                 message.sources.forEach(source => {
-                    if (!sourcesMap.has(source.uri)) {
-                        sourcesMap.set(source.uri, source);
-                    }
+                    if (!sourcesMap.has(source.uri)) sourcesMap.set(source.uri, source);
                 });
             }
         });
@@ -142,21 +147,21 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
         onSendMessage('', undefined, { action: 'consolidate_and_update_content', newContent });
     }, [onSendMessage]);
 
+    const handleSaveActivityDocument = useCallback((html: string) => {
+        if (!onSaveActivityContent) return;
+        onSaveActivityContent([{ id: 'activity-master', content: html }]);
+    }, [onSaveActivityContent]);
+
     const handleAppendSources = useCallback(() => {
         if (!editorRef.current) return;
         if (editorRef.current.querySelector('#webliografia-master')) return;
-
         const sourcesHtml = `<hr id="webliografia-master"><h2>Webliografia</h2><ol>${allSources.map(source => `<li><a href="${source.uri}" target="_blank" rel="noopener noreferrer">${source.title || source.uri}</a></li>`).join('')}</ol>`;
         editorRef.current.innerHTML += sourcesHtml;
         handleSaveDocument(editorRef.current.innerHTML);
     }, [allSources, handleSaveDocument]);
 
     const handleExportHtml = useCallback(async () => {
-        if (!editorRef.current || !editorRef.current.innerHTML.trim()) {
-            console.warn("Editor content is empty, aborting HTML export.");
-            return;
-        }
-
+        if (!editorRef.current || !editorRef.current.innerHTML.trim()) return;
         setIsExportingHtml(true);
         try {
             const htmlContent = editorRef.current.innerHTML;
@@ -171,64 +176,35 @@ const BlockWorkspaceView: React.FC<BlockWorkspaceViewProps> = ({ block, onSendMe
     h1 { font-size: 2em; } h2 { font-size: 1.5em; } h3 { font-size: 1.17em; }
     blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; font-style: italic; color: #4b5563; }
     a { color: #2563eb; }
-    hr.page-break { border: 0; height: 1px; background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)); margin: 2em 0; }
+    hr.page-break { border: 0; height: 1px; background-image: linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(0,0,0,0)); margin: 2em 0; }
   </style>
 </head>
 <body>
 ${htmlContent}
 </body>
 </html>`;
-
             const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            const filename = `blocco_lezione_${block.day.toLowerCase().replace(/[^a-z0-9]/g, '_')}.html`;
-            link.download = filename;
-
+            link.download = `blocco_lezione_${block.day.toLowerCase().replace(/[^a-z0-9]/g, '_')}.html`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
             URL.revokeObjectURL(link.href);
         } catch (error) {
-            console.error("HTML export failed", error);
+            console.error('HTML export failed', error);
         } finally {
             setIsExportingHtml(false);
         }
     }, [block.day, block.objective]);
 
-    const handleSubmitActivity = useCallback(() => {
-        if (!activityTitle.trim() || !onAddActivity) return;
-        onAddActivity(activityTitle.trim(), activityType, activityDueInBlocks, activityDescription.trim() || undefined, activityContext);
-        setActivityTitle('');
-        setActivityType('produzione_scritta');
-        setActivityDueInBlocks(4);
-        setActivityDescription('');
-        setActivityContext('solo_in_classe');
-        setIsActivityFormOpen(false);
-    }, [activityTitle, activityType, activityDueInBlocks, activityDescription, activityContext, onAddActivity]);
-
-    const handleSubmitMasterActivity = useCallback(() => {
-        if (!masterTitle.trim() || !onCreateActivity) return;
-        onCreateActivity(masterTitle.trim(), masterFormaLavoro, masterContesto, masterDeliverable);
-        setMasterTitle('');
-        setMasterFormaLavoro('individuale');
-        setMasterContesto('in_aula');
-        setMasterDeliverable('elaborato');
-    }, [masterTitle, masterFormaLavoro, masterContesto, masterDeliverable, onCreateActivity]);
-
-    // Wrap onSendMessage to inject activity context hint when in activity mode
-    const wrappedOnSendMessage = useCallback((content: string, file?: File, payload?: PlanningActionPayload) => {
-        if (labMode === 'activity' && content && !payload) {
-            const activeActivity = blockActivities?.find(a => a.id === selectedActivityId) ?? blockActivities?.[0];
-            const prefix = activeActivity
-                ? `[Contesto: sto lavorando sul master dell'attività "${activeActivity.title}"]\n\n`
-                : `[Contesto: sto progettando un'attività per questo blocco]\n\n`;
-            onSendMessage(prefix + content, file, payload);
-        } else {
-            onSendMessage(content, file, payload);
-        }
-    }, [labMode, blockActivities, selectedActivityId, onSendMessage]);
+    const handleSubmitNewActivity = useCallback(() => {
+        if (!newActivityTitle.trim() || !onCreateActivityInLab) return;
+        onCreateActivityInLab(newActivityTitle.trim(), newActivityDuration, newActivityContesto);
+        setNewActivityTitle('');
+        setNewActivityDuration(3);
+        setNewActivityContesto('in_aula');
+    }, [newActivityTitle, newActivityDuration, newActivityContesto, onCreateActivityInLab]);
 
     const editorToolbarActions = useMemo(() => (
         <button
@@ -243,20 +219,26 @@ ${htmlContent}
     ), [handleExportHtml, isExportingHtml]);
 
     if (!block) {
-         return (
+        return (
             <div className="flex-1 flex items-center justify-center text-gray-500">
                 Seleziona un blocco per iniziare.
             </div>
         );
     }
 
+    // Determina il send handler e lo stato di loading correnti
+    const effectiveSendMessage = labMode === 'activity' && selectedActivity && onSendActivityMessage
+        ? (content: string) => onSendActivityMessage(content)
+        : (content: string, file?: File, payload?: PlanningActionPayload) => onSendMessage(content, file, payload);
+    const effectiveIsLoading = labMode === 'activity' ? isActivityLoading : isLoading;
+
     return (
         <div className="relative flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
 
             {activeTab === 'laboratorio' && (
                 <>
-                    {/* Pannello info blocco: accordion aperto di default con modulo e obiettivo */}
-                    {(block.module || block.objective || onAddFonte) && (
+                    {/* Pannello info blocco (solo in lesson mode) */}
+                    {labMode === 'lesson' && (block.module || block.objective || onAddFonte) && (
                         <details className="flex-shrink-0 border-b border-gray-800/40 bg-[#0D1117] group" open>
                             <summary className="list-none flex items-center gap-2 px-4 py-1.5 cursor-pointer select-none hover:bg-gray-800/30 transition-colors">
                                 <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
@@ -271,26 +253,6 @@ ${htmlContent}
                                         <span className="text-[10px] font-mono text-sky-400/60 truncate flex-shrink min-w-0">{block.module}</span>
                                     ) : (
                                         <span className="text-[11px] text-gray-600 italic">Dettagli blocco</span>
-                                    )}
-                                    {blockActivities && blockActivities.length > 0 && (
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            {blockActivities.map(a => {
-                                                const statusColor =
-                                                    a.status === 'consegnata' ? 'text-emerald-400/70 border-emerald-500/20' :
-                                                    a.status === 'scaduta'    ? 'text-gray-500 border-gray-600/30' :
-                                                    a.status === 'in_scadenza'? 'text-amber-400/70 border-amber-500/20' :
-                                                                                 'text-rose-400/70 border-rose-500/20';
-                                                return (
-                                                    <span key={a.id} className={`flex items-center gap-1 text-[9px] font-mono border rounded px-1.5 py-0.5 ${statusColor}`}>
-                                                        <span>↗</span>
-                                                        <span className="max-w-[100px] truncate">{a.title}</span>
-                                                        <span className="opacity-60">· {ACTIVITY_TYPE_LABELS[a.type]}</span>
-                                                        {a.status === 'consegnata' && <span>✓</span>}
-                                                        {a.status === 'scaduta' && <span>⚑</span>}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -316,8 +278,6 @@ ${htmlContent}
                             </summary>
 
                             <div className="px-4 pb-2.5 pt-1 flex flex-col gap-2">
-
-                                {/* Contesto modulo — espandibile con un click */}
                                 {matchingUnit && (matchingModule || matchingUnit.role || matchingUnit.significance) && (
                                     <div>
                                         <button
@@ -334,7 +294,6 @@ ${htmlContent}
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                             </svg>
                                         </button>
-
                                         {isModuleExpanded && (
                                             <div className="mt-2 flex flex-col gap-2 border-l border-gray-700/40 pl-3 ml-0.5">
                                                 {matchingUnit.role && (
@@ -354,9 +313,7 @@ ${htmlContent}
                                                         <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-1">Concetti Chiave</p>
                                                         <div className="flex flex-wrap gap-1">
                                                             {matchingModule.sintonizzazione.map((p, i) => (
-                                                                <span key={i} className="text-[9px] font-mono bg-gray-800/60 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40">
-                                                                    {p.name}
-                                                                </span>
+                                                                <span key={i} className="text-[9px] font-mono bg-gray-800/60 text-gray-400 rounded px-1.5 py-0.5 border border-gray-700/40">{p.name}</span>
                                                             ))}
                                                         </div>
                                                     </div>
@@ -391,15 +348,12 @@ ${htmlContent}
                                         )}
                                     </div>
                                 )}
-
-                                {/* Obiettivo didattico */}
                                 {block.objective && (
                                     <div>
                                         <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-gray-500 mb-0.5">Obiettivo</p>
                                         <p className="text-[11px] text-gray-400 leading-relaxed">{block.objective}</p>
                                     </div>
                                 )}
-                                {/* Come · Approccio · Contesto — coerenza con Progettazione */}
                                 {(block.tipologia || block.metodologia || isFslActive || block.hasExternalExpert || block.isFuoriAula) && (
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         {block.tipologia && (
@@ -415,249 +369,151 @@ ${htmlContent}
                                         {(block.tipologia || block.metodologia) && (isFslActive || block.hasExternalExpert || block.isFuoriAula) && (
                                             <span className="w-px h-3 bg-gray-700/50" />
                                         )}
-                                        {isFslActive && (
-                                            <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5">FSL</span>
-                                        )}
+                                        {isFslActive && <span className="text-[9px] font-mono text-sky-400/70 border border-sky-500/20 rounded px-1.5 py-0.5">FSL</span>}
                                         {block.hasExternalExpert && (
-                                            <span className="text-[9px] font-mono text-amber-400/70 border border-amber-500/20 rounded px-1.5 py-0.5" title={block.externalExpertName || 'Esperto esterno'}>ESP{block.externalExpertName ? ` · ${block.externalExpertName}` : ''}</span>
+                                            <span className="text-[9px] font-mono text-amber-400/70 border border-amber-500/20 rounded px-1.5 py-0.5" title={block.externalExpertName || 'Esperto esterno'}>
+                                                ESP{block.externalExpertName ? ` · ${block.externalExpertName}` : ''}
+                                            </span>
                                         )}
                                         {block.isFuoriAula && (
-                                            <span className="text-[9px] font-mono text-teal-400/70 border border-teal-500/20 rounded px-1.5 py-0.5" title={block.luogo || 'Fuori aula'}>FUORI{block.luogo ? ` · ${block.luogo}` : ''}</span>
+                                            <span className="text-[9px] font-mono text-teal-400/70 border border-teal-500/20 rounded px-1.5 py-0.5" title={block.luogo || 'Fuori aula'}>
+                                                FUORI{block.luogo ? ` · ${block.luogo}` : ''}
+                                            </span>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </details>
                     )}
-                    {/* ── Lab mode toggle: Lezione / Attività ─────────────────── */}
-                    <div className="flex-shrink-0 px-4 pt-2 pb-2 flex items-center gap-3 border-b border-gray-800/30">
-                        <div className="flex items-center bg-gray-900/60 rounded-md p-0.5">
-                            <button
-                                onClick={() => onLabModeChange('lesson')}
-                                className={`px-2.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
-                                    labMode === 'lesson' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
-                                }`}
-                            >
-                                Lezione
-                            </button>
-                            <button
-                                onClick={() => onLabModeChange('activity')}
-                                className={`px-2.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
-                                    labMode === 'activity' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
-                                }`}
-                            >
-                                Attività
-                            </button>
-                        </div>
-                        {/* Activity pills selector — visible only in activity mode when activities exist */}
-                        {labMode === 'activity' && blockActivities && blockActivities.length > 0 && (
-                            <div className="flex items-center gap-1 flex-wrap">
-                                {blockActivities.map(a => (
-                                    <button
-                                        key={a.id}
-                                        onClick={() => setSelectedActivityId(a.id)}
-                                        className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono transition-colors ${
-                                            (selectedActivityId ?? blockActivities[0]?.id) === a.id
-                                                ? 'bg-gray-700 text-white'
-                                                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50'
-                                        }`}
-                                    >
-                                        {a.title}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
 
-                    {/* ── Activity mode: mini-form quando non ci sono attività ── */}
-                    {labMode === 'activity' && (!blockActivities || blockActivities.length === 0) && (
-                        <div className="flex-shrink-0 px-4 py-3 border-b border-gray-800/40 bg-gray-900/30">
-                            <p className="text-[10px] font-mono text-gray-500 mb-2.5">↗ Nuova attività master</p>
+                    {/* Pannello info attività selezionata (activity mode) */}
+                    {labMode === 'activity' && selectedActivity && (
+                        <div className="flex-shrink-0 border-b border-rose-900/30 bg-rose-950/20 px-4 py-2 flex items-center gap-3 min-w-0">
+                            <span className="text-[9px] font-mono tracking-[0.12em] uppercase text-rose-700/70 flex-shrink-0">Attività</span>
+                            <span className="text-sm font-display font-medium text-rose-300/90 truncate">{selectedActivity.title}</span>
+                            {selectedActivity.durationInBlocks != null && (
+                                <span className="text-[9px] font-mono text-rose-700/60 flex-shrink-0">{selectedActivity.durationInBlocks} blocchi</span>
+                            )}
+                            {selectedActivity.contesto && (
+                                <span className="text-[9px] font-mono text-rose-700/60 flex-shrink-0 border border-rose-800/40 rounded px-1.5 py-0.5">
+                                    {ATTIVITA_CONTESTO_LABELS[selectedActivity.contesto] ?? selectedActivity.contesto}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Form creazione nuova attività (activity mode, nessuna attività selezionata/esistente) */}
+                    {labMode === 'activity' && !selectedActivity && onCreateActivityInLab && (
+                        <div className="flex-shrink-0 border-b border-rose-900/30 bg-rose-950/20 px-4 py-3 space-y-2.5">
+                            <p className="text-[10px] font-mono text-rose-600/70 uppercase tracking-[0.12em]">Nuova attività</p>
                             <input
                                 type="text"
-                                value={masterTitle}
-                                onChange={e => setMasterTitle(e.target.value)}
-                                placeholder="Titolo dell'attività..."
-                                className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/40 mb-2"
+                                value={newActivityTitle}
+                                onChange={e => setNewActivityTitle(e.target.value)}
+                                placeholder="Titolo dell'attività…"
+                                className="w-full bg-transparent border border-rose-800/40 rounded px-2.5 py-1.5 text-sm text-white placeholder-rose-800/60 focus:outline-none focus:border-rose-600/50"
                                 autoFocus
-                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitMasterActivity(); }}}
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && newActivityTitle.trim()) { e.preventDefault(); handleSubmitNewActivity(); }}}
                             />
-                            {/* Forma di lavoro */}
-                            <div className="flex items-center gap-1 flex-wrap mb-2">
-                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Forma:</span>
-                                {(Object.keys(FORMA_LAVORO_LABELS) as ActivityFormaLavoro[]).map(k => (
-                                    <button key={k} onClick={() => setMasterFormaLavoro(k)}
-                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
-                                            masterFormaLavoro === k
-                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
-                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
-                                        }`}>
-                                        {FORMA_LAVORO_LABELS[k]}
-                                    </button>
-                                ))}
-                            </div>
-                            {/* Contesto */}
-                            <div className="flex items-center gap-1 flex-wrap mb-2">
-                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Contesto:</span>
-                                {(Object.keys(ATTIVITA_CONTESTO_LABELS) as ActivityContesto[]).map(k => (
-                                    <button key={k} onClick={() => setMasterContesto(k)}
-                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
-                                            masterContesto === k
-                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
-                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
-                                        }`}>
-                                        {ATTIVITA_CONTESTO_LABELS[k]}
-                                    </button>
-                                ))}
-                            </div>
-                            {/* Deliverable */}
-                            <div className="flex items-center gap-1 flex-wrap mb-3">
-                                <span className="text-[10px] font-mono text-gray-500 mr-1 flex-shrink-0">Deliverable:</span>
-                                {(Object.keys(DELIVERABLE_LABELS) as ActivityDeliverable[]).map(k => (
-                                    <button key={k} onClick={() => setMasterDeliverable(k)}
-                                        className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
-                                            masterDeliverable === k
-                                                ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
-                                                : 'text-gray-600 hover:text-gray-400 border border-transparent'
-                                        }`}>
-                                        {DELIVERABLE_LABELS[k]}
-                                    </button>
-                                ))}
+                            <div className="flex items-center gap-3 flex-wrap">
+                                {/* Durata */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-mono text-rose-700/70">Durata:</span>
+                                    <input
+                                        type="number" min={1} max={30} value={newActivityDuration}
+                                        onChange={e => setNewActivityDuration(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                                        className="w-12 bg-transparent border border-rose-800/40 rounded px-1.5 py-0.5 text-xs text-white text-center focus:outline-none focus:border-rose-600/50"
+                                    />
+                                    <span className="text-[10px] font-mono text-rose-700/70">blocchi</span>
+                                </div>
+                                {/* Contesto */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-[10px] font-mono text-rose-700/70 mr-1">Dove:</span>
+                                    {(Object.keys(ATTIVITA_CONTESTO_LABELS) as ActivityContesto[]).map(k => (
+                                        <button
+                                            key={k}
+                                            onClick={() => setNewActivityContesto(k)}
+                                            className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
+                                                newActivityContesto === k
+                                                    ? 'bg-rose-800/50 text-rose-300 border border-rose-700/50'
+                                                    : 'text-rose-700/50 hover:text-rose-400 border border-transparent'
+                                            }`}
+                                        >
+                                            {ATTIVITA_CONTESTO_LABELS[k]}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <button
-                                onClick={handleSubmitMasterActivity}
-                                disabled={!masterTitle.trim() || !onCreateActivity}
-                                className="px-3 py-1 text-[10px] font-mono text-purple-300 border border-purple-500/30 rounded hover:bg-purple-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={handleSubmitNewActivity}
+                                disabled={!newActivityTitle.trim()}
+                                className="px-3 py-1 text-[10px] font-mono text-rose-300 border border-rose-700/40 rounded hover:bg-rose-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Crea attività
                             </button>
                         </div>
                     )}
 
+                    {/* Area messaggi */}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
-                        <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
-                            {(block.messages || []).filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
-                                <div key={msg.id} id={`message-block-${block.id}-${msg.id}`}>
-                                    <MessageView
-                                        message={msg}
-                                        onShowToast={() => {}}
-                                        isLastMessage={index === (block.messages?.length || 0) - 1}
-                                        onSendMessage={wrappedOnSendMessage}
-                                        highlightQuery={highlightQuery}
-                                        isCurrentResult={msg.id === currentResultId}
-                                        onShowConfirmation={onShowConfirmation}
-                                    />
+                        {labMode === 'activity' && !selectedActivity ? (
+                            // Activity mode ma nessuna attività selezionata/creata
+                            <div className="flex items-center justify-center h-full text-center px-8">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-rose-700/50 font-mono">
+                                        {blockActivities && blockActivities.length > 0
+                                            ? 'Seleziona un\'attività dai pill in alto per aprire il laboratorio.'
+                                            : 'Crea una nuova attività per iniziare a lavorarci con Ada.'
+                                        }
+                                    </p>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                    <footer className="flex-shrink-0 px-6 pb-5 pt-3 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
-                        <div className="max-w-3xl mx-auto">
-                            {/* Form inline "Lancia attività" */}
-                            {isActivityFormOpen && onAddActivity && (
-                                <div className="mb-3 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3">
-                                    <p className="text-[10px] font-mono text-rose-400/80 mb-2">↗ Nuova attività</p>
-                                    <input
-                                        type="text"
-                                        value={activityTitle}
-                                        onChange={e => setActivityTitle(e.target.value)}
-                                        placeholder="Titolo dell'attività..."
-                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 mb-2"
-                                        autoFocus
-                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitActivity(); } }}
-                                    />
-                                    <div className="flex items-center gap-1 flex-wrap mb-2">
-                                        {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
-                                            <button
-                                                key={t}
-                                                onClick={() => setActivityType(t)}
-                                                className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
-                                                    activityType === t
-                                                        ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
-                                                        : 'text-gray-600 hover:text-gray-400 border border-transparent'
-                                                }`}
-                                            >
-                                                {ACTIVITY_TYPE_LABELS[t]}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-[10px] font-mono text-gray-500">Scadenza:</span>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={20}
-                                            value={activityDueInBlocks}
-                                            onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                                            className="w-12 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center"
+                            </div>
+                        ) : (
+                            <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+                                {activeMessages.filter(msg => (msg.content || msg.attachment || msg.generatedImages)).map((msg, index) => (
+                                    <div
+                                        key={msg.id}
+                                        id={labMode === 'lesson' ? `message-block-${block.id}-${msg.id}` : `message-activity-${selectedActivity?.id}-${msg.id}`}
+                                    >
+                                        <MessageView
+                                            message={msg}
+                                            onShowToast={() => {}}
+                                            isLastMessage={index === activeMessages.length - 1}
+                                            onSendMessage={labMode === 'lesson' ? onSendMessage : undefined}
+                                            highlightQuery={labMode === 'lesson' ? highlightQuery : undefined}
+                                            isCurrentResult={labMode === 'lesson' && msg.id === currentResultId}
+                                            onShowConfirmation={onShowConfirmation}
                                         />
-                                        <span className="text-[10px] font-mono text-gray-500">blocchi</span>
                                     </div>
-                                    <div className="flex items-center gap-1 flex-wrap mb-2">
-                                        <span className="text-[10px] font-mono text-gray-500 mr-1">Dove:</span>
-                                        {(['solo_in_classe', 'classe_e_casa', 'solo_a_casa'] as ActivityContext[]).map(ctx => (
-                                            <button
-                                                key={ctx}
-                                                onClick={() => setActivityContext(ctx)}
-                                                className={`px-2 py-0.5 text-[10px] font-mono rounded-full transition-colors ${
-                                                    activityContext === ctx
-                                                        ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40'
-                                                        : 'text-gray-600 hover:text-gray-400 border border-transparent'
-                                                }`}
-                                            >
-                                                {ACTIVITY_CONTEXT_LABELS[ctx]}
-                                            </button>
-                                        ))}
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer con ChatInput */}
+                    {(labMode === 'lesson' || (labMode === 'activity' && selectedActivity)) && (
+                        <footer className="flex-shrink-0 px-6 pb-5 pt-3 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
+                            <div className="max-w-3xl mx-auto">
+                                {labMode === 'lesson' && currentModeId && onModeChange && (
+                                    <div className="mb-2">
+                                        <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
                                     </div>
-                                    <textarea
-                                        value={activityDescription}
-                                        onChange={e => setActivityDescription(e.target.value)}
-                                        placeholder="Istruzioni per gli studenti (opzionale)"
-                                        rows={2}
-                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 resize-none mb-2"
-                                    />
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={handleSubmitActivity}
-                                            disabled={!activityTitle.trim()}
-                                            className="px-3 py-1 text-[10px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            Lancia
-                                        </button>
-                                        <button
-                                            onClick={() => setIsActivityFormOpen(false)}
-                                            className="px-3 py-1 text-[10px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors"
-                                        >
-                                            Annulla
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                            {/* Riga ModePills + pulsante Lancia attività */}
-                            {!isActivityFormOpen && (
-                                <div className="mb-2 flex items-center justify-between min-h-[22px]">
-                                    {currentModeId && onModeChange
-                                        ? <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
-                                        : <div />
-                                    }
-                                    {onAddActivity && (
-                                        <button
-                                            onClick={() => setIsActivityFormOpen(true)}
-                                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono text-rose-400/70 border border-rose-500/20 rounded-lg hover:bg-rose-500/10 hover:border-rose-400/35 transition-colors ml-2 flex-shrink-0"
-                                        >
-                                            ↗ Lancia attività
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                            <ChatInput
-                                onSendMessage={wrappedOnSendMessage}
-                                isLoading={isLoading}
-                                onShowToast={() => {}}
-                            />
-                        </div>
-                    </footer>
-                    {/* FontiDrawer — pannello slide-in assoluto, si sovrappone all'area Laboratorio */}
+                                )}
+                                {labMode === 'activity' && selectedActivity && (
+                                    <p className="text-[9px] font-mono text-rose-700/50 mb-2">
+                                        ↗ chat attività · Ada risponderà nel contesto di "{selectedActivity.title}"
+                                    </p>
+                                )}
+                                <ChatInput
+                                    onSendMessage={effectiveSendMessage as any}
+                                    isLoading={effectiveIsLoading}
+                                    onShowToast={() => {}}
+                                />
+                            </div>
+                        </footer>
+                    )}
+
+                    {/* FontiDrawer */}
                     {onAddFonte && (
                         <FontiDrawer
                             isOpen={isDrawerOpen}
@@ -673,7 +529,8 @@ ${htmlContent}
                 </>
             )}
 
-            {activeTab === 'contenutoMaster' && (
+            {/* ── Tab Contenuto Master / Master Attività ── */}
+            {activeTab === 'contenutoMaster' && labMode === 'lesson' && (
                 <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-gray-800">
                     <DocumentEditor
                         ref={editorRef}
@@ -685,63 +542,34 @@ ${htmlContent}
                         toolbarChildren={editorToolbarActions}
                         includeAlignmentInToolbar={true}
                     />
-                    {/* Sezione Fonti — visibile solo se block.fonti contiene almeno una voce */}
                     {(block.fonti?.length ?? 0) > 0 && (
                         <div className="flex-shrink-0 px-8 py-5 border-t border-gray-700/50">
-                            <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 mb-3">
-                                Fonti
-                            </p>
+                            <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 mb-3">Fonti</p>
                             <div className="flex flex-col gap-y-2">
                                 {block.fonti!.map(fonte => (
                                     <div key={fonte.id} className="flex items-start gap-2">
-                                        {/* Icona tipo */}
                                         <span className="mt-0.5 flex-shrink-0 text-gray-500">
-                                            {fonte.type === 'url' && (
-                                                <WebIcon className="h-3.5 w-3.5" />
-                                            )}
-                                            {fonte.type === 'pdf' && (
-                                                <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-                                            )}
-                                            {fonte.type === 'note' && (
-                                                <BookOpenIcon className="h-3.5 w-3.5" />
-                                            )}
+                                            {fonte.type === 'url' && <WebIcon className="h-3.5 w-3.5" />}
+                                            {fonte.type === 'pdf' && <ArrowDownTrayIcon className="h-3.5 w-3.5" />}
+                                            {fonte.type === 'note' && <BookOpenIcon className="h-3.5 w-3.5" />}
                                         </span>
-                                        {/* Contenuto */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <span className="text-sm text-gray-300 truncate">
-                                                    {fonte.title}
-                                                </span>
+                                                <span className="text-sm text-gray-300 truncate">{fonte.title}</span>
                                                 {fonte.origin === 'promoted' && (
-                                                    <span className="text-[9px] font-mono bg-gray-800 text-gray-500 rounded px-1 flex-shrink-0">
-                                                        rilevata
-                                                    </span>
+                                                    <span className="text-[9px] font-mono bg-gray-800 text-gray-500 rounded px-1 flex-shrink-0">rilevata</span>
                                                 )}
                                             </div>
-                                            {/* Dettaglio secondario per tipo */}
                                             {fonte.type === 'url' && fonte.url && (
-                                                <a
-                                                    href={fonte.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs text-sky-400/70 hover:text-sky-300 underline-offset-2 underline break-all"
-                                                >
-                                                    {fonte.url}
-                                                </a>
+                                                <a href={fonte.url} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-400/70 hover:text-sky-300 underline-offset-2 underline break-all">{fonte.url}</a>
                                             )}
                                             {fonte.type === 'note' && fonte.content && (
-                                                <p className="text-xs text-gray-500 italic">
-                                                    {fonte.content.slice(0, 80)}{fonte.content.length > 80 ? '…' : ''}
-                                                </p>
+                                                <p className="text-xs text-gray-500 italic">{fonte.content.slice(0, 80)}{fonte.content.length > 80 ? '…' : ''}</p>
                                             )}
                                             {fonte.type === 'pdf' && (
                                                 <p className="text-xs text-gray-500">
                                                     {fonte.fileName ?? ''}
-                                                    {fonte.fileSize != null && (
-                                                        <span className="ml-1">
-                                                            ({(fonte.fileSize / 1024).toFixed(0)} KB)
-                                                        </span>
-                                                    )}
+                                                    {fonte.fileSize != null && <span className="ml-1">({(fonte.fileSize / 1024).toFixed(0)} KB)</span>}
                                                 </p>
                                             )}
                                         </div>
@@ -750,6 +578,33 @@ ${htmlContent}
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* ── Master Attività ── */}
+            {activeTab === 'contenutoMaster' && labMode === 'activity' && selectedActivity && (
+                <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-gray-800">
+                    <div className="flex-shrink-0 px-6 pt-3 pb-2 border-b border-rose-900/30 bg-rose-950/10">
+                        <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-rose-700/70">
+                            Master — {selectedActivity.title}
+                        </p>
+                    </div>
+                    <DocumentEditor
+                        ref={activityEditorRef}
+                        initialContent={activityMasterHtml}
+                        onSave={handleSaveActivityDocument}
+                        mode="html"
+                        isEditable={true}
+                        className=""
+                        includeAlignmentInToolbar={true}
+                    />
+                </div>
+            )}
+
+            {/* Fallback: activity mode + master tab ma nessuna attività selezionata */}
+            {activeTab === 'contenutoMaster' && labMode === 'activity' && !selectedActivity && (
+                <div className="flex-1 flex items-center justify-center text-rose-700/40 text-sm font-mono">
+                    Seleziona un'attività per accedere al suo master.
                 </div>
             )}
         </div>

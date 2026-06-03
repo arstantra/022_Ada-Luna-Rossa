@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
-import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, LessonType, Activity, ActivityType, ActivityContext, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable } from '../types';
+import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, Activity, ActivityContesto, ContentBlock, Message } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
 import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
@@ -8,6 +8,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { getBlockPlanningStatus, getExactDateForBlock, isWeekInFslPeriod } from '../utils';
 import BlockEditModal from './BlockEditModal';
 import { LESSON_TYPE_LABELS } from '../constants';
+import * as GeminiService from '../services/gemini';
 
 const TIPOLOGIA_COLORS: Record<string, string> = {
     frontale_teorica:   'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
@@ -56,13 +57,17 @@ interface PlanningViewProps {
   currentModeId?: string;
   onModeChange?: (modeId: string) => void;
   onAddActivity?: (activity: Omit<Activity, 'id'>) => void;
+  onUpdateActivityMessages?: (activityId: string, messages: Message[]) => void;
+  onUpdateActivityContent?: (activityId: string, content: ContentBlock[]) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddActivity }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddActivity, onUpdateActivityMessages, onUpdateActivityContent }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
     const [labMode, setLabMode] = useState<'lesson' | 'activity'>('lesson');
+    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+    const [isActivityLoading, setIsActivityLoading] = useState(false);
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -135,9 +140,10 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         }
     }, [initialTab, onInitialTabConsumed]);
 
-    // Reset labMode to 'lesson' whenever the active block changes
+    // Reset labMode e selectedActivity quando cambia il blocco attivo
     useEffect(() => {
         setLabMode('lesson');
+        setSelectedActivityId(null);
     }, [weekPlan?.activeBlockIndex]);
 
     // --- Hooks moved above conditional returns (React Rules of Hooks) ---
@@ -186,51 +192,87 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
         handleUpdateBlockDetails({ fonti: [...(activeBlock?.fonti ?? []), promoted] });
     }, [activeBlock?.fonti, handleUpdateBlockDetails]);
 
-    const handleAddActivity = useCallback((title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => {
-        if (!weekPlan || !activeBlock || !onAddActivity) return;
-        onAddActivity({
-            title,
-            type,
-            context,
-            launchBlockId: activeBlock.id,
-            launchWeekNumber: weekPlan.weekNumber,
-            launchBlockIndex: weekPlan.activeBlockIndex,
-            dueInBlocks,
-            description,
-            status: 'in_corso',
-        });
-    }, [weekPlan, activeBlock, onAddActivity]);
-
-    const handleCreateMasterActivity = useCallback((
-        title: string,
-        formaLavoro: ActivityFormaLavoro,
-        contesto: ActivityContesto,
-        deliverable: ActivityDeliverable,
-    ) => {
-        if (!weekPlan || !activeBlock || !onAddActivity) return;
-        onAddActivity({
-            title,
-            type: 'altro',
-            formaLavoro,
-            contesto,
-            deliverable,
-            blockId: activeBlock.id,
-            weekNumber: weekPlan.weekNumber,
-            launchBlockId: activeBlock.id,
-            launchWeekNumber: weekPlan.weekNumber,
-            launchBlockIndex: weekPlan.activeBlockIndex,
-            dueInBlocks: 0,
-            status: 'in_corso',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        } as any);
-    }, [weekPlan, activeBlock, onAddActivity]);
 
     // Attività lanciate dal blocco attivo
     const activeBlockActivities = useMemo(() => {
         if (!activeBlock) return [];
         return (conversation.activities ?? []).filter(a => a.launchBlockId === activeBlock.id);
     }, [activeBlock, conversation.activities]);
+
+    // Attività selezionata nel laboratorio
+    const selectedActivity = useMemo(() => {
+        if (!selectedActivityId) return null;
+        return activeBlockActivities.find(a => a.id === selectedActivityId) ?? null;
+    }, [selectedActivityId, activeBlockActivities]);
+
+    // Crea nuova attività nel laboratorio (campi semplificati: titolo + durata + contesto)
+    const handleCreateActivityInLab = useCallback((title: string, durationInBlocks: number, contesto: ActivityContesto) => {
+        if (!weekPlan || !activeBlock || !onAddActivity) return;
+        const newId = crypto.randomUUID();
+        onAddActivity({
+            id: newId,
+            title,
+            durationInBlocks,
+            contesto,
+            blockId: activeBlock.id,
+            weekNumber: weekPlan.weekNumber,
+            launchBlockId: activeBlock.id,
+            launchWeekNumber: weekPlan.weekNumber,
+            launchBlockIndex: weekPlan.activeBlockIndex,
+            objectiveLink: activeBlock.objective?.trim() || undefined,
+            status: 'progettata',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        } as any);
+        // Seleziona la nuova attività dopo la creazione (sarà disponibile al prossimo render)
+        setSelectedActivityId(newId);
+        setLabMode('activity');
+    }, [weekPlan, activeBlock, onAddActivity]);
+
+    // Invia messaggio nel canale chat dell'attività
+    const handleSendActivityMessage = useCallback(async (content: string) => {
+        if (!selectedActivity || !onUpdateActivityMessages) return;
+        const userMsg: Message = { id: `msg-user-${Date.now()}`, role: 'user', content };
+        const aiPlaceholder: Message = { id: `msg-ai-${Date.now() + 1}`, role: 'assistant', content: '…' };
+        const currentMessages = selectedActivity.messages ?? [];
+        const withUser = [...currentMessages, userMsg, aiPlaceholder];
+        onUpdateActivityMessages(selectedActivity.id, withUser);
+        setIsActivityLoading(true);
+        try {
+            const activityContext = `# ATTIVITÀ IN PROGETTAZIONE
+Titolo: ${selectedActivity.title}
+Durata: ${selectedActivity.durationInBlocks != null ? `${selectedActivity.durationInBlocks} blocchi` : 'non definita'}
+Dove si svolge: ${selectedActivity.contesto ?? 'in aula'}
+${selectedActivity.objectiveLink ? `Obiettivo collegato: ${selectedActivity.objectiveLink}` : ''}
+${selectedActivity.description ? `Descrizione: ${selectedActivity.description}` : ''}
+
+Stai aiutando il docente a progettare il briefing e il contenuto master di questa attività. Fornisci idee, strutture, testi pronti all'uso.`;
+            const stream = await GeminiService.streamChatResponse(
+                currentMessages, content, undefined, masterContext,
+                masterContext.currentModeId, false, [], [], activityContext,
+            );
+            let accumulated = '';
+            for await (const chunk of stream) {
+                accumulated += chunk.text ?? '';
+                onUpdateActivityMessages(selectedActivity.id, [
+                    ...currentMessages, userMsg, { ...aiPlaceholder, content: accumulated },
+                ]);
+            }
+        } catch (e) {
+            const error = e instanceof Error ? e.message : 'Errore sconosciuto';
+            onUpdateActivityMessages(selectedActivity.id, [
+                ...currentMessages, userMsg, { ...aiPlaceholder, content: `**Errore:** ${error}` },
+            ]);
+        } finally {
+            setIsActivityLoading(false);
+        }
+    }, [selectedActivity, onUpdateActivityMessages, masterContext]);
+
+    // Salva il contenuto master dell'attività
+    const handleSaveActivityContent = useCallback((html: string) => {
+        if (!selectedActivity || !onUpdateActivityContent) return;
+        onUpdateActivityContent(selectedActivity.id, [{ id: 'activity-master', content: html }]);
+    }, [selectedActivity, onUpdateActivityContent]);
 
     // Search Logic
     const handleCloseSearch = useCallback(() => {
@@ -313,7 +355,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
 
                         {/* Zona C — toggle tab + azioni contestuali + X */}
                         <div className="flex items-center gap-1 flex-shrink-0">
-                            {/* Tab toggle — sempre visibile */}
+                            {/* Tab toggle — etichette dinamiche in base a labMode */}
                             <div className="flex items-center bg-gray-800/80 rounded-md p-0.5 border border-gray-700/40 mr-1">
                                 <button
                                     onClick={() => setActiveWorkspaceTab('laboratorio')}
@@ -321,7 +363,9 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                                         ${activeWorkspaceTab === 'laboratorio' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
                                 >
                                     <SparklesIcon className="h-3 w-3" />
-                                    Laboratorio
+                                    {labMode === 'activity' && selectedActivity ? (
+                                        <span className="max-w-[90px] truncate">{selectedActivity.title}</span>
+                                    ) : 'Laboratorio'}
                                 </button>
                                 <button
                                     onClick={() => setActiveWorkspaceTab('contenutoMaster')}
@@ -329,7 +373,7 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                                         ${activeWorkspaceTab === 'contenutoMaster' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-200'}`}
                                 >
                                     <BookOpenIcon className="h-3 w-3" />
-                                    Contenuto
+                                    {labMode === 'activity' && selectedActivity ? 'Master Attività' : 'Contenuto'}
                                 </button>
                             </div>
 
@@ -379,8 +423,28 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                         </div>
                     </div>
 
-                    {/* Riga 2: pill blocchi — full width, sempre visibile */}
-                    <div className="flex items-center gap-1 px-5 pb-2">
+                    {/* Riga 2: toggle Lezione/Attività + pill blocchi (+ pill attività in activity mode) */}
+                    <div className="flex items-center gap-2 px-5 pb-2 flex-wrap">
+                        {/* Toggle Lezione / Attività */}
+                        {onAddActivity && (
+                            <div className="flex items-center bg-gray-900/60 rounded-md p-0.5 flex-shrink-0">
+                                <button
+                                    onClick={() => { setLabMode('lesson'); setSelectedActivityId(null); }}
+                                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                                        labMode === 'lesson' ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                >Lezione</button>
+                                <button
+                                    onClick={() => setLabMode('activity')}
+                                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                                        labMode === 'activity' ? 'bg-rose-900/60 text-rose-300' : 'text-gray-500 hover:text-gray-300'
+                                    }`}
+                                >Attività</button>
+                            </div>
+                        )}
+                        {/* Separatore */}
+                        {onAddActivity && <span className="w-px h-3.5 bg-gray-700/50 flex-shrink-0" />}
+                        {/* Block pills */}
                         {weekPlan.blocks.map((block, index) => {
                             const isActive = index === weekPlan.activeBlockIndex;
                             const dotColor = getBlockDotColor(block);
@@ -402,6 +466,29 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                                 </button>
                             );
                         })}
+                        {/* Activity pills — visibili solo in activity mode */}
+                        {labMode === 'activity' && activeBlockActivities.length > 0 && (
+                            <>
+                                <span className="w-px h-3.5 bg-gray-700/50 flex-shrink-0" />
+                                {activeBlockActivities.map(a => (
+                                    <button
+                                        key={a.id}
+                                        onClick={() => { setSelectedActivityId(a.id); setActiveWorkspaceTab('laboratorio'); }}
+                                        className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono transition-colors ${
+                                            selectedActivityId === a.id
+                                                ? 'bg-rose-900/50 text-rose-300 border border-rose-700/40'
+                                                : 'text-rose-500/60 hover:text-rose-300 hover:bg-rose-900/30'
+                                        }`}
+                                        title={a.title}
+                                    >
+                                        <span className="max-w-[100px] truncate">{a.title}</span>
+                                        {a.durationInBlocks != null && (
+                                            <span className="opacity-50 text-[9px]">{a.durationInBlocks}bl</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </>
+                        )}
                     </div>
 
                     {/* Riga 3: tipologia + titolo blocco — solo Laboratorio */}
@@ -451,12 +538,14 @@ const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekP
                     onRemoveFonte={handleRemoveFonte}
                     onUpdateFonte={handleUpdateFonte}
                     onPromoteFonte={handlePromote}
-                    onAddActivity={onAddActivity ? handleAddActivity : undefined}
                     blockActivities={activeBlockActivities}
                     isFslActive={weekPlan ? isWeekInFslPeriod(weekPlan.weekNumber, masterContext.fslPeriods) : false}
                     labMode={labMode}
-                    onLabModeChange={setLabMode}
-                    onCreateActivity={onAddActivity ? handleCreateMasterActivity : undefined}
+                    selectedActivity={selectedActivity ?? undefined}
+                    isActivityLoading={isActivityLoading}
+                    onSendActivityMessage={handleSendActivityMessage}
+                    onSaveActivityContent={handleSaveActivityContent}
+                    onCreateActivityInLab={onAddActivity ? handleCreateActivityInLab : undefined}
                 />
             </main>
             {activeBlock && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, BlockDetails, LessonState, GroupDefinition, ConvActivity as Activity, ActivityType, ActivityContext } from '../../types';
+import type { Conversation, BlockDetails, LessonState, GroupDefinition, Activity, ActivityType, ActivityContext } from '../../types';
 
 export interface LessonHandlerDeps {
   conversationsRef: React.MutableRefObject<Conversation[]>;
@@ -43,23 +43,25 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
   };
 
   // Lancia attività da StrategicDashboardView (conosce weekNumber e blockIndex)
-  const handleAddActivityForBlock = (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string, context?: ActivityContext) => {
+  const handleAddActivityForBlock = (weekNumber: number, blockIndex: number, title: string, _type: ActivityType, durationInBlocks: number, description?: string, _context?: ActivityContext) => {
     const convo = conversations.find(c => c.weekPlan?.weekNumber === weekNumber);
     if (!convo) return;
     const block = convo.weekPlan?.blocks[blockIndex];
     if (!block) return;
+    const now = new Date().toISOString();
     const newActivity: Activity = {
       id: crypto.randomUUID(),
+      blockId: block.id,
+      weekNumber,
       title,
-      type,
-      context,
+      durationInBlocks,
+      description,
       launchBlockId: block.id,
       launchWeekNumber: weekNumber,
       launchBlockIndex: blockIndex,
-      dueInBlocks,
-      description,
-      status: 'in_corso',
-      moduleId: block.moduleId,
+      status: 'progettata',
+      createdAt: now,
+      updatedAt: now,
     };
     updateConversation(convo.id, c => ({
       ...c,
@@ -224,7 +226,7 @@ export function createLessonHandlers(deps: LessonHandlerDeps) {
     handleUpdateGroupsForBlock,
     handleUpdateGroupNotesForBlock,
     handleSaveGroupsForBlock,
-    handleAddArtifactForBlock,
+        handleAddArtifactForBlock,
     handleDeleteArtifactForBlock,
   };
 }

@@ -456,7 +456,7 @@ weekPlan?: WeekPlan;
   tempEvaluation?: Partial<Evaluation>;
   pendingContent?: DetachedLesson[];
   modules?: CourseModule[];   // estratti dal Profilo del Corso, confermati dal docente
-  activities?: ConvActivity[];    // attività legacy (sistema basato su conversazioni)
+  activities?: Activity[];    // attività del corso (sistema DB + conversazioni)
 }
 
 export interface Mode {
@@ -550,11 +550,20 @@ export interface Activity {
   title: string;
   description?: string;
   objectiveLink?: string;
-  formaLavoro: ActivityFormaLavoro;
-  contesto: ActivityContesto;
-  deliverable: ActivityDeliverable;
+  formaLavoro?: ActivityFormaLavoro;   // opzionale — definito in preparazione lezione
+  contesto?: ActivityContesto;
+  deliverable?: ActivityDeliverable;   // opzionale — definito in preparazione lezione
+  durationInBlocks?: number;           // durata in blocchi (impostata alla creazione)
+  // Tracciamento lancio (retrocompatibilità con sistema conversazioni)
+  launchBlockId?: string;
+  launchWeekNumber?: number;
+  launchBlockIndex?: number;
   rubric?: ActivityRubricCriteria[];
   sourceBlockIds?: string[];
+
+  // BRIEFING LABORATORIO (Opzione A — chat parallela + master attività)
+  messages?: Message[];                // canale chat parallelo nel Laboratorio
+  masterContent?: ContentBlock[];      // contenuto master dell'attività
 
   // DECLINAZIONE (preparazione)
   groupAssignments?: ActivityGroupAssignment[];
@@ -575,4 +584,3 @@ export interface Activity {
   createdAt: string;
   updatedAt: string;
 }
-
