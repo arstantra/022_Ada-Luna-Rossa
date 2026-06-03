@@ -260,7 +260,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         const values: number[] = [];
         for (const v of Object.values(obsInsights)) {
             if (!v) continue;
-            values.push(v.sentiment === 'positivo' ? 100 : v.sentiment === 'neutro' ? 50 : 0);
+            const sv = v as { sentiment: 'positivo' | 'neutro' | 'critico' };
+            values.push(sv.sentiment === 'positivo' ? 100 : sv.sentiment === 'neutro' ? 50 : 0);
         }
         if (values.length === 0) return null;
         return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
@@ -270,7 +271,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         const result: { key: string; text: string; urgent: boolean }[] = [];
         for (const [actId, insights] of Object.entries(obsInsights)) {
             if (!insights) continue;
-            insights.alerts.forEach((alert, i) => {
+            const typedInsights = insights as { alerts: string[] };
+            typedInsights.alerts.forEach((alert, i) => {
                 result.push({
                     key: `${actId}-${i}`,
                     text: alert,
