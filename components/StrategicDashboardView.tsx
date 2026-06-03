@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, CourseContentUnit, FslPeriod } from '../types';
-import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
+import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS, ACTIVITY_STATUS_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -38,11 +38,12 @@ interface StrategicDashboardViewProps {
     onUpdateLuogo: (weekNumber: number, blockIndex: number, luogo: string) => void;
     allActivities?: Activity[];
     onCreateActivity?: (blockId: string, weekNumber: number, data: Partial<Activity>) => Promise<Activity>;
+    onDeleteActivity?: (id: string) => Promise<void>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, allActivities: allActivitiesProp, onCreateActivity, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, allActivities: allActivitiesProp, onCreateActivity, onDeleteActivity, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -54,6 +55,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     const [activityFormaLavoro, setActivityFormaLavoro] = useState<ActivityFormaLavoro>('individuale');
     const [activityContesto, setActivityContesto] = useState<ActivityContesto>('in_aula');
     const [activityDeliverable, setActivityDeliverable] = useState<ActivityDeliverable>('elaborato');
+    const [activityDescription, setActivityDescription] = useState('');
     // Dropdown CONTESTO — chiave `${weekNumber}-${blockIndex}`
     const [openContextMenu, setOpenContextMenu] = useState<string | null>(null);
     // Chiavi dei blocchi il cui TITOLO è in modalità modifica manuale
@@ -808,15 +810,15 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                     const FORMA_LABELS: Record<ActivityFormaLavoro, string> = { individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe' };
                                                     const CONTESTO_LABELS: Record<ActivityContesto, string> = { in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma' };
                                                     const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = { elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro' };
-                                                    const STATUS_DOT: Record<string, string> = { progettata: 'bg-slate-500', lanciata: 'bg-amber-400', in_corso: 'bg-amber-400', consegnata: 'bg-emerald-500', scaduta: 'bg-gray-500', annullata: 'bg-gray-500' };
+                                                    const STATUS_DOT: Record<string, string> = { progettata: 'bg-slate-500', lanciata: 'bg-amber-400', in_corso: 'bg-amber-400', consegnata: 'bg-emerald-500', scaduta: 'bg-red-500/70', annullata: 'bg-gray-500' };
                                                     return (
                                                         <div className="rounded-lg border border-gray-700/40 bg-gray-900/50 p-3 space-y-2">
                                                             <div className="flex items-center justify-between">
                                                                 <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Attività</label>
                                                                 {!isFormOpen && (
                                                                     <button
-                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityFormaLavoro('individuale'); setActivityContesto('in_aula'); setActivityDeliverable('elaborato'); }}
-                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/20 rounded hover:bg-rose-500/10 hover:border-rose-400/30 hover:text-rose-400/90 transition-colors"
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityDescription(''); setActivityFormaLavoro('individuale'); setActivityContesto('in_aula'); setActivityDeliverable('elaborato'); }}
+                                                                        className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-purple-400/70 border border-purple-500/20 rounded hover:bg-purple-500/10 hover:border-purple-400/30 hover:text-purple-400 transition-colors"
                                                                     >
                                                                         + Attività
                                                                     </button>
@@ -826,10 +828,17 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                             {blockActivities.length > 0 && (
                                                                 <div className="flex flex-col gap-1">
                                                                     {blockActivities.map(a => (
-                                                                        <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-md border border-rose-500/15 bg-rose-500/5 text-[10px] font-mono text-rose-300/70">
-                                                                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[a.status] ?? 'bg-gray-500'}`} />
+                                                                        <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-md border border-gray-700/40 bg-gray-900/40 text-[10px] font-mono text-gray-400">
+                                                                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[a.status] ?? 'bg-gray-500'}`} title={ACTIVITY_STATUS_LABELS[a.status as import('../types').ActivityStatus] ?? a.status} />
                                                                             <span className="flex-grow truncate">{a.title}</span>
-                                                                            <span className="opacity-50 flex-shrink-0">{FORMA_LABELS[a.formaLavoro]}</span>
+                                                                            <span className="flex-shrink-0 px-1 py-0.5 rounded text-[8px] font-mono bg-gray-700/60 text-gray-400">{FORMA_LABELS[a.formaLavoro]}</span>
+                                                                            {onDeleteActivity && (
+                                                                                <button
+                                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (window.confirm(`Eliminare l'attività "${a.title}"?`)) onDeleteActivity(a.id); }}
+                                                                                    className="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors leading-none"
+                                                                                    title="Elimina attività"
+                                                                                >×</button>
+                                                                            )}
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -845,11 +854,18 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                             placeholder="Titolo dell'attività..."
                                                                             className="flex-grow bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
                                                                             autoFocus
-                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) { e.preventDefault(); onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable }); setActivityTitle(''); setActivityFormKey(null); } }}
+                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) { e.preventDefault(); onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), description: activityDescription.trim() || undefined, formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable, objectiveLink: block.objective?.trim() || undefined }); setActivityTitle(''); setActivityDescription(''); setActivityFormKey(null); } }}
                                                                         />
-                                                                        <button onClick={() => { if (!activityTitle.trim()) return; onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable }); setActivityTitle(''); setActivityFormKey(null); }} disabled={!activityTitle.trim()} className="px-2.5 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">Salva</button>
-                                                                        <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); }} className="px-2.5 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors flex-shrink-0">Annulla</button>
+                                                                        <button onClick={() => { if (!activityTitle.trim()) return; onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), description: activityDescription.trim() || undefined, formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable, objectiveLink: block.objective?.trim() || undefined }); setActivityTitle(''); setActivityDescription(''); setActivityFormKey(null); }} disabled={!activityTitle.trim()} className="px-2.5 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">Salva</button>
+                                                                        <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); setActivityDescription(''); }} className="px-2.5 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors flex-shrink-0">Annulla</button>
                                                                     </div>
+                                                                    <textarea
+                                                                        value={activityDescription}
+                                                                        onChange={e => setActivityDescription(e.target.value)}
+                                                                        placeholder="Descrizione breve (opzionale)…"
+                                                                        rows={1}
+                                                                        className="w-full bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40 resize-none"
+                                                                    />
                                                                     <div className="grid grid-cols-3 gap-2">
                                                                         <div>
                                                                             <span className="text-[9px] font-mono text-gray-500 block mb-1">Forma</span>

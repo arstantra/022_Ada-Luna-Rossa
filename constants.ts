@@ -230,6 +230,15 @@ export const TEACHING_METHODOLOGY_LABELS: Record<TeachingMethodology, string> = 
   jigsaw:               'Jigsaw',
 };
 
+export const ACTIVITY_STATUS_LABELS: Record<import('./types').ActivityStatus, string> = {
+  progettata: 'Progettata',
+  lanciata:   'Lanciata',
+  in_corso:   'In corso',
+  consegnata: 'Consegnata',
+  scaduta:    'Scaduta',
+  annullata:  'Annullata',
+};
+
 export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   ricerca:            'Ricerca',
   audiovisivo:        'Audiovisivo',
