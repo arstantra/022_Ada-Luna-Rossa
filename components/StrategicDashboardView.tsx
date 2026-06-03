@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityType, CourseContentUnit, FslPeriod } from '../types';
-import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, ACTIVITY_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
+import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, CourseContentUnit, FslPeriod } from '../types';
+import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
@@ -36,22 +36,24 @@ interface StrategicDashboardViewProps {
     onUpdateExternalExpertName: (weekNumber: number, blockIndex: number, name: string) => void;
     onToggleFuoriAula: (weekNumber: number, blockIndex: number, value: boolean) => void;
     onUpdateLuogo: (weekNumber: number, blockIndex: number, luogo: string) => void;
-    onAddActivityForBlock?: (weekNumber: number, blockIndex: number, title: string, type: ActivityType, dueInBlocks: number, description?: string) => void;
+    allActivities?: Activity[];
+    onCreateActivity?: (blockId: string, weekNumber: number, data: Partial<Activity>) => Promise<Activity>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, onAddActivityForBlock, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, allActivities: allActivitiesProp, onCreateActivity, showToast, teacherProfile }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [allExpanded, setAllExpanded] = useState(false);
     const weeksContainerRef = useRef<HTMLDivElement>(null);
-    // Form "Lancia attività" inline nella sezione espansa
+    // Form "+ Attività" inline nella sezione espansa
     const [activityFormKey, setActivityFormKey] = useState<string | null>(null); // `${weekNumber}-${blockIndex}`
     const [activityTitle, setActivityTitle] = useState('');
-    const [activityType, setActivityType] = useState<ActivityType>('produzione_scritta');
-    const [activityDueInBlocks, setActivityDueInBlocks] = useState(4);
+    const [activityFormaLavoro, setActivityFormaLavoro] = useState<ActivityFormaLavoro>('individuale');
+    const [activityContesto, setActivityContesto] = useState<ActivityContesto>('in_aula');
+    const [activityDeliverable, setActivityDeliverable] = useState<ActivityDeliverable>('elaborato');
     // Dropdown CONTESTO — chiave `${weekNumber}-${blockIndex}`
     const [openContextMenu, setOpenContextMenu] = useState<string | null>(null);
     // Chiavi dei blocchi il cui TITOLO è in modalità modifica manuale
@@ -391,21 +393,7 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
         return { completate, inCorso, daFare, saltate, total: weekData.length };
     }, [weekData]);
 
-    // ── Attività — raccolta e mappa offset globale ──────────────────────────────
-    const allActivities = useMemo(
-        () => conversations.flatMap(c => c.activities ?? []) as Activity[],
-        [conversations]
-    );
-
-    const globalOffsetMap = useMemo(() => {
-        const map = new Map<number, number>();
-        let offset = 0;
-        weekData.forEach(w => {
-            map.set(w.weekNumber, offset);
-            offset += w.blocks.length;
-        });
-        return map;
-    }, [weekData]);
+    const allActivities = allActivitiesProp ?? [];
 
     const selectKeyDownHandler = (e: React.KeyboardEvent<HTMLSelectElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -550,14 +538,8 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                         const blockDate = getExactDateForBlock(week.dates, block.day, teacherProfile);
                                         const dateString = blockDate ? ` - ${blockDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}` : '';
                                         const blockState = getBlockProgressState(block);
-                                        // Attività attive su questo blocco
-                                        const blockGlobalIdx = (globalOffsetMap.get(week.weekNumber) ?? 0) + index;
-                                        const blockActivities = isSpecialStatus ? [] : allActivities.filter(a => {
-                                            if (a.status === 'consegnata' || a.status === 'scaduta') return false;
-                                            const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
-                                            const dueGlobal = launchGlobal + a.dueInBlocks;
-                                            return blockGlobalIdx >= launchGlobal && blockGlobalIdx <= dueGlobal;
-                                        });
+                                        // Attività legate a questo blocco
+                                        const blockActivities = isSpecialStatus ? [] : allActivities.filter(a => a.blockId === block.id);
 
                                         const ctxKey = `${week.weekNumber}-${index}`;
                                         const isCtxOpen = openContextMenu === ctxKey;
@@ -791,42 +773,37 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <EditableField value={block.luogo || ''} onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)} placeholder="Destinazione o luogo (es. Museo del Design, Milano)…" />
                                                     </div>
                                                 )}
-                                                {/* ATTIVITÀ — canale parallelo, box dedicato */}
-                                                {onAddActivityForBlock && !isSpecialStatus && (() => {
+                                                {/* ATTIVITÀ — box dedicato */}
+                                                {onCreateActivity && !isSpecialStatus && (() => {
                                                     const formKey = `${week.weekNumber}-${index}`;
                                                     const isFormOpen = activityFormKey === formKey;
+                                                    const FORMA_LABELS: Record<ActivityFormaLavoro, string> = { individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe' };
+                                                    const CONTESTO_LABELS: Record<ActivityContesto, string> = { in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma' };
+                                                    const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = { elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro' };
+                                                    const STATUS_DOT: Record<string, string> = { progettata: 'bg-slate-500', lanciata: 'bg-amber-400', in_corso: 'bg-amber-400', consegnata: 'bg-emerald-500', scaduta: 'bg-gray-500', annullata: 'bg-gray-500' };
                                                     return (
                                                         <div className="rounded-lg border border-gray-700/40 bg-gray-900/50 p-3 space-y-2">
-                                                            {/* Header: etichetta + pulsante */}
                                                             <div className="flex items-center justify-between">
                                                                 <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-gray-500/80">Attività</label>
                                                                 {!isFormOpen && (
                                                                     <button
-                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityType('produzione_scritta'); setActivityDueInBlocks(4); }}
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivityFormKey(formKey); setActivityTitle(''); setActivityFormaLavoro('individuale'); setActivityContesto('in_aula'); setActivityDeliverable('elaborato'); }}
                                                                         className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-rose-400/60 border border-rose-500/20 rounded hover:bg-rose-500/10 hover:border-rose-400/30 hover:text-rose-400/90 transition-colors"
                                                                     >
-                                                                        ↗ Lancia attività
+                                                                        + Attività
                                                                     </button>
                                                                 )}
                                                             </div>
-                                                            {/* Chip attività attive su questo blocco */}
+                                                            {/* Chip attività legate a questo blocco */}
                                                             {blockActivities.length > 0 && (
                                                                 <div className="flex flex-col gap-1">
-                                                                    {blockActivities.map(a => {
-                                                                        const launchGlobal = (globalOffsetMap.get(a.launchWeekNumber) ?? 0) + a.launchBlockIndex;
-                                                                        const dueGlobal = launchGlobal + a.dueInBlocks;
-                                                                        const isLaunch = blockGlobalIdx === launchGlobal;
-                                                                        const isDue = blockGlobalIdx === dueGlobal;
-                                                                        return (
-                                                                            <div key={a.id} className={`flex items-center gap-2 px-2 py-1 rounded-md border text-[10px] font-mono ${isDue ? 'border-amber-500/25 bg-amber-500/5 text-amber-300' : 'border-rose-500/15 bg-rose-500/5 text-rose-300/70'}`}>
-                                                                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDue ? 'bg-amber-400' : 'bg-rose-500'}`} />
-                                                                                {isLaunch && <span className="text-[9px] opacity-70">↗</span>}
-                                                                                {isDue && <span className="text-[9px] opacity-70">⚑</span>}
-                                                                                <span className="flex-grow truncate">{a.title}</span>
-                                                                                <span className="opacity-50 flex-shrink-0">{ACTIVITY_TYPE_LABELS[a.type]}</span>
-                                                                            </div>
-                                                                        );
-                                                                    })}
+                                                                    {blockActivities.map(a => (
+                                                                        <div key={a.id} className="flex items-center gap-2 px-2 py-1 rounded-md border border-rose-500/15 bg-rose-500/5 text-[10px] font-mono text-rose-300/70">
+                                                                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[a.status] ?? 'bg-gray-500'}`} />
+                                                                            <span className="flex-grow truncate">{a.title}</span>
+                                                                            <span className="opacity-50 flex-shrink-0">{FORMA_LABELS[a.formaLavoro]}</span>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             )}
                                                             {/* Form nuova attività */}
@@ -840,20 +817,30 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                                             placeholder="Titolo dell'attività..."
                                                                             className="flex-grow bg-transparent border border-gray-700/50 rounded px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
                                                                             autoFocus
-                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) { e.preventDefault(); onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); } }}
+                                                                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && activityTitle.trim()) { e.preventDefault(); onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable }); setActivityTitle(''); setActivityFormKey(null); } }}
                                                                         />
-                                                                        <button onClick={() => { if (!activityTitle.trim()) return; onAddActivityForBlock(week.weekNumber, index, activityTitle.trim(), activityType, activityDueInBlocks); setActivityTitle(''); setActivityFormKey(null); }} disabled={!activityTitle.trim()} className="px-2.5 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">Lancia</button>
+                                                                        <button onClick={() => { if (!activityTitle.trim()) return; onCreateActivity(block.id, week.weekNumber, { title: activityTitle.trim(), formaLavoro: activityFormaLavoro, contesto: activityContesto, deliverable: activityDeliverable }); setActivityTitle(''); setActivityFormKey(null); }} disabled={!activityTitle.trim()} className="px-2.5 py-1 text-[9px] font-mono text-rose-300 border border-rose-500/30 rounded hover:bg-rose-500/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">Salva</button>
                                                                         <button onClick={() => { setActivityFormKey(null); setActivityTitle(''); }} className="px-2.5 py-1 text-[9px] font-mono text-gray-500 border border-gray-600/40 rounded hover:bg-gray-700/50 transition-colors flex-shrink-0">Annulla</button>
                                                                     </div>
-                                                                    <div className="flex items-center gap-1 flex-wrap">
-                                                                        {(['ricerca', 'audiovisivo', 'produzione_scritta', 'progetto', 'altro'] as ActivityType[]).map(t => (
-                                                                            <button key={t} onClick={() => setActivityType(t)} className={`px-2 py-0.5 text-[9px] font-mono rounded-full transition-colors ${activityType === t ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'text-gray-600 hover:text-gray-400 border border-transparent'}`}>{ACTIVITY_TYPE_LABELS[t]}</button>
-                                                                        ))}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[9px] font-mono text-gray-500">Scadenza:</span>
-                                                                        <input type="number" min={1} max={20} value={activityDueInBlocks} onChange={e => setActivityDueInBlocks(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} className="w-10 bg-transparent border border-gray-700/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-rose-500/40 text-center" />
-                                                                                                           <span className="text-[9px] font-mono text-gray-500">blocchi</span>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <div>
+                                                                            <span className="text-[9px] font-mono text-gray-500 block mb-1">Forma</span>
+                                                                            <select value={activityFormaLavoro} onChange={e => setActivityFormaLavoro(e.target.value as ActivityFormaLavoro)} className="w-full bg-gray-800 border border-gray-600/70 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none">
+                                                                                {(Object.entries(FORMA_LABELS) as [ActivityFormaLavoro, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-[9px] font-mono text-gray-500 block mb-1">Contesto</span>
+                                                                            <select value={activityContesto} onChange={e => setActivityContesto(e.target.value as ActivityContesto)} className="w-full bg-gray-800 border border-gray-600/70 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none">
+                                                                                {(Object.entries(CONTESTO_LABELS) as [ActivityContesto, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                                                            </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-[9px] font-mono text-gray-500 block mb-1">Consegna</span>
+                                                                            <select value={activityDeliverable} onChange={e => setActivityDeliverable(e.target.value as ActivityDeliverable)} className="w-full bg-gray-800 border border-gray-600/70 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none">
+                                                                                {(Object.entries(DELIVERABLE_LABELS) as [ActivityDeliverable, string][]).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                                                            </select>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )}
