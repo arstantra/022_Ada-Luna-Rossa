@@ -773,6 +773,34 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                                                         <EditableField value={block.luogo || ''} onSave={(val) => onUpdateLuogo(week.weekNumber, index, val)} placeholder="Destinazione o luogo (es. Museo del Design, Milano)…" />
                                                     </div>
                                                 )}
+                                                {/* CONTENUTO MASTER — preview se contentBlocks presenti */}
+                                                {block.contentBlocks && block.contentBlocks.length > 0 && (() => {
+                                                    const firstBlock = block.contentBlocks[0];
+                                                    const rawText = firstBlock.type === 'html'
+                                                        ? firstBlock.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+                                                        : firstBlock.content.trim();
+                                                    const preview = rawText.length > 150 ? rawText.slice(0, 150) + '…' : rawText;
+                                                    const extraCount = block.contentBlocks.length - 1;
+                                                    return (
+                                                        <div className="rounded-lg border border-gray-700/40 bg-gray-900/50 p-3 space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <label className="text-[9px] font-mono font-medium tracking-[0.14em] uppercase text-emerald-500/60">Contenuto Master</label>
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onStartPlanning(week); }}
+                                                                    className="text-[10px] font-mono text-emerald-400/70 hover:text-emerald-400 transition-colors"
+                                                                >
+                                                                    Apri nel Laboratorio →
+                                                                </button>
+                                                            </div>
+                                                            <div className="relative overflow-hidden" style={{ maxHeight: '3.6em' }}>
+                                                                <p className="text-xs text-gray-400 leading-relaxed">{preview}</p>
+                                                            </div>
+                                                            {extraCount > 0 && (
+                                                                <p className="text-[9px] font-mono text-gray-600">+ {extraCount} {extraCount === 1 ? 'altro blocco' : 'altri blocchi'}</p>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 {/* ATTIVITÀ — box dedicato */}
                                                 {onCreateActivity && !isSpecialStatus && (() => {
                                                     const formKey = `${week.weekNumber}-${index}`;
