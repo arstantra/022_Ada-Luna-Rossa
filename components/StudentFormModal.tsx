@@ -7,8 +7,10 @@ interface StudentFormData {
     lastName: string;
     hasBES: boolean;
     hasDSA: boolean;
+    hasPEI: boolean;
     besNotes: string;
     dsaNotes: string;
+    peiNotes: string;
     certificationNotes: string;
     notes: string;
 }
@@ -25,8 +27,10 @@ const emptyForm = (): StudentFormData => ({
     lastName: '',
     hasBES: false,
     hasDSA: false,
+    hasPEI: false,
     besNotes: '',
     dsaNotes: '',
+    peiNotes: '',
     certificationNotes: '',
     notes: '',
 });
@@ -39,8 +43,10 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
             lastName:  student.lastName  ?? student.name.split(' ').at(-1) ?? '',
             hasBES: student.hasBES ?? false,
             hasDSA: student.hasDSA ?? false,
+            hasPEI: student.hasPEI ?? false,
             besNotes: student.besNotes ?? '',
             dsaNotes: student.dsaNotes ?? '',
+            peiNotes: student.peiNotes ?? '',
             certificationNotes: student.certificationNotes ?? '',
             notes: student.notes ?? '',
         };
@@ -68,8 +74,10 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
             lastName,
             hasBES: form.hasBES || undefined,
             hasDSA: form.hasDSA || undefined,
+            hasPEI: form.hasPEI || undefined,
             besNotes: form.besNotes.trim() || undefined,
             dsaNotes: form.dsaNotes.trim() || undefined,
+            peiNotes: form.peiNotes.trim() || undefined,
             certificationNotes: form.certificationNotes.trim() || undefined,
             notes: form.notes.trim() || undefined,
         });
@@ -158,6 +166,19 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
                                 <span className={`w-2 h-2 rounded-full ${form.hasDSA ? 'bg-blue-400' : 'bg-gray-600'}`} />
                                 DSA
                             </button>
+                            {/* Toggle PEI */}
+                            <button
+                                type="button"
+                                onClick={() => set('hasPEI', !form.hasPEI)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
+                                    form.hasPEI
+                                        ? 'bg-violet-500/15 border-violet-500/40 text-violet-300'
+                                        : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-400 hover:border-gray-600/50'
+                                }`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${form.hasPEI ? 'bg-violet-400' : 'bg-gray-600'}`} />
+                                PEI
+                            </button>
                         </div>
                     </div>
 
@@ -188,6 +209,22 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
                                 onChange={e => set('dsaNotes', e.target.value)}
                                 rows={2}
                                 placeholder="Tipologia DSA, strumenti compensativi, misure dispensative…"
+                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
+                            />
+                        </div>
+                    )}
+
+                    {/* Note PEI */}
+                    {form.hasPEI && (
+                        <div>
+                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
+                                Note PEI
+                            </label>
+                            <textarea
+                                value={form.peiNotes}
+                                onChange={e => set('peiNotes', e.target.value)}
+                                rows={2}
+                                placeholder="Obiettivi del Piano Educativo Individualizzato, supporti, figure di riferimento…"
                                 className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
                             />
                         </div>

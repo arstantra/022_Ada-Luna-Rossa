@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { marked } from 'marked';
 import type { useMasterContext } from '../hooks/useMasterContext';
 import { SparklesIcon, XIcon, RefreshIcon, PencilIcon } from './Icons';
 import DocumentEditor from './DocumentEditor';
@@ -26,8 +25,7 @@ const AdaPersonalityView: React.FC<AdaPersonalityViewProps> = ({ masterContext, 
         setIsGenerating(true);
         try {
             const markdown = await generateDocumentContent('personalita', profiloContent);
-            const html = String(marked.parse(markdown));
-            setGeneratedContent(html);
+            setGeneratedContent(markdown);
             // Abilita la modifica automaticamente dopo la generazione
             // così il docente può rivedere prima che l'autosave scatti
             setIsEditing(true);
@@ -121,7 +119,7 @@ const AdaPersonalityView: React.FC<AdaPersonalityViewProps> = ({ masterContext, 
                             <DocumentEditor
                                 initialContent={generatedContent ?? masterContext.systemInstruction}
                                 onSave={masterContext.handleSaveInstructions}
-                                mode="html"
+                                mode="markdown"
                                 isEditable={isEditing}
                                 className="min-h-[55vh]"
                             />

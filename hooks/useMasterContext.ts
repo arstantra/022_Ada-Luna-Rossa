@@ -19,6 +19,7 @@ import {
   LOCAL_STORAGE_TEACHER_KEY,
   LOCAL_STORAGE_MODE_KEY,
   LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY,
+  LOCAL_STORAGE_BLOCK_HOUR_DEFAULTS_KEY,
   LOCAL_STORAGE_ROUTE_CALENDAR_KEY,
   LOCAL_STORAGE_FSL_PERIODS_KEY,
   LOCAL_STORAGE_DISCIPLINA_KEY,
@@ -46,6 +47,7 @@ export const useMasterContext = () => {
     const [courseAnno, setCourseAnno] = useState('');
     const [courseDocente, setCourseDocente] = useState('');
     const [blockDayDefaults, setBlockDayDefaults] = useState<Record<string, string>>({});
+    const [blockHourDefaults, setBlockHourDefaults] = useState<Record<string, number>>({});
     const [routeCalendar, setRouteCalendar] = useState<WeekEntry[]>([]);
     const [fslPeriods, setFslPeriods] = useState<FslPeriod[]>([]);
     const [currentModeId, setCurrentModeId] = useState<Mode['id']>(DEFAULT_MODE_ID);
@@ -110,6 +112,13 @@ export const useMasterContext = () => {
                     await db.saveSetting(LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY, '{}');
                 }
 
+
+                // Load block hour defaults
+                const hourDefaultsJson = await db.getSetting(LOCAL_STORAGE_BLOCK_HOUR_DEFAULTS_KEY);
+                if (hourDefaultsJson) {
+                    try { setBlockHourDefaults(JSON.parse(hourDefaultsJson)); }
+                    catch (e) { console.error("Failed to parse block hour defaults, resetting.", e); setBlockHourDefaults({}); }
+                }
 
                 // Handle mode separately as it's not a simple string
                 const modeValue = await db.getSetting(LOCAL_STORAGE_MODE_KEY);
@@ -241,6 +250,13 @@ export const useMasterContext = () => {
         } catch (error) { console.error("Failed to save block day defaults:", error); }
     }, []);
 
+    const handleSaveBlockHourDefaults = useCallback(async (defaults: Record<string, number>) => {
+        setBlockHourDefaults(defaults);
+        try {
+            await db.saveSetting(LOCAL_STORAGE_BLOCK_HOUR_DEFAULTS_KEY, JSON.stringify(defaults));
+        } catch (error) { console.error("Failed to save block hour defaults:", error); }
+    }, []);
+
     const handleSaveRouteCalendar = useCallback(async (calendar: WeekEntry[]) => {
         setRouteCalendar(calendar);
         try {
@@ -280,6 +296,7 @@ export const useMasterContext = () => {
         courseAnno,
         courseDocente,
         blockDayDefaults,
+        blockHourDefaults,
         routeCalendar,
         fslPeriods,
         currentModeId,
@@ -298,6 +315,7 @@ export const useMasterContext = () => {
         handleSaveCourseAnno,
         handleSaveCourseDocente,
         handleSaveBlockDayDefaults,
+        handleSaveBlockHourDefaults,
         handleSaveRouteCalendar,
         handleSaveFslPeriods,
         handleSaveMode,

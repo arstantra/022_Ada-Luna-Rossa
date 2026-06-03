@@ -182,8 +182,10 @@ export const useStudents = (crewContext: string) => {
             evaluations: [],
             hasBES: data.hasBES,
             hasDSA: data.hasDSA,
+            hasPEI: data.hasPEI,
             besNotes: data.besNotes,
             dsaNotes: data.dsaNotes,
+            peiNotes: data.peiNotes,
             certificationNotes: data.certificationNotes,
         };
         setStudents(prev => [...prev, newStudent].sort((a, b) => a.name.localeCompare(b.name, 'it')));

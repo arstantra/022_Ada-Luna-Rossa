@@ -69,8 +69,10 @@ export interface Student {
     // Campi inclusione — inseriti nel modale Equipaggio
     hasBES?: boolean;
     hasDSA?: boolean;
+    hasPEI?: boolean;
     besNotes?: string;
     dsaNotes?: string;
+    peiNotes?: string;
     certificationNotes?: string;
 }
 

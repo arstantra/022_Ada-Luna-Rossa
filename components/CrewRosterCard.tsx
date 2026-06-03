@@ -27,10 +27,12 @@ export const buildCrewContext = (students: Student[]): string => {
             const flags: string[] = [];
             if (s.hasBES) flags.push('BES');
             if (s.hasDSA) flags.push('DSA');
+            if (s.hasPEI) flags.push('PEI');
             if (flags.length > 0) line += ` [${flags.join(', ')}]`;
             const details: string[] = [];
             if (s.besNotes) details.push(`BES: ${s.besNotes}`);
             if (s.dsaNotes) details.push(`DSA: ${s.dsaNotes}`);
+            if (s.peiNotes) details.push(`PEI: ${s.peiNotes}`);
             if (s.certificationNotes) details.push(`Certificazioni: ${s.certificationNotes}`);
             if (s.notes) details.push(`Note: ${s.notes}`);
             if (details.length > 0) line += ` — ${details.join(' | ')}`;
@@ -134,6 +136,11 @@ const CrewRosterCard: React.FC<CrewRosterCardProps> = ({
                                 {s.hasDSA && (
                                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/25 text-blue-400">
                                         DSA
+                                    </span>
+                                )}
+                                {s.hasPEI && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/25 text-violet-400">
+                                        PEI
                                     </span>
                                 )}
                             </div>

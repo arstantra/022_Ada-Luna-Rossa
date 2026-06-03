@@ -9,6 +9,7 @@ export const LOCAL_STORAGE_RULES_KEY = 'ada-rules-context';
 export const LOCAL_STORAGE_TEACHER_KEY = 'ada-teacher-profile';
 export const LOCAL_STORAGE_MODE_KEY = 'ada-mode';
 export const LOCAL_STORAGE_BLOCK_DAY_DEFAULTS_KEY = 'ada-gemini-block-day-defaults';
+export const LOCAL_STORAGE_BLOCK_HOUR_DEFAULTS_KEY = 'ada-block-hour-defaults';
 export const LOCAL_STORAGE_ROUTE_CALENDAR_KEY = 'ada-route-calendar';
 export const LOCAL_STORAGE_FSL_PERIODS_KEY    = 'ada-fsl-periods';
 export const LOCAL_STORAGE_DISCIPLINA_KEY = 'ada-disciplina';

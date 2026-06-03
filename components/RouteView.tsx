@@ -35,10 +35,11 @@ function getConfiguredBlockCount(defaults: Record<string, string>): number {
 }
 
 const RouteView: React.FC<RouteViewProps> = ({ masterContext, onClose }) => {
-    const { blockDayDefaults, routeCalendar, handleSaveBlockDayDefaults, handleSaveRouteCalendar, fslPeriods, handleSaveFslPeriods } = masterContext;
+    const { blockDayDefaults, blockHourDefaults, routeCalendar, handleSaveBlockDayDefaults, handleSaveBlockHourDefaults, handleSaveRouteCalendar, fslPeriods, handleSaveFslPeriods } = masterContext;
 
     // ── Stato locale giorni predefiniti ──────────────────────────────────────
     const [localDefaults, setLocalDefaults] = useState<Record<string, string>>(() => ({ ...blockDayDefaults }));
+    const [localHourDefaults, setLocalHourDefaults] = useState<Record<string, number>>(() => ({ ...blockHourDefaults }));
 
     const handleDayChange = useCallback((blockIndex: number, day: string) => {
         setLocalDefaults(prev => {
@@ -53,6 +54,19 @@ const RouteView: React.FC<RouteViewProps> = ({ masterContext, onClose }) => {
         else delete next[String(blockIndex)];
         handleSaveBlockDayDefaults(next);
     }, [blockDayDefaults, handleSaveBlockDayDefaults]);
+
+    const handleHourChange = useCallback((blockIndex: number, hours: number) => {
+        setLocalHourDefaults(prev => {
+            const next = { ...prev };
+            if (hours > 0) next[String(blockIndex)] = hours;
+            else delete next[String(blockIndex)];
+            return next;
+        });
+        const next = { ...blockHourDefaults };
+        if (hours > 0) next[String(blockIndex)] = hours;
+        else delete next[String(blockIndex)];
+        handleSaveBlockHourDefaults(next);
+    }, [blockHourDefaults, handleSaveBlockHourDefaults]);
 
     // ── Calendario settimane ──────────────────────────────────────────────────
     const [weeks, setWeeks] = useState<WeekEntry[]>(() =>
@@ -159,20 +173,32 @@ const RouteView: React.FC<RouteViewProps> = ({ masterContext, onClose }) => {
                         <p className="text-xs text-gray-500 mb-4">
                             Associa un giorno della settimana a ciascun blocco. ADA usa questi giorni per inferire la data esatta di ogni blocco all'interno di una settimana.
                         </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {Array.from({ length: 6 }, (_, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 bg-gray-800/60 border border-gray-700/40 rounded-lg">
-                                    <span className="text-sm font-mono text-gray-300">BL{i + 1}</span>
+                                <div key={i} className="flex items-center gap-2 p-3 bg-gray-800/60 border border-gray-700/40 rounded-lg">
+                                    <span className="text-sm font-mono text-gray-300 w-8 shrink-0">BL{i + 1}</span>
                                     <select
                                         value={localDefaults[String(i)] || ''}
                                         onChange={e => handleDayChange(i, e.target.value)}
-                                        className="ml-3 flex-1 bg-gray-900 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-900 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     >
-                                        <option value="">—</option>
+                                        <option value="">— giorno —</option>
                                         {DAYS_OF_WEEK.map(d => (
                                             <option key={d} value={d}>{d}</option>
                                         ))}
                                     </select>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={8}
+                                            value={localHourDefaults[String(i)] || ''}
+                                            onChange={e => handleHourChange(i, parseInt(e.target.value, 10) || 0)}
+                                            placeholder="—"
+                                            className="w-14 bg-gray-900 border border-gray-600 rounded-md px-2 py-1 text-sm text-gray-200 text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        />
+                                        <span className="text-xs text-gray-500 font-mono">h</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
