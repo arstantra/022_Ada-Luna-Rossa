@@ -1117,7 +1117,7 @@ const GanttView: React.FC<GanttViewProps> = ({
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
         {/* Card Gantt Attività */}
-        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ minHeight: 0, flex: '0 0 auto', maxHeight: 340 }}>
+        <div className="rounded-xl border border-gray-600/40 bg-gray-800/30 overflow-hidden flex flex-col" style={{ flex: '0 0 auto' }}>
 
           <div className="flex items-center px-5 pt-4 pb-3 flex-shrink-0">
             <span className="text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500">
@@ -1125,7 +1125,7 @@ const GanttView: React.FC<GanttViewProps> = ({
             </span>
           </div>
 
-          <div className="flex-1 overflow-auto custom-scrollbar">
+          <div className="overflow-x-auto custom-scrollbar">
             {activities.length === 0 ? (
               <div className="flex items-center justify-center h-full py-16">
                 <p className="text-[10px] font-mono text-gray-600 text-center leading-relaxed">
@@ -1134,7 +1134,7 @@ const GanttView: React.FC<GanttViewProps> = ({
                 </p>
               </div>
             ) : (
-            <div className="pb-10" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
+            <div className="pb-4" style={{ minWidth: LEFT + maxWeek * MIN_COL_W }}>
 
               {/* ── Header settimane ──────────────────────────────────────── */}
               <div className="flex sticky top-0 z-10" style={{ height: HEAD, background: '#0D1117' }}>
