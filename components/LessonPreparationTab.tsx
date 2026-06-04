@@ -140,9 +140,9 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                         />
                     </div>
 
-                    {/* Link Classroom */}
+                    {/* Link Classroom compito */}
                     <div>
-                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Link Classroom</label>
+                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Link compito Classroom</label>
                         <div className="flex items-center gap-2">
                             <input
                                 type="url"
@@ -476,6 +476,26 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     React.useEffect(() => {
         setClassroomDraft(currentClassroomUrl);
     }, [selectedOption?.key, currentClassroomUrl]);
+
+    // Reset transient state when selected block changes
+    React.useEffect(() => {
+        setProposedGroups([]);
+        setIsGroupsOpen(false);
+        setIsAdaOpen(false);
+        setAdaQuestion('');
+        setAdaResponse(null);
+    }, [selectedKey]);
+
+    // Auto-jump to in_corso block when a lesson becomes active
+    React.useEffect(() => {
+        const inCorsoKey = conversations
+            .filter(c => c.weekPlan)
+            .flatMap(c => c.weekPlan!.blocks.map((b, i) => ({ key: `${c.id}-${i}`, b })))
+            .find(({ b }) => b.lessonState === 'in_corso')?.key;
+        if (inCorsoKey) {
+            setSelectedKey(prev => prev === inCorsoKey ? prev : inCorsoKey);
+        }
+    }, [conversations]);
 
     const getStudentNameById = (id: string) => students.find(s => s.id === id)?.name ?? 'Sconosciuto';
 

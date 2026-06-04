@@ -4,7 +4,6 @@ import LessonPreparationTab from './LessonPreparationTab';
 import LessonInCorsoTab from './LessonInCorsoTab';
 import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon } from './Icons';
 import AttendanceModal from './AttendanceModal';
-import GroupCreationModal from './GroupCreationModal';
 import Modal from './Modal';
 import LessonNotesModal from './LessonNotesModal';
 import AttendanceSummary from './AttendanceSummary';
@@ -220,7 +219,6 @@ interface InAulaBlockItemProps {
     onToggleSelection: () => void;
     onNavigate: () => void;
     onOpenAttendance: () => void;
-    onOpenGroups: () => void;
     onOpenArtifactModal: () => void;
     onDeleteArtifact: (artifactIndex: number) => void;
     onOpenLessonNotesModal: () => void;
@@ -239,7 +237,7 @@ interface InAulaBlockItemProps {
     notebooks: Notebook[];
     onUnlinkNotebook: (notebookId: string) => void;
 }
-const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelected, isGeneratingAnalysis, onToggleSelection, onNavigate, onOpenAttendance, onOpenGroups, onOpenArtifactModal, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, onUpdateGroups, onUpdateGroupNotes, onOpenLinkModal, onDeleteLink, onOpenCloudLinkModal, onScollegaCloudLink, showToast, masterContext, onUpdateBlockStatus, onOpenNotebookModal, notebooks, onUnlinkNotebook }) => {
+const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelected, isGeneratingAnalysis, onToggleSelection, onNavigate, onOpenAttendance, onOpenArtifactModal, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, onUpdateGroups, onUpdateGroupNotes, onOpenLinkModal, onDeleteLink, onOpenCloudLinkModal, onScollegaCloudLink, showToast, masterContext, onUpdateBlockStatus, onOpenNotebookModal, notebooks, onUnlinkNotebook }) => {
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isLessonOpen, setIsLessonOpen] = useState(false);
     const [isLessonLocallyCancelled, setIsLessonLocallyCancelled] = useState(false);
@@ -456,14 +454,6 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
                                 >
                                     <UsersIcon className="h-4 w-4"/>Registra Presenze
                                 </button>
-                                <button 
-                                    onClick={onOpenGroups} 
-                                    disabled={!isLessonOpen || !block.presentStudentIds || block.presentStudentIds.length === 0}
-                                    title={!block.presentStudentIds || block.presentStudentIds.length === 0 ? "Registra le presenze per abilitare la creazione dei gruppi" : "Crea Gruppi di lavoro"}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-200 bg-gray-600 rounded-md hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <UsersIcon className="h-4 w-4"/>Crea Gruppi
-                                </button>
                             </div>
                             {block.presentStudentIds && (
                                 <AttendanceSummary
@@ -606,7 +596,6 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
     
     // Modal states
     const [attendanceModalBlock, setAttendanceModalBlock] = useState<(BlockDetails & { convoId: string; blockIndex: number; weekPlan: WeekPlan }) | null>(null);
-    const [groupModalBlock, setGroupModalBlock] = useState<(BlockDetails & { convoId: string; blockIndex: number; weekPlan: WeekPlan }) | null>(null);
     const [artifactModalInfo, setArtifactModalInfo] = useState<{ convoId: string, blockIndex: number } | null>(null);
     const [linkModalInfo, setLinkModalInfo] = useState<{ convoId: string; blockIndex: number } | null>(null);
     const [cloudLinkModalInfo, setCloudLinkModalInfo] = useState<{ convoId: string; blockIndex: number; initialUrl: string } | null>(null);
@@ -862,7 +851,6 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                                                 onToggleSelection={() => handleToggleSelection(block.uniqueId)}
                                                 onNavigate={() => onNavigateToBlock(block.convoId, block.blockIndex)}
                                                 onOpenAttendance={() => setAttendanceModalBlock(block)}
-                                                onOpenGroups={() => setGroupModalBlock(block)}
                                                 onOpenArtifactModal={() => setArtifactModalInfo({ convoId: block.convoId, blockIndex: block.blockIndex })}
                                                 onDeleteArtifact={(artifactIndex) => onDeleteArtifact(block.convoId, block.blockIndex, artifactIndex)}
                                                 onOpenLessonNotesModal={() => onOpenLessonNotesModal({ convoId: block.convoId, blockIndex: block.blockIndex, initialNotes: block.lessonNotes || '' })}
@@ -917,18 +905,6 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 />
             )}
             
-            {groupModalBlock && (
-                <GroupCreationModal
-                    isOpen={!!groupModalBlock}
-                    onClose={() => setGroupModalBlock(null)}
-                    block={groupModalBlock}
-                    studentsInWeek={students.filter(s => (groupModalBlock.presentStudentIds || []).includes(s.id))}
-                    onSaveGroups={(groups) => {
-                        onSaveGroups(groupModalBlock.convoId, groupModalBlock.blockIndex, groups);
-                        setGroupModalBlock(null);
-                    }}
-                />
-            )}
 
             {artifactModalInfo && (
                  <ArtifactModal
