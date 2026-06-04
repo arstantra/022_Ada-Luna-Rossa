@@ -1,3 +1,8 @@
+/**
+ * @deprecated DORMIENTE — 2026-06-04
+ * Sostituito dalla sezione Abbinamento in LessonPreparationTab.tsx (v2).
+ * Non eliminare: mantenuto per retrocompatibilità nel caso in cui venga richiamato altrove.
+ */
 import React, { useState, useCallback } from 'react';
 import type { LessonAssignment, LessonAssignmentChannel, LessonMaterial, GroupDefinition, Student } from '../types';
 import { LESSON_ASSIGNMENT_CHANNEL_LABELS } from '../types';

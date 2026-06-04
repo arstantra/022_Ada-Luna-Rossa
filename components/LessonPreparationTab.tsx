@@ -1,305 +1,72 @@
-import React, { useState, useMemo } from 'react';
-import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus, LessonAssignment, LessonAssignmentChannel } from '../types';
-import AssignmentPlanSection from './AssignmentPlanSection';
-import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon, FolderOpenIcon } from './Icons';
-import MaterialProductionModal from './MaterialProductionModal';
-import { LOCAL_STORAGE_COURSE_DRIVE_URL_KEY } from '../constants';
-import EditableTextarea from './EditableTextarea';
+/**
+ * LessonPreparationTab — Scrivania di preparazione lezione
+ * Riscritta da zero (2026-06-04) — architettura a 5 sezioni:
+ *   1. Selezione blocco (fix bug: deriva da availableWeeks, non da conversations filtrate)
+ *   2. Scrivania Fonti (master + link + youtube + note + sinergia NotebookLM)
+ *   3. Distribuzione Ada (suggerimento output contestuale + generazione)
+ *   4. Gruppi (min 1 — anche singolo studente)
+ *   5. Abbinamento gruppi → output (con adattamenti BES/DSA/PEI)
+ */
+
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import type {
+    Conversation, Student, GroupDefinition, LessonMaterial,
+    PreparationSource, PrepSourceType, Notebook,
+} from '../types';
+import type { WeekRouteInfo } from '../types';
+import type { useMasterContext } from '../hooks/useMasterContext';
 import * as GeminiService from '../services/gemini';
+import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
+import {
+    SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon,
+    LinkIcon, DocumentTextIcon, XIcon, UsersIcon, BookOpenIcon,
+} from './Icons';
 import MarkdownRenderer from './MarkdownRenderer';
 import Modal from './Modal';
-import type { useMasterContext } from '../hooks/useMasterContext';
 
-// ── ActivityCard ──────────────────────────────────────────────────────────────
+// ── Icone inline (YouTube, Note) ──────────────────────────────────────────────
 
-interface ActivityCardProps {
-    activity: Activity;
-    isOpen: boolean;
-    onToggle: () => void;
-    blockGroups: GroupDefinition[];
-    onUpdate?: (id: string, updates: Partial<Activity>) => void;
-    onGenerateBriefing?: (id: string) => void;
-    isGeneratingBriefing?: boolean;
-    readOnly?: boolean;
-}
+const YouTubeIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21.8 8s-.2-1.4-.8-2c-.8-.8-1.6-.8-2-.9C16.4 5 12 5 12 5s-4.4 0-7 .1c-.4.1-1.2.1-2 .9-.6.6-.8 2-.8 2S2 9.6 2 11.2v1.5c0 1.6.2 3.2.2 3.2s.2 1.4.8 2c.8.8 1.8.8 2.2.8C6.8 19 12 19 12 19s4.4 0 7-.1c.4-.1 1.2-.1 2-.9.6-.6.8-2 .8-2s.2-1.6.2-3.2v-1.5C22 9.6 21.8 8 21.8 8zM9.7 14.5V9.4l5.4 2.6-5.4 2.5z" />
+    </svg>
+);
 
-const ActivityCard: React.FC<ActivityCardProps> = ({
-    activity, isOpen, onToggle, blockGroups, onUpdate, onGenerateBriefing, isGeneratingBriefing, readOnly = false,
-}) => {
-    const badge = STATUS_BADGE[activity.status] ?? STATUS_BADGE.progettata;
-    const deadlineDisplay = activity.deadline
-        ? new Date(activity.deadline).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
-        : null;
+const NoteIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+);
 
-    const assignedGroupIds = (activity.groupAssignments ?? []).map(g => g.groupId);
-
-    const toggleGroup = (groupId: string) => {
-        if (readOnly || !onUpdate) return;
-        const current = activity.groupAssignments ?? [];
-        const already = current.some(g => g.groupId === groupId);
-        const next = already
-            ? current.filter(g => g.groupId !== groupId)
-            : [...current, { groupId }];
-        onUpdate(activity.id, { groupAssignments: next });
-    };
-
-    return (
-        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-            {/* Header */}
-            <button
-                onClick={onToggle}
-                className="w-full flex items-center gap-2 px-4 py-3 text-left"
-                aria-expanded={isOpen}
-            >
-                <DocumentTextIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                <span className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-gray-200 truncate block">{activity.title}</span>
-                    <span className="text-[10px] font-mono text-gray-500 flex items-center gap-1.5 mt-0.5">
-                        {FORMA_LAVORO_LABELS[activity.formaLavoro]}
-                        <span className="text-gray-700">·</span>
-                        {CONTESTO_LABELS[activity.contesto]}
-                        {deadlineDisplay && (
-                            <>
-                                <span className="text-gray-700">·</span>
-                                <span className="text-amber-500/80">{deadlineDisplay}</span>
-                            </>
-                        )}
-                    </span>
-                </span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded flex-shrink-0 ${badge.cls}`}>
-                    {badge.label}
-                </span>
-                <ChevronDownIcon className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Expanded */}
-            {isOpen && (
-                <div className="px-4 pb-4 border-t border-gray-700/40 space-y-4 pt-3">
-
-                    {/* Deadline */}
-                    <div>
-                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Scadenza</label>
-                        <input
-                            type="date"
-                            value={activity.deadline ?? ''}
-                            disabled={readOnly}
-                            onChange={e => onUpdate?.(activity.id, { deadline: e.target.value || undefined })}
-                            className="p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                    </div>
-
-                    {/* Gruppi assegnati */}
-                    {blockGroups.length > 0 && (
-                        <div>
-                            <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Gruppi assegnati</label>
-                            <div className="flex flex-wrap gap-2">
-                                {blockGroups.map(g => {
-                                    const assigned = assignedGroupIds.includes(g.name);
-                                    return (
-                                        <button
-                                            key={g.name}
-                                            onClick={() => toggleGroup(g.name)}
-                                            disabled={readOnly}
-                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors disabled:cursor-not-allowed ${
-                                                assigned
-                                                    ? 'bg-indigo-600/50 border-indigo-500/50 text-indigo-200'
-                                                    : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white disabled:opacity-60'
-                                            }`}
-                                        >
-                                            {assigned ? '✓ ' : ''}{g.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Briefing */}
-                    <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Briefing studenti</label>
-                            {!readOnly && onGenerateBriefing && (
-                                <button
-                                    onClick={() => onGenerateBriefing(activity.id)}
-                                    disabled={isGeneratingBriefing}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isGeneratingBriefing
-                                        ? <><span className="h-3 w-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione...</>
-                                        : <><SparklesIcon className="h-3 w-3" />Genera con ADA</>
-                                    }
-                                </button>
-                            )}
-                        </div>
-                        <EditableTextarea
-                            value={activity.briefingContent ?? ''}
-                            onSave={val => onUpdate?.(activity.id, { briefingContent: val || undefined })}
-                            placeholder="Scrivi o genera un briefing per gli studenti…"
-                            disabled={readOnly || !onUpdate}
-                            rows={4}
-                        />
-                    </div>
-
-                    {/* Link Classroom compito */}
-                    <div>
-                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Link compito Classroom</label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="url"
-                                value={activity.classroomAssignmentUrl ?? ''}
-                                disabled={readOnly}
-                                onChange={e => onUpdate?.(activity.id, { classroomAssignmentUrl: e.target.value || undefined })}
-                                onBlur={e => onUpdate?.(activity.id, { classroomAssignmentUrl: e.target.value.trim() || undefined })}
-                                placeholder="https://classroom.google.com/..."
-                                className="flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            {activity.classroomAssignmentUrl && (
-                                <a
-                                    href={activity.classroomAssignmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
-                                >
-                                    <LinkIcon className="h-3.5 w-3.5" />
-                                    Apri
-                                </a>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ── AddMaterialModal ──────────────────────────────────────────────────────────
-
-const MATERIAL_TYPE_OPTIONS: { value: LessonMaterial['type']; label: string }[] = [
-    { value: 'slide', label: 'Slide' },
-    { value: 'video', label: 'Video' },
-    { value: 'pdf', label: 'PDF' },
-    { value: 'paper', label: 'Articolo' },
-    { value: 'ricerca', label: 'Ricerca' },
-    { value: 'stampa', label: 'Stampa' },
-    { value: 'altro', label: 'Altro' },
-];
-
-const MATERIAL_TYPE_LABELS: Record<LessonMaterial['type'], string> = {
-    slide: 'Slide', video: 'Video', pdf: 'PDF', paper: 'Articolo',
-    ricerca: 'Ricerca', stampa: 'Stampa', altro: 'Altro',
-};
-
-const AddMaterialModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
-}> = ({ isOpen, onClose, onSave }) => {
-    const [title, setTitle] = useState('');
-    const [url, setUrl] = useState('');
-    const [type, setType] = useState<LessonMaterial['type']>('slide');
-    const [notes, setNotes] = useState('');
-    const [error, setError] = useState('');
-
-    React.useEffect(() => {
-        if (isOpen) { setTitle(''); setUrl(''); setType('slide'); setNotes(''); setError(''); }
-    }, [isOpen]);
-
-    const handleSave = () => {
-        if (!title.trim()) { setError('Il titolo è obbligatorio.'); return; }
-        if (!url.trim()) { setError("L'URL è obbligatorio."); return; }
-        try { new URL(url); } catch { setError('URL non valido. Inserisci un link completo (es. https://...).'); return; }
-        onSave({ title: title.trim(), url: url.trim(), type, targetAudience: 'classe', notes: notes.trim() || undefined });
-        onClose();
-    };
-
-    const footer = (
-        <>
-            <div />
-            <div className="space-x-3">
-                <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 rounded-md hover:bg-gray-700">Annulla</button>
-                <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Aggiungi</button>
-            </div>
-        </>
-    );
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Aggiungi Materiale" footer={footer}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Titolo *</label>
-                    <input
-                        type="text" value={title} onChange={e => setTitle(e.target.value)}
-                        className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Es: Slide introduttive al Modulo 2"
-                        autoFocus
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">URL *</label>
-                    <input
-                        type="url" value={url} onChange={e => setUrl(e.target.value)}
-                        className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="https://..."
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
-                    <select
-                        value={type} onChange={e => setType(e.target.value as LessonMaterial['type'])}
-                        className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md text-sm text-gray-200"
-                    >
-                        {MATERIAL_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                        Note <span className="text-gray-500">(opzionale)</span>
-                    </label>
-                    <input
-                        type="text" value={notes} onChange={e => setNotes(e.target.value)}
-                        className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Es: Da stampare in anticipo"
-                    />
-                </div>
-                {error && <p className="text-sm text-red-400">{error}</p>}
-            </div>
-        </Modal>
-    );
-};
-
-// ── Activity labels ───────────────────────────────────────────────────────────
-
-const FORMA_LAVORO_LABELS: Record<ActivityFormaLavoro, string> = {
-    individuale: 'Individuale', coppia: 'Coppia', gruppo: 'Gruppo', classe: 'Classe',
-};
-const CONTESTO_LABELS: Record<ActivityContesto, string> = {
-    in_aula: 'In aula', misto: 'Misto', autonoma: 'Autonoma',
-};
-const DELIVERABLE_LABELS: Record<ActivityDeliverable, string> = {
-    elaborato: 'Elaborato', presentazione: 'Presentazione', prototipo: 'Prototipo', performance: 'Performance', altro: 'Altro',
-};
-const STATUS_BADGE: Record<ActivityStatus, { label: string; cls: string }> = {
-    progettata: { label: 'Progettata', cls: 'text-slate-400 bg-slate-800/60' },
-    lanciata:   { label: 'Lanciata',   cls: 'text-amber-400 bg-amber-900/30' },
-    in_corso:   { label: 'In corso',   cls: 'text-blue-400 bg-blue-900/30' },
-    consegnata: { label: 'Consegnata', cls: 'text-emerald-400 bg-emerald-900/30' },
-    scaduta:    { label: 'Scaduta',    cls: 'text-red-400 bg-red-900/30' },
-    annullata:  { label: 'Annullata',  cls: 'text-gray-500 bg-gray-800/60' },
-};
-
-// ── Block option type ─────────────────────────────────────────────────────────
+// ── Tipi locali ───────────────────────────────────────────────────────────────
 
 interface BlockOption {
     key: string;
-    convoId: string;
+    convoId: string | null; // null = blocco non ancora inizializzato
     blockIndex: number;
     weekNumber: number;
+    weekDates: string;
     label: string;
-    block: BlockDetails;
-    weekPlan: WeekPlan;
+    block: import('../types').BlockDetails | null;
+    isStub: boolean; // blocco dalla rotta ma senza weekPlan ancora
 }
 
-// ── LessonPreparationTab ──────────────────────────────────────────────────────
+interface DistributionSuggestion {
+    outputType: string;
+    description: string;
+    workflow: string[];
+    toolSuggestion: string;
+}
+
+interface GeneratedOutput {
+    groupId: string; // 'all' per output per tutta la classe
+    outputType: string;
+    content: string;
+    isAdapted?: boolean;
+    adaptationType?: 'BES' | 'DSA' | 'PEI';
+}
+
+// ── Costanti ──────────────────────────────────────────────────────────────────
 
 const CRITERIA_OPTIONS = [
     { id: 'Livello competenza', label: 'Livello competenza' },
@@ -308,250 +75,371 @@ const CRITERIA_OPTIONS = [
     { id: 'Mix casuale', label: 'Mix casuale' },
 ];
 
+const OUTPUT_TYPE_LABELS: Record<string, string> = {
+    slide: 'Slide (Canva / PP)',
+    scheda_stampa: 'Scheda stampabile',
+    manuale_lab: 'Manuale laboratorio',
+    sito: 'Sito / Pagina web',
+    guida_visuale: 'Guida visuale',
+    spiegazione_adattata: 'Spiegazione adattata',
+};
+
+// ── Props ─────────────────────────────────────────────────────────────────────
+
 interface LessonPreparationTabProps {
     conversations: Conversation[];
+    availableWeeks: WeekRouteInfo[];
     students: Student[];
-    onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
-    onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
-    onSaveMaterialBrief: (convoId: string, blockIndex: number, materialId: string, brief: string, outputTool: LessonMaterial['outputTool']) => void;
+    notebooks: Notebook[];
     onSaveGroups: (convoId: string, blockIndex: number, groups: GroupDefinition[]) => void;
     onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
+    onSavePreparationSources: (convoId: string, blockIndex: number, sources: PreparationSource[]) => void;
     masterContext: ReturnType<typeof useMasterContext>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
-    activities?: Activity[];
-    onUpdateActivity?: (id: string, updates: Partial<Activity>) => void;
-    onGenerateBriefing?: (activityId: string) => Promise<string>;
-    onSaveAssignmentPlan?: (convoId: string, blockIndex: number, assignments: LessonAssignment[]) => void;
-    onUpdateAssignmentChannel?: (convoId: string, blockIndex: number, assignmentId: string, channel: LessonAssignmentChannel) => void;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Aggrega il testo di tutte le fonti attive per l'invio ad Ada */
+function buildSourcesText(
+    block: import('../types').BlockDetails | null,
+    sources: PreparationSource[],
+    blockOptionsMap: Map<string, BlockOption>
+): string {
+    const parts: string[] = [];
+
+    // Master blocco corrente
+    const masterCurrent = sources.find(s => s.type === 'master_current' && s.isActive);
+    if (masterCurrent && block?.contentBlocks?.length) {
+        parts.push('## Master blocco corrente\n' + block.contentBlocks.map(cb => cb.content).join('\n\n'));
+    }
+
+    // Altri master
+    sources.filter(s => s.type === 'master_other' && s.isActive && s.blockRef).forEach(s => {
+        const opt = blockOptionsMap.get(s.blockRef!);
+        if (opt?.block?.contentBlocks?.length) {
+            parts.push(`## Master: ${s.label}\n` + opt.block.contentBlocks.map(cb => cb.content).join('\n\n'));
+        }
+    });
+
+    // Note incollate
+    sources.filter(s => s.type === 'note' && s.isActive && s.content).forEach(s => {
+        parts.push(`## Nota: ${s.label}\n${s.content}`);
+    });
+
+    // Link / YouTube: solo label + url (Ada non può fetch, ma il contesto aiuta)
+    sources.filter(s => (s.type === 'link' || s.type === 'youtube') && s.isActive && s.url).forEach(s => {
+        parts.push(`## Risorsa: ${s.label}\nURL: ${s.url}`);
+    });
+
+    return parts.join('\n\n---\n\n').slice(0, 8000);
+}
+
+/** Genera il testo formattato da esportare in NotebookLM */
+function buildLMExport(
+    block: import('../types').BlockDetails | null,
+    sources: PreparationSource[],
+    blockOptionsMap: Map<string, BlockOption>
+): string {
+    const lines: string[] = ['# Fonti per NotebookLM', ''];
+    if (block?.objective) lines.push(`**Obiettivo:** ${block.objective}`, '');
+
+    const masterText = block?.contentBlocks?.map(cb => cb.content).join('\n\n');
+    if (masterText) {
+        lines.push('## Contenuto Master', masterText, '');
+    }
+
+    sources.filter(s => s.type === 'master_other' && s.blockRef).forEach(s => {
+        const opt = blockOptionsMap.get(s.blockRef!);
+        const text = opt?.block?.contentBlocks?.map(cb => cb.content).join('\n\n');
+        if (text) lines.push(`## ${s.label}`, text, '');
+    });
+
+    sources.filter(s => s.type === 'note' && s.content).forEach(s => {
+        lines.push(`## ${s.label}`, s.content!, '');
+    });
+
+    sources.filter(s => s.type === 'link' || s.type === 'youtube').forEach(s => {
+        lines.push(`## Risorsa: ${s.label}`, `URL: ${s.url ?? ''}`, '');
+    });
+
+    return lines.join('\n');
+}
+
+// ── Componente principale ─────────────────────────────────────────────────────
+
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
-    conversations, students, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
-    activities = [], onUpdateActivity, onGenerateBriefing, onSaveAssignmentPlan, onUpdateAssignmentChannel,
+    conversations, availableWeeks, students, notebooks,
+    onSaveGroups, onSaveClassroomUrl, onSavePreparationSources,
+    masterContext, showToast,
 }) => {
+
+    // ── 1. SELEZIONE — deriva da availableWeeks × conversations (fix bug) ───
     const blockOptions = useMemo<BlockOption[]>(() => {
-        return conversations
-            .filter(c => c.weekPlan)
-            .flatMap(c =>
-                c.weekPlan!.blocks
-                    .map((block, index) => ({ block, index, weekPlan: c.weekPlan!, convoId: c.id }))
-                    .filter(({ block }) =>
-                        block.lessonState !== 'archiviata' &&
-                        block.status !== 'saltato' &&
-                        block.status !== 'annullato'
-                    )
-                    .map(({ block, index, weekPlan, convoId }) => ({
-                        key: `${convoId}-${index}`,
-                        convoId,
-                        blockIndex: index,
-                        weekNumber: weekPlan.weekNumber,
-                        label: `Sett. ${weekPlan.weekNumber} · BL${index + 1}${block.day ? ` · ${block.day}` : ''} — ${block.lessonTitle || block.objective || 'Blocco senza titolo'}`,
-                        block,
-                        weekPlan,
-                    }))
-            )
-            .sort((a, b) => a.weekNumber !== b.weekNumber ? a.weekNumber - b.weekNumber : a.blockIndex - b.blockIndex);
-    }, [conversations]);
+        const opts: BlockOption[] = [];
+        for (const week of availableWeeks) {
+            const convo = conversations.find(c => c.weekPlan?.weekNumber === week.weekNumber);
+            for (let i = 0; i < week.totalBlocks; i++) {
+                const block = convo?.weekPlan?.blocks[i] ?? null;
+                if (block && (block.status === 'saltato' || block.status === 'annullato')) continue;
+                const title = block?.blockTitle || block?.objective || block?.lessonTitle;
+                opts.push({
+                    key: convo ? `${convo.id}-${i}` : `stub-${week.weekNumber}-${i}`,
+                    convoId: convo?.id ?? null,
+                    blockIndex: i,
+                    weekNumber: week.weekNumber,
+                    weekDates: week.dates,
+                    label: `Sett. ${week.weekNumber} · BL${i + 1}${block?.day && block.day !== 'Giorno da definire' ? ` · ${block.day}` : ''} — ${title ?? 'Blocco da pianificare'}`,
+                    block,
+                    isStub: !convo || !block,
+                });
+            }
+        }
+        return opts;
+    }, [availableWeeks, conversations]);
+
+    const blockOptionsMap = useMemo(() => {
+        const m = new Map<string, BlockOption>();
+        blockOptions.forEach(o => m.set(o.key, o));
+        return m;
+    }, [blockOptions]);
 
     const [selectedKey, setSelectedKey] = useState<string>(() => {
-        // Default to active lesson block if present
-        return conversations
+        const inCorso = conversations
             .filter(c => c.weekPlan)
             .flatMap(c => c.weekPlan!.blocks.map((b, i) => ({ key: `${c.id}-${i}`, b })))
-            .find(({ b }) => b.lessonState === 'in_corso')?.key ?? '';
+            .find(({ b }) => b.lessonState === 'in_corso');
+        return inCorso?.key ?? '';
     });
 
-    const [isMasterOpen, setIsMasterOpen] = useState(false);
-    const [isAdaOpen, setIsAdaOpen] = useState(false);
-    const [addMaterialOpen, setAddMaterialOpen] = useState(false);
-    const [adaQuestion, setAdaQuestion] = useState('');
-    const [adaResponse, setAdaResponse] = useState<string | null>(null);
-    const [isAdaLoading, setIsAdaLoading] = useState(false);
-
-    // ── Gruppi state ──────────────────────────────────────────────────────────
-    const [isGroupsOpen, setIsGroupsOpen] = useState(false);
-    const [groupSize, setGroupSize] = useState(3);
-    const [selectedCriteria, setSelectedCriteria] = useState<string[]>(['Livello competenza']);
-    const [proposedGroups, setProposedGroups] = useState<GroupDefinition[]>([]);
-    const [isLoadingGroupSuggestion, setIsLoadingGroupSuggestion] = useState(false);
-
-    // ── Activity state ────────────────────────────────────────────────────────
-    const [openActivityIds, setOpenActivityIds] = useState<Set<string>>(new Set());
-    const [generatingBriefingId, setGeneratingBriefingId] = useState<string | null>(null);
-
-    // ── Classroom URL state ───────────────────────────────────────────────────
-    const [classroomDraft, setClassroomDraft] = useState('');
-
-    // ── MaterialProductionModal state ─────────────────────────────────────────
-    const [productionModal, setProductionModal] = useState<{
-        sourceName: string;
-        sourceContent: string;
-        sourceType: LessonMaterial['type'];
-        materialId: string | null; // null = master source
-    } | null>(null);
-
-    // ── Materiali unificati state ─────────────────────────────────────────────
-    const [isMaterialiOpen, setIsMaterialiOpen] = useState(true);
-    const [extraMasterKeys, setExtraMasterKeys] = useState<string[]>([]);
-    const [openExtraMasterKeys, setOpenExtraMasterKeys] = useState<Set<string>>(new Set());
-    const [courseDriveUrl, setCourseDriveUrl] = useState<string>(() => {
-        try { return localStorage.getItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY) ?? ''; } catch { return ''; }
-    });
-    const [driveLinkDraft, setDriveLinkDraft] = useState<string>(() => {
-        try { return localStorage.getItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY) ?? ''; } catch { return ''; }
-    });
-
-    const toggleExtraMaster = (key: string) =>
-        setOpenExtraMasterKeys(prev => {
-            const next = new Set(prev);
-            next.has(key) ? next.delete(key) : next.add(key);
-            return next;
-        });
-
-    const selectedOption = useMemo(
-        () => blockOptions.find(o => o.key === selectedKey) ?? blockOptions[0] ?? null,
-        [blockOptions, selectedKey]
-    );
-
-    // ── Activity helpers ──────────────────────────────────────────────────────
-    const currentBlockActivities = useMemo(
-        () => activities.filter(a => a.blockId === selectedOption?.block.id),
-        [activities, selectedOption?.block.id]
-    );
-    const otherActiveActivities = useMemo(
-        () => activities.filter(a =>
-            a.blockId !== selectedOption?.block.id &&
-            (a.status === 'lanciata' || a.status === 'in_corso')
-        ),
-        [activities, selectedOption?.block.id]
-    );
-
-    const toggleActivityOpen = (id: string) =>
-        setOpenActivityIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-
-    const getBlockGroupsForActivity = (blockId: string): GroupDefinition[] => {
-        for (const c of conversations) {
-            if (!c.weekPlan) continue;
-            const b = c.weekPlan.blocks.find(bl => bl.id === blockId);
-            if (b) return b.lessonGroups ?? [];
-        }
-        return [];
-    };
-
-    const handleGenerateBriefingClick = async (activityId: string) => {
-        if (!onGenerateBriefing) return;
-        setGeneratingBriefingId(activityId);
-        try {
-            const text = await onGenerateBriefing(activityId);
-            onUpdateActivity?.(activityId, { briefingContent: text });
-        } catch {
-            showToast('Errore nella generazione del briefing.', 'error');
-        } finally {
-            setGeneratingBriefingId(null);
-        }
-    };
-
-    const handleAskAda = async () => {
-        if (!adaQuestion.trim()) return;
-        setIsAdaLoading(true);
-        setAdaResponse(null);
-        try {
-            const masterSnippet = selectedOption?.block.contentBlocks
-                ?.map(cb => cb.content).join('\n').slice(0, 800);
-            const result = await GeminiService.generateToolSuggestion(adaQuestion, masterSnippet);
-            setAdaResponse(result);
-        } catch {
-            showToast('Errore nella risposta di Ada.', 'error');
-        } finally {
-            setIsAdaLoading(false);
-        }
-    };
-
-    // Sync classroomDraft when selected block changes
-    const currentClassroomUrl = selectedOption?.block.classroomUrl ?? '';
-    React.useEffect(() => {
-        setClassroomDraft(currentClassroomUrl);
-    }, [selectedOption?.key, currentClassroomUrl]);
-
-    // Reset transient state when selected block changes
-    React.useEffect(() => {
-        setProposedGroups([]);
-        setIsGroupsOpen(false);
-        setIsAdaOpen(false);
-        setAdaQuestion('');
-        setAdaResponse(null);
-    }, [selectedKey]);
-
-    // Auto-jump to in_corso block when a lesson becomes active
+    // Auto-jump al blocco in_corso quando una lezione diventa attiva
     React.useEffect(() => {
         const inCorsoKey = conversations
             .filter(c => c.weekPlan)
             .flatMap(c => c.weekPlan!.blocks.map((b, i) => ({ key: `${c.id}-${i}`, b })))
             .find(({ b }) => b.lessonState === 'in_corso')?.key;
-        if (inCorsoKey) {
-            setSelectedKey(prev => prev === inCorsoKey ? prev : inCorsoKey);
-        }
+        if (inCorsoKey) setSelectedKey(prev => prev === inCorsoKey ? prev : inCorsoKey);
     }, [conversations]);
 
-    const getStudentNameById = (id: string) => students.find(s => s.id === id)?.name ?? 'Sconosciuto';
+    const selectedOption = useMemo(
+        () => blockOptions.find(o => o.key === selectedKey) ?? blockOptions[0] ?? null,
+        [blockOptions, selectedKey]
+    );
+    const block = selectedOption?.block ?? null;
 
-    const toggleCriteria = (criterionId: string) => {
-        setSelectedCriteria(prev =>
-            prev.includes(criterionId)
-                ? prev.filter(c => c !== criterionId)
-                : [...prev, criterionId]
-        );
+    // ── 2. SCRIVANIA FONTI — stato accordion e sources ───────────────────────
+    const [isFontiOpen, setIsFontiOpen] = useState(true);
+    const [isLMOpen, setIsLMOpen] = useState(false);
+    const [lmPasteText, setLmPasteText] = useState('');
+    const [showLMExport, setShowLMExport] = useState(false);
+    const [lmExportText, setLmExportText] = useState('');
+    const [copiedLMExport, setCopiedLMExport] = useState(false);
+
+    // Fonti locali (sincronizzate con block.preparationSources)
+    const [localSources, setLocalSources] = useState<PreparationSource[]>([]);
+    const prevBlockKeyRef = useRef<string | null>(null);
+
+    // Sincronizza localSources quando cambia il blocco
+    React.useEffect(() => {
+        const key = selectedOption?.key ?? null;
+        if (key !== prevBlockKeyRef.current) {
+            prevBlockKeyRef.current = key;
+            const saved = block?.preparationSources ?? [];
+            // Assicura che master_current ci sia sempre
+            const hasMaster = saved.some(s => s.type === 'master_current');
+            setLocalSources(hasMaster ? saved : [
+                { id: 'master-current', type: 'master_current', label: 'Master blocco', isActive: true, addedAt: new Date().toISOString() },
+                ...saved,
+            ]);
+        }
+    }, [selectedOption?.key, block]);
+
+    const saveSources = useCallback((sources: PreparationSource[]) => {
+        setLocalSources(sources);
+        if (selectedOption?.convoId) {
+            onSavePreparationSources(selectedOption.convoId, selectedOption.blockIndex, sources);
+        }
+    }, [selectedOption, onSavePreparationSources]);
+
+    const toggleSource = (id: string) => {
+        const updated = localSources.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s);
+        saveSources(updated);
+    };
+
+    const removeSource = (id: string) => {
+        saveSources(localSources.filter(s => s.id !== id && s.type !== 'master_current'));
+        // Non permettere rimozione del master_current
+        const src = localSources.find(s => s.id === id);
+        if (src?.type === 'master_current') return;
+        saveSources(localSources.filter(s => s.id !== id));
+    };
+
+    // Modal aggiungi fonte
+    const [addSourceModal, setAddSourceModal] = useState<null | PrepSourceType>(null);
+    const [newSourceLabel, setNewSourceLabel] = useState('');
+    const [newSourceUrl, setNewSourceUrl] = useState('');
+    const [newSourceContent, setNewSourceContent] = useState('');
+
+    const handleAddSource = () => {
+        if (!addSourceModal) return;
+        const id = crypto.randomUUID();
+        const base = { id, isActive: true, addedAt: new Date().toISOString() };
+        let src: PreparationSource | null = null;
+
+        if (addSourceModal === 'master_other') {
+            // viene gestito inline con dropdown
+            return;
+        } else if (addSourceModal === 'link' || addSourceModal === 'youtube') {
+            if (!newSourceUrl.trim()) { showToast('Inserisci un URL valido.', 'error'); return; }
+            src = { ...base, type: addSourceModal, label: newSourceLabel.trim() || newSourceUrl, url: newSourceUrl.trim() };
+        } else if (addSourceModal === 'note') {
+            if (!newSourceContent.trim()) { showToast('Il testo non può essere vuoto.', 'error'); return; }
+            src = { ...base, type: 'note', label: newSourceLabel.trim() || 'Nota', content: newSourceContent.trim() };
+        }
+
+        if (src) {
+            saveSources([...localSources, src]);
+            setAddSourceModal(null);
+            setNewSourceLabel(''); setNewSourceUrl(''); setNewSourceContent('');
+        }
+    };
+
+    // ── 3. DISTRIBUZIONE ADA ─────────────────────────────────────────────────
+    const [isDistribuzioneOpen, setIsDistribuzioneOpen] = useState(false);
+    const [distSuggestion, setDistSuggestion] = useState<DistributionSuggestion | null>(null);
+    const [isLoadingDist, setIsLoadingDist] = useState(false);
+    const [generatedOutputs, setGeneratedOutputs] = useState<GeneratedOutput[]>([]);
+    const [generatingOutputFor, setGeneratingOutputFor] = useState<string | null>(null);
+
+    const handleSuggestDistribution = async () => {
+        if (!block) return;
+        setIsLoadingDist(true);
+        setDistSuggestion(null);
+        try {
+            const sourcesText = buildSourcesText(block, localSources, blockOptionsMap);
+            const suggestion = await GeminiService.generateDistributionSuggestion(
+                block.tipologia ? LESSON_TYPE_LABELS[block.tipologia] : undefined,
+                block.metodologia ? TEACHING_METHODOLOGY_LABELS[block.metodologia] : undefined,
+                !!block.isFuoriAula,
+                !!block.hasExternalExpert,
+                block.objective ?? '',
+                sourcesText,
+                masterContext.systemInstruction,
+            );
+            setDistSuggestion(suggestion);
+        } catch {
+            showToast('Errore nella generazione del suggerimento.', 'error');
+        } finally {
+            setIsLoadingDist(false);
+        }
+    };
+
+    const handleGenerateOutput = async (outputType: string, groupId: string, adaptInfo?: { type: 'BES' | 'DSA' | 'PEI'; name: string; notes: string }) => {
+        if (!block) return;
+        const key = `${groupId}-${outputType}`;
+        setGeneratingOutputFor(key);
+        try {
+            const sourcesText = buildSourcesText(block, localSources, blockOptionsMap);
+            let content: string;
+            if (adaptInfo) {
+                content = await GeminiService.generateAdaptedMaterial(
+                    sourcesText,
+                    adaptInfo.name,
+                    adaptInfo.type,
+                    adaptInfo.notes,
+                    masterContext.systemInstruction,
+                );
+            } else {
+                const toolMap: Record<string, string> = {
+                    slide: 'canva', scheda_stampa: 'ada_diretta', manuale_lab: 'ada_diretta',
+                    sito: 'ada_diretta', guida_visuale: 'ada_diretta', spiegazione_adattata: 'ada_diretta',
+                };
+                content = await GeminiService.generateMaterialBrief(
+                    sourcesText,
+                    OUTPUT_TYPE_LABELS[outputType] ?? outputType,
+                    distSuggestion?.toolSuggestion ?? toolMap[outputType] ?? 'ada_diretta',
+                    groupId === 'all' ? 'tutta la classe' : `gruppo ${groupId}`,
+                    '',
+                    masterContext.systemInstruction,
+                );
+            }
+            setGeneratedOutputs(prev => [
+                ...prev.filter(o => !(o.groupId === groupId && o.outputType === outputType)),
+                { groupId, outputType, content, isAdapted: !!adaptInfo, adaptationType: adaptInfo?.type },
+            ]);
+        } catch {
+            showToast('Errore nella generazione dell\'output.', 'error');
+        } finally {
+            setGeneratingOutputFor(null);
+        }
+    };
+
+    // ── 4. GRUPPI (min 1) ────────────────────────────────────────────────────
+    const [isGruppiOpen, setIsGruppiOpen] = useState(false);
+    const [groupSize, setGroupSize] = useState(3);
+    const [selectedCriteria, setSelectedCriteria] = useState<string[]>(['Livello competenza']);
+    const [proposedGroups, setProposedGroups] = useState<GroupDefinition[]>([]);
+    const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+
+    const toggleCriteria = (id: string) => {
+        setSelectedCriteria(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
         setProposedGroups([]);
     };
 
+    const getStudentName = (id: string) => students.find(s => s.id === id)?.name ?? 'Sconosciuto';
+
     const handleGenerateGroups = async () => {
-        if (!selectedOption) return;
-        if (selectedCriteria.length === 0) {
+        if (!selectedOption || selectedCriteria.length === 0) {
             showToast('Seleziona almeno un criterio.', 'error');
             return;
         }
         if (selectedCriteria.length === 1 && selectedCriteria[0] === 'Mix casuale') {
             const shuffled = [...students].sort(() => Math.random() - 0.5);
             const groups: GroupDefinition[] = [];
-            let i = 0; let groupNum = 1;
+            let i = 0, n = 1;
             while (i < shuffled.length) {
-                groups.push({ name: `Gruppo ${groupNum}`, studentIds: shuffled.slice(i, i + groupSize).map(s => s.id), justification: 'Composizione casuale.' });
-                i += groupSize; groupNum++;
+                const slice = shuffled.slice(i, i + groupSize);
+                groups.push({ name: groupSize === 1 ? slice[0]?.name ?? `Studente ${n}` : `Gruppo ${n}`, studentIds: slice.map(s => s.id), justification: groupSize === 1 ? 'Lavoro individuale.' : 'Composizione casuale.' });
+                i += groupSize; n++;
             }
             setProposedGroups(groups);
             return;
         }
-        setIsLoadingGroupSuggestion(true);
+        setIsLoadingGroups(true);
         try {
             const groups = await GeminiService.generateGroupSuggestionWithCriteria(students, selectedCriteria, groupSize);
             setProposedGroups(groups);
         } catch (err) {
-            showToast(err instanceof Error ? err.message : 'Errore durante la generazione dei gruppi.', 'error');
+            showToast(err instanceof Error ? err.message : 'Errore generazione gruppi.', 'error');
         } finally {
-            setIsLoadingGroupSuggestion(false);
+            setIsLoadingGroups(false);
         }
     };
 
     const handleSaveGroups = () => {
-        if (!selectedOption || proposedGroups.length === 0) return;
+        if (!selectedOption?.convoId || proposedGroups.length === 0) return;
         onSaveGroups(selectedOption.convoId, selectedOption.blockIndex, proposedGroups);
         showToast('Gruppi salvati!', 'success');
         setProposedGroups([]);
-        setIsGroupsOpen(false);
+        setIsGruppiOpen(false);
     };
 
-    const handleRemoveStudentFromGroup = (groupIndex: number, studentId: string) => {
-        setProposedGroups(prev => {
-            const next = [...prev];
-            next[groupIndex] = { ...next[groupIndex], studentIds: next[groupIndex].studentIds.filter(id => id !== studentId) };
-            return next;
-        });
-    };
+    // ── 5. ABBINAMENTO ───────────────────────────────────────────────────────
+    const [isAbbinamentoOpen, setIsAbbinamentoOpen] = useState(false);
+    const [groupOutputMap, setGroupOutputMap] = useState<Record<string, string>>({});
 
+    const savedGroups = block?.lessonGroups ?? [];
+    const [openOutputIds, setOpenOutputIds] = useState<Set<string>>(new Set());
+
+    const toggleOutput = (id: string) => setOpenOutputIds(prev => {
+        const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+    });
+
+    // ── Classroom URL ────────────────────────────────────────────────────────
+    const [classroomDraft, setClassroomDraft] = useState(block?.classroomUrl ?? '');
+    React.useEffect(() => { setClassroomDraft(block?.classroomUrl ?? ''); }, [selectedOption?.key, block?.classroomUrl]);
+
+    // ── Stato vuoto ──────────────────────────────────────────────────────────
     if (blockOptions.length === 0) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-8 py-20 gap-4">
@@ -564,534 +452,701 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
         );
     }
 
-    const block = selectedOption?.block;
+    const activeSources = localSources.filter(s => s.isActive);
     const hasMasterContent = (block?.contentBlocks?.length ?? 0) > 0;
-    const materials = block?.lessonMaterials ?? [];
 
+    // ── RENDER ───────────────────────────────────────────────────────────────
     return (
-        <>
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="max-w-3xl mx-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="max-w-3xl mx-auto p-6 space-y-5">
 
-                    {/* Block selector */}
-                    <div>
-                        <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
-                            Blocco da preparare
-                        </label>
-                        <select
-                            value={selectedOption?.key ?? ''}
-                            onChange={e => setSelectedKey(e.target.value)}
-                            className="w-full p-2.5 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
-                        >
-                            {blockOptions.map(o => (
-                                <option key={o.key} value={o.key}>{o.label}</option>
-                            ))}
-                        </select>
-                    </div>
+                {/* ── 1. SELEZIONE ─────────────────────────────────────────── */}
+                <div>
+                    <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
+                        Blocco da preparare
+                    </label>
+                    <select
+                        value={selectedOption?.key ?? ''}
+                        onChange={e => setSelectedKey(e.target.value)}
+                        className="w-full p-2.5 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                    >
+                        {blockOptions.map(o => (
+                            <option key={o.key} value={o.key}>{o.label}</option>
+                        ))}
+                    </select>
+                    {selectedOption?.isStub && (
+                        <p className="text-xs text-amber-500/70 mt-1.5 font-mono">
+                            ⚠ Questo blocco non è ancora stato aperto in Laboratorio. Le sezioni di distribuzione e abbinamento saranno limitate.
+                        </p>
+                    )}
+                </div>
 
-                    {selectedOption && (
-                        <>
-                            {/* ── MATERIALI DI LEZIONE — sezione unificata ── */}
-                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-                                {/* Header collassabile */}
-                                <button
-                                    onClick={() => setIsMaterialiOpen(o => !o)}
-                                    className="w-full flex items-center justify-between px-4 py-3 text-left"
-                                    aria-expanded={isMaterialiOpen}
-                                >
-                                    <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                                        <DocumentTextIcon className="h-4 w-4 text-gray-500" />
-                                        Materiali di Lezione
-                                        {(materials.length + extraMasterKeys.length + (hasMasterContent ? 1 : 0)) > 0 && (
-                                            <span className="text-[10px] font-mono text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
-                                                {materials.length + extraMasterKeys.length + (hasMasterContent ? 1 : 0)}
-                                            </span>
-                                        )}
+                {selectedOption && (
+                    <>
+                        {/* ── 2. SCRIVANIA FONTI ───────────────────────────── */}
+                        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+                            <button
+                                onClick={() => setIsFontiOpen(o => !o)}
+                                className="w-full flex items-center justify-between px-4 py-3 text-left"
+                            >
+                                <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                    <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+                                    Scrivania Fonti
+                                    <span className="text-[10px] font-mono text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
+                                        {activeSources.length} attive
                                     </span>
-                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isMaterialiOpen ? 'rotate-180' : ''}`} />
-                                </button>
+                                </span>
+                                <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isFontiOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                                {isMaterialiOpen && (
-                                    <div className="border-t border-gray-700/40 divide-y divide-gray-700/30">
+                            {isFontiOpen && (
+                                <div className="border-t border-gray-700/40 divide-y divide-gray-700/30">
 
-                                        {/* ── 1. Master blocco corrente ── */}
-                                        <div>
-                                            <button
-                                                onClick={() => setIsMasterOpen(o => !o)}
-                                                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-700/20 transition-colors"
-                                                aria-expanded={isMasterOpen}
-                                            >
-                                                <span className="text-xs text-gray-400 flex items-center gap-2">
-                                                    <span className="text-[10px] font-mono text-blue-400/80 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide">Master</span>
-                                                    <span className="truncate max-w-[260px]">{block?.blockTitle || block?.objective || 'Blocco corrente'}</span>
-                                                </span>
-                                                <span className="flex items-center gap-2 flex-shrink-0">
-                                                    {hasMasterContent && (
-                                                        <button
-                                                            onClick={e => {
-                                                                e.stopPropagation();
-                                                                setProductionModal({
-                                                                    sourceName: block?.blockTitle || block?.objective || 'Master blocco corrente',
-                                                                    sourceContent: block!.contentBlocks!.map(cb => cb.content).join('\n\n'),
-                                                                    sourceType: 'altro',
-                                                                    materialId: null,
-                                                                });
-                                                            }}
-                                                            className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors"
-                                                            title="Produci materiale dal master"
-                                                        >
-                                                            <SparklesIcon className="h-3 w-3" />Produci
+                                    {/* Lista fonti */}
+                                    <div className="px-4 py-3 space-y-2">
+                                        {localSources.map(src => {
+                                            const isMasterCurrent = src.type === 'master_current';
+                                            const icon = src.type === 'youtube' ? <YouTubeIcon className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+                                                : src.type === 'note' ? <NoteIcon className="h-3.5 w-3.5 text-amber-400/80 flex-shrink-0" />
+                                                : src.type === 'master_current' || src.type === 'master_other' ? <DocumentTextIcon className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                                                : <LinkIcon className="h-3.5 w-3.5 text-sky-400 flex-shrink-0" />;
+
+                                            return (
+                                                <div
+                                                    key={src.id}
+                                                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-colors ${src.isActive ? 'border-gray-600/50 bg-gray-900/40' : 'border-gray-700/30 bg-gray-900/20 opacity-50'}`}
+                                                >
+                                                    {icon}
+                                                    <span className="flex-1 min-w-0">
+                                                        <span className="text-xs text-gray-300 truncate block">{src.label}</span>
+                                                        {isMasterCurrent && !hasMasterContent && (
+                                                            <span className="text-[10px] text-gray-600 font-mono">master vuoto — vai al Laboratorio</span>
+                                                        )}
+                                                        {(src.type === 'link' || src.type === 'youtube') && src.url && (
+                                                            <a href={src.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-sky-400 truncate block transition-colors">
+                                                                {src.url.slice(0, 50)}…
+                                                            </a>
+                                                        )}
+                                                    </span>
+                                                    {/* Toggle attivo */}
+                                                    <button
+                                                        onClick={() => toggleSource(src.id)}
+                                                        title={src.isActive ? 'Disattiva' : 'Attiva'}
+                                                        className={`w-7 h-4 rounded-full flex-shrink-0 transition-colors ${src.isActive ? 'bg-purple-600/70' : 'bg-gray-700'}`}
+                                                    >
+                                                        <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${src.isActive ? 'translate-x-3' : 'translate-x-0'}`} />
+                                                    </button>
+                                                    {/* Rimuovi (non per master_current) */}
+                                                    {!isMasterCurrent && (
+                                                        <button onClick={() => removeSource(src.id)} className="text-gray-600 hover:text-red-400 flex-shrink-0 transition-colors">
+                                                            <XIcon className="h-3.5 w-3.5" />
                                                         </button>
                                                     )}
-                                                    {!hasMasterContent && <span className="text-[10px] font-mono text-gray-600 uppercase">vuoto</span>}
-                                                    <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${isMasterOpen ? 'rotate-180' : ''}`} />
-                                                </span>
-                                            </button>
-                                            {isMasterOpen && (
-                                                <div className="px-4 pb-3">
-                                                    {hasMasterContent ? (
-                                                        <div className="space-y-2">
-                                                            {block!.contentBlocks!.map((cb, i) => (
-                                                                <div key={i} className="bg-gray-900/50 rounded-lg p-3 text-sm text-gray-300 max-h-48 overflow-y-auto custom-scrollbar">
-                                                                    <MarkdownRenderer content={cb.content} />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-sm text-gray-600 italic">
-                                                            Nessun contenuto master. Vai al Laboratorio per prepararlo.
-                                                        </p>
-                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        })}
+                                    </div>
 
-                                        {/* ── 2. Altri master ── */}
-                                        <div className="px-4 py-3 space-y-2">
+                                    {/* Bottoni aggiungi fonte */}
+                                    <div className="px-4 py-3">
+                                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">Aggiungi fonte</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {/* Master altro blocco */}
                                             <select
                                                 value=""
                                                 onChange={e => {
-                                                    if (e.target.value && !extraMasterKeys.includes(e.target.value)) {
-                                                        setExtraMasterKeys(prev => [...prev, e.target.value]);
-                                                    }
+                                                    const key = e.target.value;
+                                                    if (!key || localSources.some(s => s.blockRef === key)) return;
+                                                    const opt = blockOptionsMap.get(key);
+                                                    if (!opt) return;
+                                                    saveSources([...localSources, {
+                                                        id: crypto.randomUUID(), type: 'master_other', label: opt.label,
+                                                        isActive: true, addedAt: new Date().toISOString(), blockRef: key,
+                                                    }]);
                                                 }}
-                                                className="w-full p-1.5 bg-gray-900 border border-gray-700/60 rounded-lg text-xs text-gray-400 focus:ring-1 focus:ring-blue-500/50"
+                                                className="text-xs bg-gray-800 border border-gray-700/60 rounded-lg px-2 py-1.5 text-gray-400 focus:ring-1 focus:ring-blue-500/50"
                                             >
-                                                <option value="">+ Aggiungi master di un altro blocco…</option>
+                                                <option value="">+ Master altro blocco…</option>
                                                 {blockOptions
-                                                    .filter(o => o.key !== selectedOption?.key && !extraMasterKeys.includes(o.key) && (o.block.contentBlocks?.length ?? 0) > 0)
-                                                    .map(o => (
-                                                        <option key={o.key} value={o.key}>{o.label}</option>
-                                                    ))
+                                                    .filter(o => o.key !== selectedOption?.key && (o.block?.contentBlocks?.length ?? 0) > 0 && !localSources.some(s => s.blockRef === o.key))
+                                                    .map(o => <option key={o.key} value={o.key}>{o.label}</option>)
                                                 }
                                             </select>
-                                            {extraMasterKeys.map(key => {
-                                                const opt = blockOptions.find(o => o.key === key);
-                                                if (!opt) return null;
-                                                const isOpen = openExtraMasterKeys.has(key);
-                                                return (
-                                                    <div key={key} className="rounded-lg border border-gray-700/40 bg-gray-900/30 overflow-hidden">
-                                                        <div className="flex items-center">
-                                                            <button
-                                                                onClick={() => toggleExtraMaster(key)}
-                                                                className="flex-1 flex items-center justify-between px-3 py-2 text-left hover:bg-gray-700/20 transition-colors"
-                                                            >
-                                                                <span className="text-xs text-gray-400 flex items-center gap-2">
-                                                                    <span className="text-[10px] font-mono text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded uppercase tracking-wide">Master</span>
-                                                                    <span className="truncate max-w-[220px]">{opt.block.blockTitle || opt.block.objective || opt.label}</span>
-                                                                </span>
-                                                                <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setExtraMasterKeys(prev => prev.filter(k => k !== key))}
-                                                                className="px-2.5 py-2 text-gray-600 hover:text-red-400 transition-colors"
-                                                                title="Rimuovi"
-                                                            >
-                                                                <XIcon className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                        {isOpen && (
-                                                            <div className="px-3 pb-3 border-t border-gray-700/30 space-y-2 pt-2">
-                                                                {opt.block.contentBlocks?.map((cb, i) => (
-                                                                    <div key={i} className="bg-gray-900/50 rounded-lg p-3 text-sm text-gray-300 max-h-40 overflow-y-auto custom-scrollbar">
-                                                                        <MarkdownRenderer content={cb.content} />
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
 
-                                        {/* ── 3. Drive ── */}
-                                        <div className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <FolderOpenIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                                                <input
-                                                    type="url"
-                                                    value={driveLinkDraft}
-                                                    onChange={e => setDriveLinkDraft(e.target.value)}
-                                                    onBlur={() => {
-                                                        const trimmed = driveLinkDraft.trim();
-                                                        if (trimmed !== courseDriveUrl) {
-                                                            setCourseDriveUrl(trimmed);
-                                                            try { localStorage.setItem(LOCAL_STORAGE_COURSE_DRIVE_URL_KEY, trimmed); } catch { /* noop */ }
-                                                        }
-                                                    }}
-                                                    placeholder="Incolla URL cartella Drive del corso…"
-                                                    className="flex-1 p-1.5 bg-gray-900 border border-gray-700/60 rounded-lg text-xs text-gray-300 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50"
-                                                />
-                                                <a
-                                                    href={courseDriveUrl || 'https://drive.google.com'}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
-                                                >
-                                                    <FolderOpenIcon className="h-3.5 w-3.5" />
-                                                    Apri Drive
-                                                </a>
-                                            </div>
-                                        </div>
-
-                                        {/* ── 4. Materiali aggiuntivi ── */}
-                                        <div className="px-4 py-3 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Materiali aggiuntivi</span>
+                                            {[
+                                                { type: 'link' as PrepSourceType, label: '+ Link', icon: <LinkIcon className="h-3 w-3" /> },
+                                                { type: 'youtube' as PrepSourceType, label: '+ YouTube', icon: <YouTubeIcon className="h-3 w-3" /> },
+                                                { type: 'note' as PrepSourceType, label: '+ Testo', icon: <NoteIcon className="h-3 w-3" /> },
+                                            ].map(({ type, label, icon }) => (
                                                 <button
-                                                    onClick={() => setAddMaterialOpen(true)}
-                                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-400 border border-blue-500/25 rounded-lg hover:bg-blue-500/10 hover:border-blue-400/40 transition-colors"
+                                                    key={type}
+                                                    onClick={() => { setAddSourceModal(type); setNewSourceLabel(''); setNewSourceUrl(''); setNewSourceContent(''); }}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 border border-gray-700/50 rounded-lg hover:border-gray-600 hover:text-gray-200 transition-colors"
                                                 >
-                                                    <PlusCircleIcon className="h-3.5 w-3.5" />
-                                                    Aggiungi
+                                                    {icon}{label}
                                                 </button>
-                                            </div>
-                                            {materials.length === 0 ? (
-                                                <p className="text-xs text-gray-600 italic">Slide, video, PDF, link utili per questa lezione.</p>
-                                            ) : (
-                                                <div className="space-y-1.5">
-                                                    {materials.map(mat => (
-                                                        <div key={mat.id} className="flex flex-col gap-1 px-2 py-1.5 bg-gray-900/40 rounded-lg border border-gray-700/30 hover:border-gray-600/40 transition-colors">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-mono uppercase tracking-wide text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded flex-shrink-0">
-                                                                    {MATERIAL_TYPE_LABELS[mat.type]}
-                                                                </span>
-                                                                <p className="text-xs font-medium text-gray-300 truncate flex-1">{mat.title}</p>
-                                                                {mat.notes && <p className="text-[10px] text-gray-600 truncate max-w-[80px]">{mat.notes}</p>}
-                                                                <button
-                                                                    onClick={() => setProductionModal({
-                                                                        sourceName: mat.title,
-                                                                        sourceContent: mat.notes ?? mat.title,
-                                                                        sourceType: mat.type,
-                                                                        materialId: mat.id,
-                                                                    })}
-                                                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors flex-shrink-0"
-                                                                    title="Produci con Ada"
-                                                                >
-                                                                    <SparklesIcon className="h-3 w-3" />
-                                                                </button>
-                                                                <a href={mat.url} target="_blank" rel="noopener noreferrer"
-                                                                    className="p-1 text-gray-600 hover:text-blue-400 flex-shrink-0 transition-colors" title="Apri">
-                                                                    <LinkIcon className="h-3.5 w-3.5" />
-                                                                </a>
-                                                                <button
-                                                                    onClick={() => onRemoveMaterial(selectedOption!.convoId, selectedOption!.blockIndex, mat.id)}
-                                                                    className="p-1 text-gray-600 hover:text-red-400 flex-shrink-0 transition-colors" title="Rimuovi">
-                                                                    <TrashIcon className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            </div>
-                                                            {mat.productionBrief && (
-                                                                <div className="flex items-center gap-1.5 pl-1">
-                                                                    {mat.outputTool && (
-                                                                        <span className="text-[10px] font-mono text-purple-400/70 bg-purple-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
-                                                                            {mat.outputTool === 'ada_diretta' ? 'Ada' : mat.outputTool === 'gemini_immagini' ? 'Gemini' : mat.outputTool}
-                                                                        </span>
-                                                                    )}
-                                                                    <p className="text-[11px] text-gray-500 truncate flex-1">{mat.productionBrief.slice(0, 80)}</p>
-                                                                    <button
-                                                                        onClick={() => setProductionModal({
-                                                                            sourceName: mat.title,
-                                                                            sourceContent: mat.notes ?? mat.title,
-                                                                            sourceType: mat.type,
-                                                                            materialId: mat.id,
-                                                                        })}
-                                                                        className="p-0.5 text-gray-600 hover:text-purple-400 transition-colors flex-shrink-0"
-                                                                        title="Modifica brief"
-                                                                    >
-                                                                        <SparklesIcon className="h-3 w-3" />
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Classroom URL */}
-                            <div>
-                                <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
-                                    Link Classroom
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="url"
-                                        value={classroomDraft}
-                                        onChange={e => setClassroomDraft(e.target.value)}
-                                        onBlur={() => {
-                                            if (!selectedOption) return;
-                                            const trimmed = classroomDraft.trim();
-                                            if (trimmed !== (selectedOption.block.classroomUrl ?? '')) {
-                                                onSaveClassroomUrl(selectedOption.convoId, selectedOption.blockIndex, trimmed);
-                                            }
-                                        }}
-                                        placeholder="https://classroom.google.com/..."
-                                        className="flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50"
-                                    />
-                                    {classroomDraft && (
-                                        <a
-                                            href={classroomDraft}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap"
+                                    {/* Pannello NotebookLM */}
+                                    <div>
+                                        <button
+                                            onClick={() => setIsLMOpen(o => !o)}
+                                            className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-700/20 transition-colors"
                                         >
-                                            <LinkIcon className="h-3.5 w-3.5" />
-                                            Apri
-                                        </a>
-                                    )}
-                                </div>
-                            </div>
+                                            <span className="text-xs text-gray-400 flex items-center gap-2">
+                                                <BookOpenIcon className="h-3.5 w-3.5 text-indigo-400" />
+                                                <span className="font-mono text-[10px] text-indigo-400/80 bg-indigo-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide">NotebookLM</span>
+                                                Sinergia con le fonti
+                                            </span>
+                                            <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${isLMOpen ? 'rotate-180' : ''}`} />
+                                        </button>
 
-                            {/* Attività */}
-                            {(currentBlockActivities.length > 0 || otherActiveActivities.length > 0) && (
-                                <div className="space-y-3">
-                                    <h3 className="text-sm font-medium text-gray-300">Attività</h3>
+                                        {isLMOpen && (
+                                            <div className="px-4 pb-4 space-y-3 pt-2 border-t border-gray-700/30">
+                                                {/* Notebook collegati */}
+                                                {(block?.linkedNotebookIds ?? []).length > 0 && (
+                                                    <div>
+                                                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Notebook collegati</p>
+                                                        <div className="space-y-1">
+                                                            {block!.linkedNotebookIds!.map(nid => {
+                                                                const nb = notebooks.find(n => n.id === nid);
+                                                                if (!nb) return null;
+                                                                return (
+                                                                    <div key={nid} className="flex items-center gap-2">
+                                                                        <a href={nb.url} target="_blank" rel="noopener noreferrer"
+                                                                            className="flex-1 text-xs text-indigo-400/80 hover:text-indigo-300 truncate transition-colors">
+                                                                            {nb.title}
+                                                                        </a>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                    {/* Gruppo 1: questo blocco */}
-                                    {currentBlockActivities.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Questo blocco</p>
-                                            {currentBlockActivities.map(act => (
-                                                <ActivityCard
-                                                    key={act.id}
-                                                    activity={act}
-                                                    isOpen={openActivityIds.has(act.id)}
-                                                    onToggle={() => toggleActivityOpen(act.id)}
-                                                    blockGroups={getBlockGroupsForActivity(act.blockId)}
-                                                    onUpdate={onUpdateActivity}
-                                                    onGenerateBriefing={handleGenerateBriefingClick}
-                                                    isGeneratingBriefing={generatingBriefingId === act.id}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                                {/* Esporta fonti */}
+                                                <div>
+                                                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Esporta fonti → NotebookLM</p>
+                                                    <p className="text-xs text-gray-600 mb-2">Genera un testo da incollare come fonte in un nuovo notebook.</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            const text = buildLMExport(block, localSources, blockOptionsMap);
+                                                            setLmExportText(text);
+                                                            setShowLMExport(true);
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-indigo-400 border border-indigo-500/25 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-400/40 transition-colors"
+                                                    >
+                                                        <BookOpenIcon className="h-3.5 w-3.5" />
+                                                        Prepara fonti per LM
+                                                    </button>
+                                                </div>
 
-                                    {/* Gruppo 2: in corso da altri blocchi */}
-                                    {otherActiveActivities.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">In corso da altri blocchi</p>
-                                            {otherActiveActivities.map(act => (
-                                                <ActivityCard
-                                                    key={act.id}
-                                                    activity={act}
-                                                    isOpen={openActivityIds.has(act.id)}
-                                                    onToggle={() => toggleActivityOpen(act.id)}
-                                                    blockGroups={getBlockGroupsForActivity(act.blockId)}
-                                                    onUpdate={onUpdateActivity}
-                                                    onGenerateBriefing={handleGenerateBriefingClick}
-                                                    isGeneratingBriefing={generatingBriefingId === act.id}
-                                                    readOnly
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                                {/* Incolla risposta LM */}
+                                                <div>
+                                                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">Incolla risposta da NotebookLM</p>
+                                                    <textarea
+                                                        value={lmPasteText}
+                                                        onChange={e => setLmPasteText(e.target.value)}
+                                                        rows={3}
+                                                        className="w-full p-2 bg-gray-900 border border-gray-700/60 rounded-lg text-xs text-gray-200 placeholder-gray-600 resize-none focus:ring-1 focus:ring-indigo-500/50"
+                                                        placeholder="Incolla qui l'output di NotebookLM…"
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            if (!lmPasteText.trim()) return;
+                                                            saveSources([...localSources, {
+                                                                id: crypto.randomUUID(), type: 'note',
+                                                                label: `Risposta LM — ${new Date().toLocaleDateString('it-IT')}`,
+                                                                isActive: true, addedAt: new Date().toISOString(),
+                                                                content: lmPasteText.trim(),
+                                                            }]);
+                                                            setLmPasteText('');
+                                                            showToast('Risposta LM aggiunta alle fonti!', 'success');
+                                                        }}
+                                                        disabled={!lmPasteText.trim()}
+                                                        className="mt-1.5 px-2.5 py-1.5 text-xs text-indigo-400 border border-indigo-500/25 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-400/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    >
+                                                        Aggiungi come fonte
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Crea Gruppi con Ada */}
-                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-                                <button
-                                    onClick={() => setIsGroupsOpen(o => !o)}
-                                    className="w-full flex items-center justify-between px-4 py-3 text-left"
-                                    aria-expanded={isGroupsOpen}
-                                >
-                                    <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                                        <UsersIcon className="h-4 w-4 text-indigo-400" />
-                                        Crea Gruppi con Ada
-                                    </span>
-                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isGroupsOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                {isGroupsOpen && (
-                                    <div className="px-4 pb-4 border-t border-gray-700/40 space-y-4 pt-3">
-                                        {students.length === 0 ? (
-                                            <p className="text-sm text-gray-600">Nessuno studente nel registro. Aggiungili prima in "L'Equipaggio".</p>
-                                        ) : (
-                                            <>
-                                                {/* Group size */}
+                        {/* ── 3. DISTRIBUZIONE ADA ─────────────────────────── */}
+                        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+                            <button
+                                onClick={() => setIsDistribuzioneOpen(o => !o)}
+                                className="w-full flex items-center justify-between px-4 py-3 text-left"
+                            >
+                                <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                    <SparklesIcon className="h-4 w-4 text-purple-400" />
+                                    Distribuzione
+                                </span>
+                                <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDistribuzioneOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isDistribuzioneOpen && (
+                                <div className="px-4 pb-4 border-t border-gray-700/40 pt-3 space-y-4">
+                                    {/* Chips contesto blocco */}
+                                    {block && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {block.tipologia && (
+                                                <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400/80 border border-blue-500/20 rounded-md px-1.5 py-0.5">
+                                                    {LESSON_TYPE_LABELS[block.tipologia]}
+                                                </span>
+                                            )}
+                                            {block.metodologia && (
+                                                <span className="text-[10px] font-mono bg-violet-500/10 text-violet-400/80 border border-violet-500/20 rounded-md px-1.5 py-0.5">
+                                                    {TEACHING_METHODOLOGY_LABELS[block.metodologia]}
+                                                </span>
+                                            )}
+                                            {block.isFuoriAula && (
+                                                <span className="text-[10px] font-mono bg-teal-500/10 text-teal-400/80 border border-teal-500/20 rounded-md px-1.5 py-0.5">
+                                                    Fuori aula{block.luogo ? ` · ${block.luogo}` : ''}
+                                                </span>
+                                            )}
+                                            {block.hasExternalExpert && (
+                                                <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400/80 border border-amber-500/20 rounded-md px-1.5 py-0.5">
+                                                    Esperto{block.externalExpertName ? ` · ${block.externalExpertName}` : ''}
+                                                </span>
+                                            )}
+                                            {!block.tipologia && !block.metodologia && (
+                                                <span className="text-[10px] font-mono text-gray-600">
+                                                    Configura tipologia e metodologia in Progettazione per suggerimenti precisi.
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Pulsante suggerisci */}
+                                    <button
+                                        onClick={handleSuggestDistribution}
+                                        disabled={isLoadingDist || !block}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isLoadingDist
+                                            ? <><span className="h-3.5 w-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Ada analizza…</>
+                                            : <><SparklesIcon className="h-3.5 w-3.5" />{distSuggestion ? 'Rigenera suggerimento' : 'Ada suggerisce output'}</>
+                                        }
+                                    </button>
+
+                                    {/* Suggerimento */}
+                                    {distSuggestion && (
+                                        <div className="bg-gray-900/60 rounded-lg border border-purple-800/30 p-3 space-y-3">
+                                            <div>
+                                                <span className="text-[10px] font-mono text-purple-400/70 uppercase tracking-widest">Output suggerito</span>
+                                                <p className="text-sm font-medium text-white mt-0.5">{OUTPUT_TYPE_LABELS[distSuggestion.outputType] ?? distSuggestion.outputType}</p>
+                                                <p className="text-xs text-gray-400 mt-1">{distSuggestion.description}</p>
+                                            </div>
+                                            {distSuggestion.workflow.length > 0 && (
                                                 <div>
-                                                    <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-1.5">Persone per gruppo</label>
-                                                    <div className="flex gap-2">
-                                                        {[2, 3, 4, 5].map(n => (
-                                                            <button key={n} onClick={() => { setGroupSize(n); setProposedGroups([]); }}
-                                                                className={`w-10 h-10 rounded-lg text-sm font-semibold border transition-colors ${groupSize === n ? 'bg-purple-600/80 border-purple-500 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}>
-                                                                {n}
-                                                            </button>
+                                                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Workflow</span>
+                                                    <ol className="mt-1 space-y-0.5">
+                                                        {distSuggestion.workflow.map((step, i) => (
+                                                            <li key={i} className="text-xs text-gray-400 flex gap-1.5">
+                                                                <span className="font-mono text-gray-600 flex-shrink-0">{i + 1}.</span>
+                                                                {step}
+                                                            </li>
                                                         ))}
-                                                    </div>
+                                                    </ol>
                                                 </div>
-                                                {/* Criteria chips */}
+                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-mono text-gray-600">Tool:</span>
+                                                <span className="text-[10px] font-mono text-gray-400 bg-gray-700/60 px-1.5 py-0.5 rounded">{distSuggestion.toolSuggestion}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => handleGenerateOutput(distSuggestion.outputType, 'all')}
+                                                disabled={generatingOutputFor === `all-${distSuggestion.outputType}` || activeSources.length === 0}
+                                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {generatingOutputFor === `all-${distSuggestion.outputType}`
+                                                    ? <><span className="h-3 w-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione…</>
+                                                    : <><SparklesIcon className="h-3 w-3" />Genera con Ada</>
+                                                }
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Output generati */}
+                                    {generatedOutputs.filter(o => o.groupId === 'all').map((out, i) => {
+                                        const isOpen = openOutputIds.has(`all-${out.outputType}`);
+                                        return (
+                                            <div key={i} className="rounded-lg border border-gray-700/50 bg-gray-900/40 overflow-hidden">
+                                                <button
+                                                    onClick={() => toggleOutput(`all-${out.outputType}`)}
+                                                    className="w-full flex items-center justify-between px-3 py-2 text-left"
+                                                >
+                                                    <span className="text-xs font-medium text-gray-300">
+                                                        {OUTPUT_TYPE_LABELS[out.outputType] ?? out.outputType}
+                                                    </span>
+                                                    <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                {isOpen && (
+                                                    <div className="px-3 pb-3 border-t border-gray-700/30 pt-2 text-sm text-gray-300 max-h-80 overflow-y-auto custom-scrollbar">
+                                                        <MarkdownRenderer content={out.content} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Link Classroom ────────────────────────────────── */}
+                        <div>
+                            <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
+                                Link Classroom
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="url"
+                                    value={classroomDraft}
+                                    onChange={e => setClassroomDraft(e.target.value)}
+                                    onBlur={() => {
+                                        if (!selectedOption?.convoId) return;
+                                        const trimmed = classroomDraft.trim();
+                                        if (trimmed !== (block?.classroomUrl ?? '')) {
+                                            onSaveClassroomUrl(selectedOption.convoId, selectedOption.blockIndex, trimmed);
+                                        }
+                                    }}
+                                    placeholder="https://classroom.google.com/..."
+                                    className="flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50"
+                                />
+                                {classroomDraft && (
+                                    <a href={classroomDraft} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-sky-400 border border-sky-500/25 rounded-lg hover:bg-sky-500/10 hover:border-sky-400/40 transition-colors whitespace-nowrap">
+                                        <LinkIcon className="h-3.5 w-3.5" />Apri
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ── 4. GRUPPI (min 1) ─────────────────────────────── */}
+                        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+                            <button
+                                onClick={() => setIsGruppiOpen(o => !o)}
+                                className="w-full flex items-center justify-between px-4 py-3 text-left"
+                            >
+                                <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                                    <UsersIcon className="h-4 w-4 text-indigo-400" />
+                                    Crea Gruppi con Ada
+                                    {savedGroups.length > 0 && (
+                                        <span className="text-[10px] font-mono text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
+                                            {savedGroups.length} salvati
+                                        </span>
+                                    )}
+                                </span>
+                                <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isGruppiOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isGruppiOpen && (
+                                <div className="px-4 pb-4 border-t border-gray-700/40 pt-3 space-y-4">
+                                    {students.length === 0 ? (
+                                        <p className="text-sm text-gray-600">Nessuno studente nel registro. Aggiungili prima in "L'Equipaggio".</p>
+                                    ) : (
+                                        <>
+                                            {/* Dimensione gruppo — da 1 (individuale) a 5 */}
+                                            <div>
+                                                <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">
+                                                    Persone per gruppo
+                                                    {groupSize === 1 && <span className="ml-1.5 text-sky-400/70">— individuale</span>}
+                                                </label>
+                                                <div className="flex gap-2">
+                                                    {[1, 2, 3, 4, 5].map(n => (
+                                                        <button
+                                                            key={n}
+                                                            onClick={() => { setGroupSize(n); setProposedGroups([]); }}
+                                                            className={`w-10 h-10 rounded-lg text-sm font-semibold border transition-colors ${groupSize === n ? 'bg-purple-600/80 border-purple-500 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}
+                                                        >
+                                                            {n === 1 ? '1' : n}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Criteri */}
+                                            {groupSize > 1 && (
                                                 <div>
-                                                    <label className="block text-xs font-mono text-gray-400 uppercase tracking-widest mb-1.5">Criteri di bilanciamento</label>
+                                                    <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">Criteri di bilanciamento</label>
                                                     <div className="flex flex-wrap gap-2">
                                                         {CRITERIA_OPTIONS.map(c => (
-                                                            <button key={c.id} onClick={() => toggleCriteria(c.id)}
-                                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${selectedCriteria.includes(c.id) ? 'bg-indigo-600/60 border-indigo-500/60 text-indigo-200' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}>
+                                                            <button
+                                                                key={c.id}
+                                                                onClick={() => toggleCriteria(c.id)}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${selectedCriteria.includes(c.id) ? 'bg-indigo-600/60 border-indigo-500/60 text-indigo-200' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}
+                                                            >
                                                                 {selectedCriteria.includes(c.id) ? '✓ ' : ''}{c.label}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
-                                                {/* Generate button */}
-                                                <button onClick={handleGenerateGroups}
-                                                    disabled={isLoadingGroupSuggestion || selectedCriteria.length === 0}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                                    {isLoadingGroupSuggestion
-                                                        ? <><span className="h-3.5 w-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione...</>
-                                                        : <><SparklesIcon className="h-3.5 w-3.5" />{selectedCriteria.length === 1 && selectedCriteria[0] === 'Mix casuale' ? 'Genera Casuale' : 'Suggerisci con Ada'}</>
-                                                    }
-                                                </button>
-                                                {/* Proposed groups */}
-                                                {proposedGroups.length > 0 && (
-                                                    <div className="space-y-3">
-                                                        <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Proposta Ada</p>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            {proposedGroups.map((group, gi) => (
+                                            )}
+
+                                            <button
+                                                onClick={handleGenerateGroups}
+                                                disabled={isLoadingGroups || (groupSize > 1 && selectedCriteria.length === 0)}
+                                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isLoadingGroups
+                                                    ? <><span className="h-3.5 w-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Generazione…</>
+                                                    : <><SparklesIcon className="h-3.5 w-3.5" />
+                                                        {groupSize === 1 ? 'Assegna individuale' : (selectedCriteria.length === 1 && selectedCriteria[0] === 'Mix casuale') ? 'Genera casuale' : 'Suggerisci con Ada'}
+                                                      </>
+                                                }
+                                            </button>
+
+                                            {proposedGroups.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Proposta Ada</p>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {proposedGroups.map((group, gi) => {
+                                                            return (
                                                                 <div key={gi} className="bg-gray-900/60 rounded-lg border border-gray-700/50 p-3">
                                                                     <p className="text-xs font-semibold text-white mb-1">{group.name}</p>
                                                                     {group.justification && <p className="text-[11px] text-gray-500 mb-2 italic">{group.justification}</p>}
                                                                     <ul className="space-y-0.5">
-                                                                        {group.studentIds.map(sid => (
-                                                                            <li key={sid} className="flex items-center justify-between text-xs text-gray-300">
-                                                                                <span>{getStudentNameById(sid)}</span>
-                                                                                <button onClick={() => handleRemoveStudentFromGroup(gi, sid)} className="text-gray-600 hover:text-red-400 ml-2"><XIcon className="h-3 w-3" /></button>
-                                                                            </li>
-                                                                        ))}
+                                                                        {group.studentIds.map(sid => {
+                                                                            const stu = students.find(s => s.id === sid);
+                                                                            return (
+                                                                                <li key={sid} className="flex items-center justify-between text-xs text-gray-300">
+                                                                                    <span className="flex items-center gap-1.5">
+                                                                                        {getStudentName(sid)}
+                                                                                        {stu?.hasBES && <span className="text-[9px] font-mono bg-amber-500/15 text-amber-400/80 px-1 py-0.5 rounded">BES</span>}
+                                                                                        {stu?.hasDSA && <span className="text-[9px] font-mono bg-sky-500/15 text-sky-400/80 px-1 py-0.5 rounded">DSA</span>}
+                                                                                        {stu?.hasPEI && <span className="text-[9px] font-mono bg-purple-500/15 text-purple-400/80 px-1 py-0.5 rounded">PEI</span>}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        onClick={() => setProposedGroups(prev => {
+                                                                                            const next = [...prev];
+                                                                                            next[gi] = { ...next[gi], studentIds: next[gi].studentIds.filter(id => id !== sid) };
+                                                                                            return next;
+                                                                                        })}
+                                                                                        className="text-gray-600 hover:text-red-400 ml-2"
+                                                                                    >
+                                                                                        <XIcon className="h-3 w-3" />
+                                                                                    </button>
+                                                                                </li>
+                                                                            );
+                                                                        })}
                                                                     </ul>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                        <button onClick={handleSaveGroups}
-                                                            className="px-4 py-2 rounded-lg bg-blue-600/80 text-white text-xs font-semibold hover:bg-blue-500 shadow-sm shadow-blue-900/40 transition-colors">
-                                                            Salva composizione
-                                                        </button>
+                                                            );
+                                                        })}
                                                     </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Piano Consegne */}
-                            {(onSaveAssignmentPlan && onUpdateAssignmentChannel) && (
-                                <AssignmentPlanSection
-                                    groups={block?.lessonGroups ?? []}
-                                    materials={block?.lessonMaterials ?? []}
-                                    students={students}
-                                    blockObjective={block?.objective ?? ''}
-                                    classroomUrl={block?.classroomUrl}
-                                    assignments={block?.lessonAssignments ?? []}
-                                    systemInstruction={masterContext.systemInstruction}
-                                    showToast={showToast}
-                                    onSaveAssignments={assignments => onSaveAssignmentPlan!(selectedOption!.convoId, selectedOption!.blockIndex, assignments)}
-                                    onUpdateChannel={(assignmentId, channel) => onUpdateAssignmentChannel!(selectedOption!.convoId, selectedOption!.blockIndex, assignmentId, channel)}
-                                />
+                                                    <button
+                                                        onClick={handleSaveGroups}
+                                                        className="px-4 py-2 rounded-lg bg-blue-600/80 text-white text-xs font-semibold hover:bg-blue-500 shadow-sm shadow-blue-900/40 transition-colors"
+                                                    >
+                                                        Salva composizione
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             )}
+                        </div>
 
-                            {/* Ada consiglia tool */}
+                        {/* ── 5. ABBINAMENTO ───────────────────────────────── */}
+                        {savedGroups.length > 0 && distSuggestion && (
                             <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
                                 <button
-                                    onClick={() => setIsAdaOpen(o => !o)}
+                                    onClick={() => setIsAbbinamentoOpen(o => !o)}
                                     className="w-full flex items-center justify-between px-4 py-3 text-left"
-                                    aria-expanded={isAdaOpen}
                                 >
                                     <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                                        <SparklesIcon className="h-4 w-4 text-purple-400" />
-                                        Ada consiglia tool
+                                        <UsersIcon className="h-4 w-4 text-emerald-400" />
+                                        Abbinamento Gruppi → Output
                                     </span>
-                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isAdaOpen ? 'rotate-180' : ''}`} />
+                                    <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isAbbinamentoOpen ? 'rotate-180' : ''}`} />
                                 </button>
-                                {isAdaOpen && (
-                                    <div className="px-4 pb-4 border-t border-gray-700/40 space-y-3">
-                                        <p className="mt-3 text-xs text-gray-500">
-                                            Descrivi cosa vuoi fare in questa lezione e Ada ti suggerirà gli strumenti più adatti.
-                                        </p>
-                                        <textarea
-                                            value={adaQuestion}
-                                            onChange={e => setAdaQuestion(e.target.value)}
-                                            rows={3}
-                                            className="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 resize-none focus:ring-1 focus:ring-purple-500/50 focus:border-purple-500/50"
-                                            placeholder="Es: Voglio fare un brainstorming collaborativo sulle idee chiave del modulo..."
-                                        />
-                                        <button
-                                            onClick={handleAskAda}
-                                            disabled={isAdaLoading || !adaQuestion.trim()}
-                                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <SparklesIcon className="h-3.5 w-3.5" />
-                                            {isAdaLoading ? 'Ada sta pensando...' : 'Chiedi ad Ada'}
-                                        </button>
-                                        {adaResponse && (
-                                            <div className="mt-2 bg-gray-900/60 rounded-lg p-3 border border-purple-800/30 text-sm text-gray-300">
-                                                <MarkdownRenderer content={adaResponse} />
-                                            </div>
-                                        )}
+
+                                {isAbbinamentoOpen && (
+                                    <div className="px-4 pb-4 border-t border-gray-700/40 pt-3 space-y-3">
+                                        {savedGroups.map((group, gi) => {
+                                            const groupStudents = group.studentIds.map(id => students.find(s => s.id === id)).filter(Boolean);
+                                            const hasSpecialNeeds = groupStudents.some(s => s?.hasBES || s?.hasDSA || s?.hasPEI);
+                                            const assigned = groupOutputMap[group.name];
+                                            const out = generatedOutputs.find(o => o.groupId === group.name);
+
+                                            return (
+                                                <div key={gi} className="rounded-lg border border-gray-700/40 bg-gray-900/30 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-semibold text-white">{group.name}</span>
+                                                        <div className="flex items-center gap-1">
+                                                            {hasSpecialNeeds && (
+                                                                <span className="text-[9px] font-mono text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded">necessità speciali</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Studenti del gruppo */}
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {groupStudents.map(s => s && (
+                                                            <span key={s.id} className="text-[10px] text-gray-400 bg-gray-700/50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                                {s.name}
+                                                                {s.hasBES && <span className="text-amber-400/80">BES</span>}
+                                                                {s.hasDSA && <span className="text-sky-400/80">DSA</span>}
+                                                                {s.hasPEI && <span className="text-purple-400/80">PEI</span>}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Selettore output */}
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            value={assigned ?? distSuggestion.outputType}
+                                                            onChange={e => setGroupOutputMap(prev => ({ ...prev, [group.name]: e.target.value }))}
+                                                            className="flex-1 p-1.5 bg-gray-800 border border-gray-700/60 rounded-lg text-xs text-gray-200"
+                                                        >
+                                                            {Object.entries(OUTPUT_TYPE_LABELS).map(([val, lbl]) => (
+                                                                <option key={val} value={val}>{lbl}</option>
+                                                            ))}
+                                                        </select>
+                                                        <button
+                                                            onClick={() => {
+                                                                const outputType = assigned ?? distSuggestion.outputType;
+                                                                // Trova studenti con bisogni speciali nel gruppo
+                                                                const specialStudent = groupStudents.find(s => s?.hasBES || s?.hasDSA || s?.hasPEI);
+                                                                if (specialStudent && hasSpecialNeeds) {
+                                                                    const type = specialStudent.hasPEI ? 'PEI' : specialStudent.hasDSA ? 'DSA' : 'BES';
+                                                                    const notes = (type === 'BES' ? specialStudent.besNotes : type === 'DSA' ? specialStudent.dsaNotes : specialStudent.peiNotes) ?? '';
+                                                                    handleGenerateOutput(outputType, group.name, { type, name: specialStudent.name, notes });
+                                                                } else {
+                                                                    handleGenerateOutput(outputType, group.name);
+                                                                }
+                                                            }}
+                                                            disabled={!!generatingOutputFor}
+                                                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                                        >
+                                                            {generatingOutputFor === `${group.name}-${assigned ?? distSuggestion.outputType}`
+                                                                ? <span className="h-3 w-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                                                                : <SparklesIcon className="h-3 w-3" />
+                                                            }
+                                                            {hasSpecialNeeds ? 'Adatta' : 'Genera'}
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Output generato per questo gruppo */}
+                                                    {out && (
+                                                        <div className="rounded-md border border-gray-700/40 bg-gray-800/40 overflow-hidden">
+                                                            <button
+                                                                onClick={() => toggleOutput(`group-${group.name}`)}
+                                                                className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+                                                            >
+                                                                <span className="text-[10px] text-gray-400 flex items-center gap-1.5">
+                                                                    {out.isAdapted && <span className="text-amber-400/80 font-mono">adattato</span>}
+                                                                    {OUTPUT_TYPE_LABELS[out.outputType] ?? out.outputType}
+                                                                </span>
+                                                                <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${openOutputIds.has(`group-${group.name}`) ? 'rotate-180' : ''}`} />
+                                                            </button>
+                                                            {openOutputIds.has(`group-${group.name}`) && (
+                                                                <div className="px-3 pb-3 border-t border-gray-700/30 pt-2 text-sm text-gray-300 max-h-60 overflow-y-auto custom-scrollbar">
+                                                                    <MarkdownRenderer content={out.content} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
-                        </>
-                    )}
-                </div>
+                        )}
+                    </>
+                )}
             </div>
 
-            <AddMaterialModal
-                isOpen={addMaterialOpen}
-                onClose={() => setAddMaterialOpen(false)}
-                onSave={material => {
-                    if (!selectedOption) return;
-                    onAddMaterial(selectedOption.convoId, selectedOption.blockIndex, material);
-                    showToast('Materiale aggiunto!', 'success');
-                }}
-            />
+            {/* ── Modal aggiungi fonte ──────────────────────────────────────── */}
+            <Modal
+                isOpen={!!addSourceModal && addSourceModal !== 'master_other'}
+                onClose={() => setAddSourceModal(null)}
+                title={addSourceModal === 'youtube' ? 'Aggiungi YouTube' : addSourceModal === 'link' ? 'Aggiungi Link' : 'Aggiungi Testo'}
+                footer={
+                    <>
+                        <div />
+                        <div className="space-x-3">
+                            <button onClick={() => setAddSourceModal(null)} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 rounded-md hover:bg-gray-700">Annulla</button>
+                            <button onClick={handleAddSource} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Aggiungi</button>
+                        </div>
+                    </>
+                }
+            >
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Etichetta</label>
+                        <input
+                            type="text" value={newSourceLabel} onChange={e => setNewSourceLabel(e.target.value)} autoFocus
+                            className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder={addSourceModal === 'note' ? 'Es: Note lezione precedente' : 'Es: Slide capitolo 3'}
+                        />
+                    </div>
+                    {(addSourceModal === 'link' || addSourceModal === 'youtube') && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">URL *</label>
+                            <input
+                                type="url" value={newSourceUrl} onChange={e => setNewSourceUrl(e.target.value)}
+                                className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder={addSourceModal === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://...'}
+                            />
+                        </div>
+                    )}
+                    {addSourceModal === 'note' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Testo *</label>
+                            <textarea
+                                value={newSourceContent} onChange={e => setNewSourceContent(e.target.value)} rows={6}
+                                className="w-full p-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                placeholder="Incolla il testo da usare come fonte…"
+                            />
+                        </div>
+                    )}
+                </div>
+            </Modal>
 
-            {productionModal && selectedOption && (
-                <MaterialProductionModal
-                    isOpen={!!productionModal}
-                    onClose={() => setProductionModal(null)}
-                    sourceName={productionModal.sourceName}
-                    sourceContent={productionModal.sourceContent}
-                    sourceMaterialType={productionModal.sourceType}
-                    systemInstruction={masterContext.systemInstruction}
-                    onSaveBrief={(brief, outputTool) => {
-                        if (productionModal.materialId) {
-                            onSaveMaterialBrief(
-                                selectedOption.convoId,
-                                selectedOption.blockIndex,
-                                productionModal.materialId,
-                                brief,
-                                outputTool
-                            );
-                        } else {
-                            showToast('Brief copiato. Usalo nel tuo tool preferito!', 'info');
-                        }
-                        setProductionModal(null);
-                    }}
-                />
-            )}
-        </>
+            {/* ── Modal esporta per NotebookLM ─────────────────────────────── */}
+            <Modal
+                isOpen={showLMExport}
+                onClose={() => setShowLMExport(false)}
+                title="Fonti per NotebookLM"
+                footer={
+                    <>
+                        <div />
+                        <div className="space-x-3">
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(lmExportText).then(() => {
+                                        setCopiedLMExport(true);
+                                        setTimeout(() => setCopiedLMExport(false), 2000);
+                                    });
+                                }}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${copiedLMExport ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'}`}
+                            >
+                                {copiedLMExport ? '✓ Copiato!' : 'Copia tutto'}
+                            </button>
+                            <button onClick={() => setShowLMExport(false)} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Chiudi</button>
+                        </div>
+                    </>
+                }
+            >
+                <div>
+                    <p className="text-xs text-gray-500 mb-3">Copia questo testo e incollalo come nuova fonte in NotebookLM.</p>
+                    <textarea
+                        readOnly value={lmExportText} rows={12}
+                        className="w-full p-2 bg-gray-900 border border-gray-700/60 rounded-md text-xs text-gray-300 resize-none font-mono"
+                    />
+                </div>
+            </Modal>
+        </div>
     );
 };
 

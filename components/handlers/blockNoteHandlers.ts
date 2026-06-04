@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis, ActivityObservation, ActivitySubmissionRecord, LessonAssignment, LessonAssignmentChannel } from '../../types';
+import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis, ActivityObservation, ActivitySubmissionRecord, LessonAssignment, LessonAssignmentChannel, PreparationSource } from '../../types';
 import * as GeminiService from '../../services/gemini';
 
 export interface BlockNoteHandlerDeps {
@@ -295,6 +295,15 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     showToast('Consegna registrata.', 'success');
   };
 
+  const handleSavePreparationSources = (convoId: string, blockIndex: number, sources: PreparationSource[]) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], preparationSources: sources };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
   return {
     handleSaveLessonNotes,
     handleDeleteLessonNotes,
@@ -316,5 +325,6 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleRecordActivitySubmission,
     handleSaveAssignmentPlan,
     handleUpdateAssignmentChannel,
+    handleSavePreparationSources,
   };
 }

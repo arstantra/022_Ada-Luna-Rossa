@@ -1,3 +1,8 @@
+/**
+ * @deprecated DORMIENTE — 2026-06-04
+ * Sostituito dalla sezione Distribuzione in LessonPreparationTab.tsx (v2).
+ * Non eliminare: mantenuto per retrocompatibilità nel caso in cui venga richiamato altrove.
+ */
 import React, { useState, useEffect } from 'react';
 import type { LessonMaterial } from '../types';
 import { SparklesIcon } from './Icons';

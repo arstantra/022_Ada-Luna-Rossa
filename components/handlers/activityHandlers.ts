@@ -1,3 +1,10 @@
+/**
+ * @deprecated DORMIENTE — 2026-06-04
+ * Il sistema Activity (ActivityFormaLavoro, ActivityStatus ecc.) è stato sostituito
+ * dalla Distribuzione + Abbinamento in LessonPreparationTab.tsx (v2).
+ * Non eliminare: LessonInCorsoTab e alcuni hook usano ancora Activity per visualizzare
+ * dati storici. Verificare prima di rimuovere.
+ */
 import type { Activity, ActivitySubmissionRecord, ActivityObservation } from '../../types';
 import * as db from '../../services/db';
 

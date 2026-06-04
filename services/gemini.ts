@@ -1137,3 +1137,85 @@ Scrivi un briefing per gli studenti (200-350 parole) che spieghi cosa fare, come
     });
     return response.text.trim();
 };
+
+// ── PREPARAZIONE LEZIONE ─────────────────────────────────────────────────────
+
+/**
+ * Suggerisce il tipo di output più adatto per la lezione dato il contesto
+ * (tipologia + metodologia + contesto fisico) e le fonti disponibili.
+ */
+export const generateDistributionSuggestion = async (
+    tipologia: string | undefined,
+    metodologia: string | undefined,
+    isFuoriAula: boolean,
+    hasExternalExpert: boolean,
+    objective: string,
+    sourcesText: string,
+    systemInstruction: string
+): Promise<{ outputType: string; description: string; workflow: string[]; toolSuggestion: string }> => {
+    const contesto = isFuoriAula ? 'fuori dall\'aula' : 'in aula';
+    const expertNote = hasExternalExpert ? 'con esperto esterno' : '';
+    const prompt = `${systemInstruction}
+
+Sei Ada, assistente AI per la didattica. Analizza il contesto della lezione e suggerisci il materiale didattico più adatto da preparare.
+
+**CONTESTO:**
+- Tipologia lezione: ${tipologia ?? 'non specificata'}
+- Approccio metodologico: ${metodologia ?? 'non specificato'}
+- Contesto fisico: ${contesto}${expertNote ? ' — ' + expertNote : ''}
+- Obiettivo: ${objective || 'non specificato'}
+
+**FONTI DISPONIBILI (estratto):**
+${sourcesText.slice(0, 1200)}
+
+**COMPITO:** Suggerisci UN solo tipo di output da preparare per questa lezione. Rispondi in JSON con questa struttura esatta:
+{
+  "outputType": "slide | scheda_stampa | manuale_lab | sito | guida_visuale | spiegazione_adattata",
+  "description": "Descrizione breve (1-2 frasi) di cosa preparare e perché è il più adatto",
+  "workflow": ["Passo 1...", "Passo 2...", "Passo 3..."],
+  "toolSuggestion": "Canva | PowerPoint | Google Slides | Ada diretta | Altro"
+}`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.5, thinkingConfig: { thinkingBudget: 0 } }
+    });
+    const raw = response.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    return JSON.parse(raw);
+};
+
+/**
+ * Genera una versione adattata del materiale per studenti con BES/DSA/PEI.
+ */
+export const generateAdaptedMaterial = async (
+    originalContent: string,
+    studentName: string,
+    adaptationType: 'BES' | 'DSA' | 'PEI',
+    adaptationNotes: string,
+    systemInstruction: string
+): Promise<string> => {
+    const adaptationInstructions: Record<string, string> = {
+        BES: 'Semplifica il linguaggio, aggiungi supporti visivi (emoji, box colorati), suddividi i passaggi in micro-step. Mantieni i contenuti chiave ma riducine la densità.',
+        DSA: 'Usa frasi brevi e struttura chiara. Elimina muri di testo. Usa elenchi puntati, grassetti per le parole chiave, spazi bianchi generosi. Considera font leggibile.',
+        PEI: 'Semplifica radicalmente i contenuti al livello essenziale. Poche parole chiave, immagini/simboli descritti nel testo, obiettivi minimi. Tono diretto e concreto.',
+    };
+    const prompt = `${systemInstruction}
+
+Sei Ada, assistente AI per la didattica inclusiva. Adatta il seguente materiale didattico per lo studente ${studentName} con ${adaptationType}.
+
+**ISTRUZIONI ADATTAMENTO ${adaptationType}:** ${adaptationInstructions[adaptationType]}
+${adaptationNotes ? `**NOTE SPECIFICHE STUDENTE:** ${adaptationNotes}` : ''}
+
+**MATERIALE ORIGINALE:**
+${originalContent.slice(0, 2500)}
+
+Produci la versione adattata mantenendo lo stesso scopo didattico. Usa Markdown.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.6, thinkingConfig: { thinkingBudget: 2048 } }
+    });
+    return response.text.trim();
+};

@@ -245,6 +245,7 @@ export interface MasterLibraryEntry {
 }
 
 // --- CONSEGNE INTELLIGENTI ---
+// @deprecated — sistema LessonAssignment sostituito dalla Scrivania Fonti + Abbinamento in LessonPreparationTab
 
 export type LessonAssignmentChannel = 'classroom' | 'stampa' | 'qr_code' | 'padlet' | 'drive_link' | 'verbale';
 
@@ -331,6 +332,23 @@ export interface BlockSource {
     dbFileKey?: string;             // chiave nello store IndexedDB 'blockFiles'
 }
 
+// ── PREPARAZIONE LEZIONE — Scrivania Fonti ────────────────────────────────────
+export type PrepSourceType = 'master_current' | 'master_other' | 'link' | 'youtube' | 'note';
+
+export interface PreparationSource {
+    id: string;
+    type: PrepSourceType;
+    label: string;
+    isActive: boolean;
+    addedAt: string; // ISO
+    // type === 'master_other'
+    blockRef?: string; // `${convoId}-${blockIndex}`
+    // type === 'link' | 'youtube'
+    url?: string;
+    // type === 'note'
+    content?: string;
+}
+
 export interface BlockDetails {
     id: string;
     day: string;
@@ -376,6 +394,7 @@ export interface BlockDetails {
     moduleId?: string;    // riferimento a CourseModule.id
     sectionId?: string;   // riferimento a ModuleSection.id
     lessonAssignments?: LessonAssignment[];
+    preparationSources?: PreparationSource[]; // Scrivania Fonti — sorgenti per Preparazione Lezione
     // Il campo module?: string rimane per retrocompatibilità DB
 }
 
@@ -523,6 +542,7 @@ export interface ToolkitShortcut {
 
 // ── Attività ─────────────────────────────────────────────────────────────────
 
+// @deprecated — sistema Activity sostituito dalla Distribuzione + Abbinamento in LessonPreparationTab
 export type ActivityFormaLavoro = 'individuale' | 'coppia' | 'gruppo' | 'classe';
 export type ActivityContesto = 'in_aula' | 'misto' | 'autonoma';
 export type ActivityDeliverable = 'elaborato' | 'presentazione' | 'prototipo' | 'performance' | 'altro';
