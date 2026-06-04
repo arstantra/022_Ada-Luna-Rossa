@@ -330,7 +330,8 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                 masterContext.systemInstruction,
             );
             setDistSuggestion(suggestion);
-        } catch {
+        } catch (err) {
+            console.error('[handleSuggestDistribution]', err);
             showToast('Errore nella generazione del suggerimento.', 'error');
         } finally {
             setIsLoadingDist(false);
@@ -804,7 +805,7 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                     >
                                         {isLoadingDist
                                             ? <><span className="h-3.5 w-3.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />Ada analizza…</>
-                                            : <><SparklesIcon className="h-3.5 w-3.5" />{distSuggestion ? 'Rigenera suggerimento' : 'Ada suggerisce output'}</>
+                                            : <><SparklesIcon className="h-3.5 w-3.5" />{distSuggestion ? 'Rigenera suggerimento' : 'Suggerisci materiale da preparare'}</>
                                         }
                                     </button>
 

@@ -1186,10 +1186,9 @@ ${sourcesText.slice(0, 1200)}
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { temperature: 0.5, thinkingConfig: { thinkingBudget: 0 } }
+        config: { temperature: 0.5, responseMimeType: 'application/json' }
     });
-    const raw = response.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    return JSON.parse(raw);
+    return JSON.parse(response.text.trim());
 };
 
 /**
