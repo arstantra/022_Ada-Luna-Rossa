@@ -244,6 +244,29 @@ export interface MasterLibraryEntry {
     createdAt?: string;
 }
 
+// --- CONSEGNE INTELLIGENTI ---
+
+export type LessonAssignmentChannel = 'classroom' | 'stampa' | 'qr_code' | 'padlet' | 'drive_link' | 'verbale';
+
+export const LESSON_ASSIGNMENT_CHANNEL_LABELS: Record<LessonAssignmentChannel, string> = {
+    classroom: 'Google Classroom',
+    stampa: 'Fotocopia / Stampa',
+    qr_code: 'QR Code',
+    padlet: 'Padlet',
+    drive_link: 'Link Drive',
+    verbale: 'Consegna verbale',
+};
+
+export interface LessonAssignment {
+    id: string;
+    groupId: string;
+    groupLabel: string;
+    isIndividual: boolean;
+    materialIds: string[];
+    rationale: string;
+    distributionChannel?: LessonAssignmentChannel;
+}
+
 // --- TIPI IN AULA ---
 
 export interface LessonMaterial {
@@ -352,6 +375,7 @@ export interface BlockDetails {
     luogo?: string;                // descrizione libera del luogo (es. "Museo del Design, Milano")
     moduleId?: string;    // riferimento a CourseModule.id
     sectionId?: string;   // riferimento a ModuleSection.id
+    lessonAssignments?: LessonAssignment[];
     // Il campo module?: string rimane per retrocompatibilità DB
 }
 

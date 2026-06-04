@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus } from '../types';
+import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus, LessonAssignment, LessonAssignmentChannel } from '../types';
+import AssignmentPlanSection from './AssignmentPlanSection';
 import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon, FolderOpenIcon } from './Icons';
 import MaterialProductionModal from './MaterialProductionModal';
 import { LOCAL_STORAGE_COURSE_DRIVE_URL_KEY } from '../constants';
@@ -320,11 +321,13 @@ interface LessonPreparationTabProps {
     activities?: Activity[];
     onUpdateActivity?: (id: string, updates: Partial<Activity>) => void;
     onGenerateBriefing?: (activityId: string) => Promise<string>;
+    onSaveAssignmentPlan?: (convoId: string, blockIndex: number, assignments: LessonAssignment[]) => void;
+    onUpdateAssignmentChannel?: (convoId: string, blockIndex: number, assignmentId: string, channel: LessonAssignmentChannel) => void;
 }
 
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     conversations, students, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
-    activities = [], onUpdateActivity, onGenerateBriefing,
+    activities = [], onUpdateActivity, onGenerateBriefing, onSaveAssignmentPlan, onUpdateAssignmentChannel,
 }) => {
     const blockOptions = useMemo<BlockOption[]>(() => {
         return conversations
@@ -971,6 +974,22 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                     </div>
                                 )}
                             </div>
+
+                            {/* Piano Consegne */}
+                            {(onSaveAssignmentPlan && onUpdateAssignmentChannel) && (
+                                <AssignmentPlanSection
+                                    groups={block?.lessonGroups ?? []}
+                                    materials={block?.lessonMaterials ?? []}
+                                    students={students}
+                                    blockObjective={block?.objective ?? ''}
+                                    classroomUrl={block?.classroomUrl}
+                                    assignments={block?.lessonAssignments ?? []}
+                                    systemInstruction={masterContext.systemInstruction}
+                                    showToast={showToast}
+                                    onSaveAssignments={assignments => onSaveAssignmentPlan!(selectedOption!.convoId, selectedOption!.blockIndex, assignments)}
+                                    onUpdateChannel={(assignmentId, channel) => onUpdateAssignmentChannel!(selectedOption!.convoId, selectedOption!.blockIndex, assignmentId, channel)}
+                                />
+                            )}
 
                             {/* Ada consiglia tool */}
                             <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">

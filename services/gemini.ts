@@ -1047,6 +1047,71 @@ Regole:
     }
 };
 
+export const generateAssignmentPlan = async (
+    groups: import('../types').GroupDefinition[],
+    materials: import('../types').LessonMaterial[],
+    students: import('../types').Student[],
+    blockObjective: string,
+    systemInstruction: string
+): Promise<import('../types').LessonAssignment[]> => {
+    const studentMap = new Map(students.map(s => [s.id, s]));
+
+    const groupDescriptions = groups.map((g, i) => {
+        const label = g.name || `Gruppo ${i + 1}`;
+        const memberDescriptions = g.studentIds.map(sid => {
+            const st = studentMap.get(sid);
+            if (!st) return sid;
+            const flags = [st.hasBES && 'BES', st.hasDSA && 'DSA', st.hasPEI && 'PEI'].filter(Boolean).join(', ');
+            return `${st.name}${flags ? ` (${flags})` : ''}${st.notes ? `: ${st.notes.slice(0, 80)}` : ''}`;
+        }).join('\n  ');
+        return `**${label}** (${g.studentIds.length === 1 ? 'individuale' : `${g.studentIds.length} studenti`}):\n  ${memberDescriptions}`;
+    }).join('\n\n');
+
+    const materialDescriptions = materials.map(m =>
+        `- id:"${m.id}" | tipo:${m.type} | titolo:"${m.title}"${m.productionBrief ? ` | brief:"${m.productionBrief.slice(0, 100)}"` : ''}${m.notes ? ` | note:"${m.notes}"` : ''}`
+    ).join('\n');
+
+    const prompt = `${systemInstruction}
+
+Sei Ada, assistente AI per la didattica. Devi creare un piano di consegne personalizzato per i gruppi di questa lezione.
+
+## Obiettivo didattico del blocco
+${blockObjective || 'Non specificato'}
+
+## Gruppi da servire
+${groupDescriptions}
+
+## Materiali disponibili (usa i loro id esatti)
+${materialDescriptions || 'Nessun materiale disponibile — usa array vuoto per materialIds.'}
+
+## Istruzioni
+Per ogni gruppo, scegli i materiali più adatti tenendo conto di: livello, BES/DSA/PEI, punti di forza dalle note.
+- Un gruppo può ricevere più materiali
+- Un gruppo può ricevere 0 materiali (es. lavora sul master del blocco)
+- Scrivi una rationale sintetica (1-2 frasi) che spiega la scelta
+
+Rispondi SOLO con un array JSON valido, senza markdown, senza commenti:
+[
+  {
+    "groupId": "nome gruppo o studentId se individuale",
+    "groupLabel": "etichetta leggibile",
+    "isIndividual": true/false,
+    "materialIds": ["id1", "id2"],
+    "rationale": "motivazione sintetica"
+  }
+]`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } }
+    });
+
+    const raw = response.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+    const parsed: Omit<import('../types').LessonAssignment, 'id'>[] = JSON.parse(raw);
+    return parsed.map(a => ({ ...a, id: crypto.randomUUID() }));
+};
+
 export const generateActivityBriefing = async (
     activity: import('../types').Activity,
     teacherProfile: string

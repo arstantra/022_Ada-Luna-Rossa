@@ -594,9 +594,11 @@ interface InAulaViewProps {
     onAddObservation?: (activityId: string, text: string, blockId: string) => Promise<void>;
     onRecordSubmission?: (activityId: string, record: import('../types').ActivitySubmissionRecord) => Promise<void>;
     onLaunchActivity?: (activityId: string) => Promise<void>;
+    onSaveAssignmentPlan?: (convoId: string, blockIndex: number, assignments: import('../types').LessonAssignment[]) => void;
+    onUpdateAssignmentChannel?: (convoId: string, blockIndex: number, assignmentId: string, channel: import('../types').LessonAssignmentChannel) => void;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl, activities, onUpdateActivity, onGenerateBriefing, onAddObservation, onRecordSubmission, onLaunchActivity }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl, activities, onUpdateActivity, onGenerateBriefing, onAddObservation, onRecordSubmission, onLaunchActivity, onSaveAssignmentPlan, onUpdateAssignmentChannel }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -755,6 +757,8 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         activities={activities}
                         onUpdateActivity={onUpdateActivity}
                         onGenerateBriefing={onGenerateBriefing}
+                        onSaveAssignmentPlan={onSaveAssignmentPlan}
+                        onUpdateAssignmentChannel={onUpdateAssignmentChannel}
                     />
                 )}
 

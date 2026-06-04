@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis, ActivityObservation, ActivitySubmissionRecord } from '../../types';
+import type { Conversation, Student, LessonMaterial, LessonEvaluation, LessonNoteAnalysis, ActivityObservation, ActivitySubmissionRecord, LessonAssignment, LessonAssignmentChannel } from '../../types';
 import * as GeminiService from '../../services/gemini';
 
 export interface BlockNoteHandlerDeps {
@@ -265,6 +265,28 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     await addObservation(activityId, { text, refType: 'activity', blockId });
   };
 
+  const handleSaveAssignmentPlan = (convoId: string, blockIndex: number, assignments: LessonAssignment[]) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      newBlocks[blockIndex] = { ...newBlocks[blockIndex], lessonAssignments: assignments };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
+  const handleUpdateAssignmentChannel = (convoId: string, blockIndex: number, assignmentId: string, channel: LessonAssignmentChannel) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonAssignments ?? [];
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        lessonAssignments: current.map(a => a.id === assignmentId ? { ...a, distributionChannel: channel } : a),
+      };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+  };
+
   const handleRecordActivitySubmission = async (
     activityId: string,
     record: ActivitySubmissionRecord
@@ -292,5 +314,7 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleSaveClassroomUrl,
     handleAddActivityObservation,
     handleRecordActivitySubmission,
+    handleSaveAssignmentPlan,
+    handleUpdateAssignmentChannel,
   };
 }
