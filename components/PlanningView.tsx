@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import type { Conversation, WeekPlan, BlockDetails, BlockSource, PlanningActionPayload, BlockStatus, Activity, ActivityContesto, ContentBlock, Message } from '../types';
 import type { ConfirmationModalProps } from './ConfirmationModal';
-import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon } from './Icons';
+import { SparklesIcon, XIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, BookOpenIcon, CogIcon, ClipboardDocumentCheckIcon, HomeIcon } from './Icons';
 import BlockWorkspaceView from './BlockWorkspaceView';
 import { useMasterContext } from '../hooks/useMasterContext';
 import ConfirmationModal from './ConfirmationModal';
@@ -48,6 +48,7 @@ interface PlanningViewProps {
   onSendMessage: (content: string, file?: File, actionPayload?: PlanningActionPayload) => void;
   onReEditBlock: (conversationId: string, blockIndex: number) => void;
   onClose: () => void;
+  onGoHome?: () => void;
   masterContext: ReturnType<typeof useMasterContext>;
   initialTab?: 'laboratorio' | 'contenutoMaster';
   onInitialTabConsumed?: () => void;
@@ -61,7 +62,7 @@ interface PlanningViewProps {
   onUpdateActivityContent?: (activityId: string, content: ContentBlock[]) => void;
 }
 
-const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddActivity, onUpdateActivityMessages, onUpdateActivityContent }) => {
+const PlanningView: React.FC<PlanningViewProps> = ({ conversation, onUpdateWeekPlan, isLoading, onSendMessage, onReEditBlock, onClose, onGoHome, masterContext, initialTab, onInitialTabConsumed, useGoogleSearch, onGoogleSearchChange, onShowConfirmation, currentModeId, onModeChange, onAddActivity, onUpdateActivityMessages, onUpdateActivityContent }) => {
     const { weekPlan } = conversation;
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'laboratorio' | 'contenutoMaster'>(initialTab || 'laboratorio');
@@ -345,8 +346,13 @@ Stai aiutando il docente a progettare il briefing e il contenuto master di quest
 
                     {/* Riga 1: Zona A (titolo) · Zona C (toggle tab + azioni + X) */}
                     <div className="flex items-center gap-3 px-5 py-3">
-                        {/* Zona A — icona + titolo settimana */}
+                        {/* Zona A — home + icona + titolo settimana */}
                         <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {onGoHome && (
+                                <button onClick={onGoHome} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                                    <HomeIcon className="h-4 w-4" />
+                                </button>
+                            )}
                             <ClipboardDocumentCheckIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
                             <h2 className="text-sm font-display font-semibold text-white truncate" title={weekPlan.theme}>
                                 {`Settimana ${weekPlan.weekNumber}: ${weekPlan.theme}`}

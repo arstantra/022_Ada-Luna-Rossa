@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Conversation, WeekRouteInfo, BlockDetails, ModuleDetails, WeekPlan, BlockStatus, LessonType, TeachingMethodology, CourseModule, Activity, CourseContentUnit, FslPeriod } from '../types';
 import { LESSON_TYPE_LABELS, COURSE_CONTENT_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
-import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
+import { ClipboardDocumentCheckIcon, WandIcon, SparklesIcon, ChevronDownIcon, ArrowDownTrayIcon, PencilIcon, HomeIcon } from './Icons';
 import * as GeminiService from '../services/gemini';
 import EditableField from './EditableField';
 import EditableTextarea from './EditableTextarea';
@@ -409,6 +409,9 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                     {/* Riga 1 — titolo + azioni */}
                     <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
                         <div className="flex items-center gap-2.5">
+                            <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                                <HomeIcon className="h-4 w-4" />
+                            </button>
                             <ClipboardDocumentCheckIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
                             <h1 className="text-base font-display font-semibold text-white">Progettazione del Corso</h1>
                         </div>

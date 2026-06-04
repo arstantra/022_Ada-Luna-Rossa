@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { Conversation, ConvActivity as Activity, ConvActivityStatus as ActivityStatus, LessonType, TeachingMethodology, CourseContentUnit, FslPeriod } from '../types';
 import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
-import { XIcon, CalendarDaysIcon } from './Icons';
+import { XIcon, CalendarDaysIcon, HomeIcon } from './Icons';
 import DidacticRadarChart from './DidacticRadarChart';
 
 // ── Tipi interni ──────────────────────────────────────────────────────────────
@@ -688,6 +688,9 @@ const GanttHeader: React.FC<GanttHeaderProps> = ({
   <header className="flex-shrink-0 flex flex-col border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
     <div className="flex items-center justify-between px-6 pt-3.5 pb-2.5">
       <div className="flex items-center gap-2.5">
+        <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+          <HomeIcon className="h-4 w-4" />
+        </button>
         <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
         <h1 className="text-base font-display font-semibold text-white">Analisi del Corso</h1>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Conversation, Student, LessonType, Activity } from '../types';
-import { UsersIcon, XIcon, ChevronDownIcon } from './Icons';
+import { UsersIcon, XIcon, ChevronDownIcon, HomeIcon } from './Icons';
 import DidacticRadarChart, { type RadarDataPoint } from './DidacticRadarChart';
 import { getAllActivities } from '../services/db';
 
@@ -150,6 +150,9 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
         <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
+                    <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                        <HomeIcon className="h-4 w-4" />
+                    </button>
                     <UsersIcon className="h-5 w-5 text-gray-400" />
                     <h2 className="text-base font-display font-semibold text-white">Andamento Aula</h2>
                 </div>

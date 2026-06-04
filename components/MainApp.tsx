@@ -434,6 +434,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
     if (view === 'student_profile' && selectedStudent) return 'student_profile';
     if (view === 'roster') return 'roster';
     if (view === 'notebooklm') return 'notebooklm';
+    if (view === 'lobby') return 'lobby';
     if (activeConversationId) {
       if (activeConversation?.weekPlan) return 'planning';
       return 'chat';
@@ -489,7 +490,7 @@ const getOrCreateConversationForWeek = useCallback((weekInfo: WeekRouteInfo): Co
             'student_profile': <StudentProfileView student={selectedStudent!} onClose={() => setView('roster')} onUpdateNotes={updateStudentNotes} onUpdateSummary={updateStudentSummary} onOpenImportModal={handleOpenImportModal} conversations={conversations} />,
             'roster': <StudentRosterView students={students} onSelectStudent={handleSelectStudent} onClose={() => setView('lobby')} />,
             'notebooklm': <NotebookLMView notebooks={notebooks} onClose={() => setView('lobby')} onAddNotebook={() => handleOpenAddNotebookModal()} onEditNotebook={handleOpenAddNotebookModal} onRemoveNotebook={removeNotebook} onAccessNotebook={accessNotebook} onManageNotes={setNotebookForNotes} />,
-            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} onAddActivity={handleAddActivity} onUpdateActivityMessages={handleUpdateActivityMessages} onUpdateActivityContent={handleUpdateActivityContent} />,
+            'planning': <PlanningView key={activeConversation?.id} conversation={activeConversation!} onUpdateWeekPlan={handleUpdateWeekPlan} isLoading={isLoading} onSendMessage={handleSendPlanningMessage} onReEditBlock={handleReEditBlock} onClose={() => setView('strategic_dashboard')} onGoHome={() => setView('lobby')} masterContext={masterContext} initialTab={initialPlanningTab} onInitialTabConsumed={resetInitialPlanningTab} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowConfirmation={setConfirmationProps} currentModeId={masterContext.currentModeId} onModeChange={handlePlanningModeChange} onAddActivity={handleAddActivity} onUpdateActivityMessages={handleUpdateActivityMessages} onUpdateActivityContent={handleUpdateActivityContent} />,
             'chat': <ChatView conversation={activeConversation} students={students} onSendMessage={handleSendMessage} isLoading={isLoading} useGoogleSearch={useGoogleSearch} onGoogleSearchChange={setUseGoogleSearch} onShowToast={showToast} onGoHome={() => setView('lobby')} currentModeId={masterContext.currentModeId} onModeChange={handleModeChange} pendingFirstMessage={pendingFirstMessage} onConsumeFirstMessage={() => setPendingFirstMessage(null)} />
           }[currentView]
         }

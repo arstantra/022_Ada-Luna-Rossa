@@ -1,6 +1,6 @@
 import React, { useState, useMemo, memo, useCallback } from 'react';
 import type { Conversation, Student, GroupDefinition, BlockDetails, LessonWithGroups } from '../types';
-import { UsersIcon, XIcon, SearchIcon, ChevronDownIcon, CalendarDaysIcon, PlusCircleIcon, CheckCircleIcon, PencilIcon } from './Icons';
+import { UsersIcon, XIcon, SearchIcon, ChevronDownIcon, CalendarDaysIcon, PlusCircleIcon, CheckCircleIcon, PencilIcon, HomeIcon } from './Icons';
 import { getExactDateForBlock } from '../utils';
 import type { useMasterContext } from '../hooks/useMasterContext';
 import AddMemberModal from './AddMemberModal';
@@ -125,6 +125,9 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
         <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
+                    <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                        <HomeIcon className="h-4 w-4" />
+                    </button>
                     <UsersIcon className="h-5 w-5 text-gray-400" />
                     <h2 className="text-base font-display font-semibold text-white">Archivio Gruppi di Lavoro</h2>
                 </div>

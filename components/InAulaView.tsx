@@ -2,7 +2,7 @@ import React, { useState, useMemo, memo } from 'react';
 import type { Conversation, WeekPlan, BlockDetails, Student, GroupDefinition, AdaAnalysis, BlockStatus, Notebook, LessonMaterial, LessonEvaluation, Activity } from '../types';
 import LessonPreparationTab from './LessonPreparationTab';
 import LessonInCorsoTab from './LessonInCorsoTab';
-import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon } from './Icons';
+import { XIcon, BriefcaseIcon, SearchIcon, BookOpenIcon, UsersIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon, PlusCircleIcon, TrashIcon, PresentationChartBarIcon, PencilIcon, SparklesIcon, ChevronDownIcon, XCircleIcon, RefreshIcon, LinkIcon, FolderOpenIcon, FolderIcon, HomeIcon } from './Icons';
 import AttendanceModal from './AttendanceModal';
 import Modal from './Modal';
 import LessonNotesModal from './LessonNotesModal';
@@ -704,6 +704,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 <div className="flex-shrink-0 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                     <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
                         <div className="flex items-center gap-3">
+                            <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                                <HomeIcon className="h-4 w-4" />
+                            </button>
                             <BriefcaseIcon className={`h-5 w-5 ${activeTab === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
                             <h2 className="text-base font-display font-semibold text-white">Lezione</h2>
                             {hasActiveLessons && activeTab !== 'in_corso' && (

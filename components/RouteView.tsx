@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { useMasterContext } from '../hooks/useMasterContext';
 import type { WeekEntry, FslPeriod } from '../types';
-import { CalendarDaysIcon, XIcon, PlusCircleIcon, TrashIcon } from './Icons';
+import { CalendarDaysIcon, XIcon, PlusCircleIcon, TrashIcon, HomeIcon } from './Icons';
 
 interface RouteViewProps {
     masterContext: ReturnType<typeof useMasterContext>;
@@ -152,6 +152,9 @@ const RouteView: React.FC<RouteViewProps> = ({ masterContext, onClose }) => {
             {/* Header */}
             <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
+                    <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                        <HomeIcon className="h-4 w-4" />
+                    </button>
                     <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
                     <div>
                         <h2 className="text-base font-display font-semibold text-white">La Rotta</h2>

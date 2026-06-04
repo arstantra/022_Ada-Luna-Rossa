@@ -1,6 +1,6 @@
 import React, { useState, memo, useRef, useEffect, useMemo } from 'react';
 import type { ToolkitShortcut, ToolkitCategory } from '../types';
-import { XIcon, ToolboxIcon, PlusCircleIcon, PencilIcon, Bars3Icon, TrashIcon, ChevronDownIcon } from './Icons';
+import { XIcon, ToolboxIcon, PlusCircleIcon, PencilIcon, Bars3Icon, TrashIcon, ChevronDownIcon, HomeIcon } from './Icons';
 import ShortcutModal from './ShortcutModal';
 import ShortcutCard from './ShortcutCard';
 import ConfirmationModal from './ConfirmationModal';
@@ -340,6 +340,9 @@ const ToolkitView: React.FC<ToolkitViewProps> = memo(({
             <main className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
                 <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
+                        <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                            <HomeIcon className="h-4 w-4" />
+                        </button>
                         <ToolboxIcon className="h-5 w-5 text-gray-400" />
                         <h2 className="text-base font-display font-semibold text-white">Toolkit</h2>
                     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, memo } from 'react';
 import type { Notebook } from '../types';
-import { XIcon, PlusCircleIcon, DotsVerticalIcon, BookOpenIcon } from './Icons';
+import { XIcon, PlusCircleIcon, DotsVerticalIcon, BookOpenIcon, HomeIcon } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 
 interface NotebookCardProps {
@@ -95,6 +95,9 @@ const NotebookLMView: React.FC<NotebookLMViewProps> = ({ notebooks, onClose, onA
         <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
             <div className="flex-shrink-0 flex items-center justify-between px-6 pt-3.5 pb-2 border-b border-gray-800/60 bg-gray-900/60 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
+                    <button onClick={onClose} className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors" title="Torna alla home">
+                        <HomeIcon className="h-4 w-4" />
+                    </button>
                     <BookOpenIcon className="h-5 w-5 text-gray-400" />
                     <div>
                         <h2 className="text-base font-display font-semibold text-white">I Tuoi NotebookLM</h2>
