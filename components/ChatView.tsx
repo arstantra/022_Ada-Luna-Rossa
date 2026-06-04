@@ -4,50 +4,29 @@ import MessageView from './MessageView';
 import ChatInput from './ChatInput';
 import StudentSheetHeader from './StudentSheetHeader';
 import ModePills from './ModePills';
-import { ChatBubbleOvalLeftEllipsisIcon, SearchIcon, XIcon } from './Icons';
+import { ChatBubbleOvalLeftEllipsisIcon, SearchIcon, XIcon, HomeIcon } from './Icons';
 import { ADA_QUICK_CHAT_ID } from '../constants';
 
 interface ChatViewProps {
   conversation: Conversation | null;
   students: Student[];
-  onSendMessage: (content: string, file?: File, actionPayload?: string) => void;
+  onSendMessage: (content: string, actionPayload?: string) => void;
   isLoading: boolean;
   onShowToast: (message: string, type: 'success' | 'info' | 'error') => void;
   currentModeId?: Mode['id'];
   onModeChange?: (modeId: Mode['id']) => void;
   useGoogleSearch?: boolean;
   onGoogleSearchChange?: (value: boolean) => void;
-  onOpenImageGenerator?: () => void;
+  onGoHome?: () => void;
   pendingFirstMessage?: string | null;
   onConsumeFirstMessage?: () => void;
 }
-
-// ── Welcome screen per la chat vuota ─────────────────────────────────────────
-const WelcomeScreen: React.FC = () => (
-  <div className="flex flex-col items-center justify-center h-full text-center px-8 gap-6">
-    <div className="space-y-2">
-      <div
-        className="font-display text-6xl font-800 tracking-tight bg-clip-text text-transparent"
-        style={{ background: 'linear-gradient(135deg, #ffffff, #d1d5db, #6b7280)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-      >
-        Ada
-      </div>
-      <p className="font-display text-sm font-600 tracking-[0.3em] uppercase text-purple-400">
-        Assistente Didattico
-      </p>
-    </div>
-    <div className="w-16 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
-    <p className="text-sm text-gray-600 max-w-sm leading-relaxed">
-      Scrivi un messaggio per iniziare. Usa il selettore modalità per cambiare stile di risposta.
-    </p>
-  </div>
-);
 
 // ── Componente principale ─────────────────────────────────────────────────────
 const ChatView: React.FC<ChatViewProps> = ({
   conversation, students, onSendMessage, isLoading,
   onShowToast, currentModeId, onModeChange,
-  useGoogleSearch, onGoogleSearchChange, onOpenImageGenerator,
+  useGoogleSearch, onGoogleSearchChange, onGoHome,
   pendingFirstMessage, onConsumeFirstMessage,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -58,14 +37,24 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   const isQuickChat = conversation?.id === ADA_QUICK_CHAT_ID;
 
-  // Auto-invio messaggio in arrivo dalla lobby (chip o input libero)
+  // Auto-invio messaggio in arrivo dalla lobby (chip o input libero).
+  // Usiamo un ref per catturare il messaggio non appena arriva, così non dipende
+  // dal timing con cui conversation diventa disponibile (fix race condition).
+  const pendingMsgRef = useRef<string | null>(null);
   useEffect(() => {
-    if (pendingFirstMessage && conversation) {
-      onSendMessage(pendingFirstMessage);
+    if (pendingFirstMessage) {
+      pendingMsgRef.current = pendingFirstMessage;
       onConsumeFirstMessage?.();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingFirstMessage, conversation?.id]);
+  }, [pendingFirstMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (pendingMsgRef.current && conversation?.id) {
+      const msg = pendingMsgRef.current;
+      pendingMsgRef.current = null;
+      onSendMessage(msg);
+    }
+  }, [conversation?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const studentForConversation = useMemo(() => {
     if (conversation?.studentId) {
@@ -116,25 +105,24 @@ const ChatView: React.FC<ChatViewProps> = ({
     );
   }, [conversation, searchHighlight]);
 
-  // ── Stato: nessuna conversazione ─────────────────────────────────────────
-  if (!conversation) {
-    return (
-      <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
-        <WelcomeScreen />
-        <div className="flex-shrink-0 px-6 pb-6 max-w-3xl mx-auto w-full">
-          <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
-        </div>
-      </main>
-    );
-  }
+  if (!conversation) return null;
 
   return (
     <main className="flex-1 flex flex-col bg-[#0D1117] overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      {/* ── Header — Zona A: icona+titolo · Zona C: azioni ──────────────── */}
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3 border-b border-gray-800/60 bg-gray-900/80 backdrop-blur-sm">
-        {/* Zona A */}
+        {/* Home button */}
+        {onGoHome && (
+          <button
+            onClick={onGoHome}
+            className="flex-shrink-0 p-1.5 text-gray-500 hover:text-purple-400 rounded-lg hover:bg-purple-500/10 transition-colors"
+            title="Torna alla home"
+          >
+            <HomeIcon className="h-4 w-4" />
+          </button>
+        )}
+
         <ChatBubbleOvalLeftEllipsisIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
 
         {isSearchOpen ? (
@@ -153,7 +141,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           </h1>
         )}
 
-        {/* Zona C — azioni */}
+        {/* Azioni */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {isSearchOpen ? (
             <>
@@ -218,11 +206,6 @@ const ChatView: React.FC<ChatViewProps> = ({
       {/* ── Input ──────────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 px-6 pb-5 pt-4 border-t border-gray-800/40 bg-gray-900/40 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto">
-          {currentModeId && onModeChange && (
-            <div className="mb-2">
-              <ModePills currentModeId={currentModeId} onModeChange={onModeChange} />
-            </div>
-          )}
           <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} onShowToast={onShowToast} />
         </div>
       </div>
