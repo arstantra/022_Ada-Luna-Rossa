@@ -925,6 +925,49 @@ Rispondi in 2-4 frasi. Suggerisci strumenti digitali concreti (Canva, Padlet, Me
     return response.text.trim();
 };
 
+export const generateMaterialBrief = async (
+    sourceContent: string,
+    materialType: string,
+    outputTool: string,
+    targetAudience: string,
+    teacherInstruction: string,
+    systemInstruction: string
+): Promise<string> => {
+    const toolInstructions: Record<string, string> = {
+        canva: 'Produci una struttura slide pronta per Canva: titolo della presentazione, poi per ogni slide titolo + 3-5 punti bullet + nota speaker (max 1 riga). Formato Markdown con intestazioni ## per ogni slide.',
+        powerpoint: 'Produci una struttura slide pronta per PowerPoint: titolo della presentazione, poi per ogni slide titolo + 3-5 punti bullet + nota speaker. Formato Markdown con intestazioni ## per ogni slide.',
+        ada_diretta: 'Produci direttamente il testo completo e pronto all\'uso: scheda, istruzioni attività o testo da consegnare agli studenti. Niente note speaker, niente struttura interna — solo il testo finale.',
+        gemini_immagini: 'Produci un prompt visivo dettagliato per la generazione di immagini con Gemini. Scrivi prima il prompt in italiano (stile, soggetto, contesto, colori, atmosfera), poi la versione in inglese per l\'API. Ogni versione in un paragrafo separato.',
+        firefly: 'Produci un prompt visivo dettagliato per Adobe Firefly. Scrivi prima il prompt in italiano (stile, soggetto, contesto, colori, atmosfera), poi la versione in inglese per l\'API. Ogni versione in un paragrafo separato.',
+        altro: 'Produci un brief strutturato con: obiettivo del materiale, pubblico target, contenuti chiave da includere, tono e stile suggeriti, note operative.',
+    };
+    const toolKey = outputTool.toLowerCase().replace(' ', '_');
+    const outputInstruction = toolInstructions[toolKey] ?? toolInstructions.altro;
+
+    const prompt = `${systemInstruction}
+
+Sei Ada, assistente AI specializzata nella didattica. L'insegnante vuole produrre un materiale didattico partendo dal contenuto qui sotto. Analizza le fonti come farebbe un assistente NotebookLM esperto.
+
+**FONTE:**
+${sourceContent.slice(0, 3000)}
+
+**TIPO MATERIALE:** ${materialType}
+**TOOL DI PRODUZIONE:** ${outputTool}
+**PUBBLICO TARGET:** ${targetAudience}
+${teacherInstruction.trim() ? `**ISTRUZIONE AGGIUNTIVA:** ${teacherInstruction}` : ''}
+
+**COMPITO:** ${outputInstruction}
+
+Vai diretto all'output richiesto. Usa Markdown.`;
+
+    const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.75, thinkingConfig: { thinkingBudget: 4096 } }
+    });
+    return response.text.trim();
+};
+
 export const generateBlockDetails = async (objective: string, theme: string): Promise<{ lessonTitle: string; lessonSyllabus: string; lessonPlanMaterials: string; }> => {
     const prompt = `Sei un esperto di design didattico. Basandoti sul contesto fornito, genera i dettagli per un blocco di lezione di 2 ore.
 

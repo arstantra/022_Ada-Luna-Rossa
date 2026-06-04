@@ -581,6 +581,7 @@ interface InAulaViewProps {
     onChiudiLezione?: (convoId: string, blockIndex: number) => void;
     onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
     onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
+    onSaveMaterialBrief: (convoId: string, blockIndex: number, materialId: string, brief: string, outputTool: LessonMaterial['outputTool']) => void;
     onSetAttendance: (convoId: string, blockIndex: number, presentIds: string[], lateIds: string[]) => void;
     onAddEvaluation: (convoId: string, blockIndex: number, evaluation: Omit<LessonEvaluation, 'id' | 'date'>) => void;
     onRemoveEvaluation: (convoId: string, blockIndex: number, evaluationId: string) => void;
@@ -595,7 +596,7 @@ interface InAulaViewProps {
     onLaunchActivity?: (activityId: string) => Promise<void>;
 }
 
-const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl, activities, onUpdateActivity, onGenerateBriefing, onAddObservation, onRecordSubmission, onLaunchActivity }) => {
+const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, students, onNavigateToBlock, onFormatMultipleBlocks, onRecordAttendance, onSaveGroups, onAddArtifact, onDeleteArtifact, onOpenLessonNotesModal, onDeleteLessonNotes, onGenerateAnalysis, analysisLoadingBlockId, onUpdateGroups, onUpdateGroupNotes, onAddLink, onDeleteLink, onUpdateCloudLink, showToast, masterContext, onUpdateBlockStatus, notebooks, onAddNotebook, onUpdateLinkedNotebooks, onAvviaLezione, onChiudiLezione, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSetAttendance, onAddEvaluation, onRemoveEvaluation, onAutoSaveNotes, onGenerateLessonNoteAnalysis, onSaveClassroomUrl, activities, onUpdateActivity, onGenerateBriefing, onAddObservation, onRecordSubmission, onLaunchActivity }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [selectedModule, setSelectedModule] = useState('all');
@@ -746,6 +747,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         students={students}
                         onAddMaterial={onAddMaterial}
                         onRemoveMaterial={onRemoveMaterial}
+                        onSaveMaterialBrief={onSaveMaterialBrief}
                         onSaveGroups={onSaveGroups}
                         onSaveClassroomUrl={onSaveClassroomUrl}
                         masterContext={masterContext}

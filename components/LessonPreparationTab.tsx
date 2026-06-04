@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Conversation, BlockDetails, WeekPlan, Student, LessonMaterial, GroupDefinition, Activity, ActivityFormaLavoro, ActivityContesto, ActivityDeliverable, ActivityStatus } from '../types';
 import { SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon, LinkIcon, DocumentTextIcon, XIcon, UsersIcon, FolderOpenIcon } from './Icons';
+import MaterialProductionModal from './MaterialProductionModal';
 import { LOCAL_STORAGE_COURSE_DRIVE_URL_KEY } from '../constants';
 import EditableTextarea from './EditableTextarea';
 import * as GeminiService from '../services/gemini';
@@ -311,6 +312,7 @@ interface LessonPreparationTabProps {
     students: Student[];
     onAddMaterial: (convoId: string, blockIndex: number, material: Omit<LessonMaterial, 'id' | 'addedAt'>) => void;
     onRemoveMaterial: (convoId: string, blockIndex: number, materialId: string) => void;
+    onSaveMaterialBrief: (convoId: string, blockIndex: number, materialId: string, brief: string, outputTool: LessonMaterial['outputTool']) => void;
     onSaveGroups: (convoId: string, blockIndex: number, groups: GroupDefinition[]) => void;
     onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
     masterContext: ReturnType<typeof useMasterContext>;
@@ -321,7 +323,7 @@ interface LessonPreparationTabProps {
 }
 
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
-    conversations, students, onAddMaterial, onRemoveMaterial, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
+    conversations, students, onAddMaterial, onRemoveMaterial, onSaveMaterialBrief, onSaveGroups, onSaveClassroomUrl, masterContext, showToast,
     activities = [], onUpdateActivity, onGenerateBriefing,
 }) => {
     const blockOptions = useMemo<BlockOption[]>(() => {
@@ -376,6 +378,14 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
 
     // ── Classroom URL state ───────────────────────────────────────────────────
     const [classroomDraft, setClassroomDraft] = useState('');
+
+    // ── MaterialProductionModal state ─────────────────────────────────────────
+    const [productionModal, setProductionModal] = useState<{
+        sourceName: string;
+        sourceContent: string;
+        sourceType: LessonMaterial['type'];
+        materialId: string | null; // null = master source
+    } | null>(null);
 
     // ── Materiali unificati state ─────────────────────────────────────────────
     const [isMaterialiOpen, setIsMaterialiOpen] = useState(true);
@@ -593,6 +603,23 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                                     <span className="truncate max-w-[260px]">{block?.blockTitle || block?.objective || 'Blocco corrente'}</span>
                                                 </span>
                                                 <span className="flex items-center gap-2 flex-shrink-0">
+                                                    {hasMasterContent && (
+                                                        <button
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                setProductionModal({
+                                                                    sourceName: block?.blockTitle || block?.objective || 'Master blocco corrente',
+                                                                    sourceContent: block!.contentBlocks!.map(cb => cb.content).join('\n\n'),
+                                                                    sourceType: 'altro',
+                                                                    materialId: null,
+                                                                });
+                                                            }}
+                                                            className="flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors"
+                                                            title="Produci materiale dal master"
+                                                        >
+                                                            <SparklesIcon className="h-3 w-3" />Produci
+                                                        </button>
+                                                    )}
                                                     {!hasMasterContent && <span className="text-[10px] font-mono text-gray-600 uppercase">vuoto</span>}
                                                     <ChevronDownIcon className={`h-3.5 w-3.5 text-gray-600 transition-transform ${isMasterOpen ? 'rotate-180' : ''}`} />
                                                 </span>
@@ -721,21 +748,57 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                             ) : (
                                                 <div className="space-y-1.5">
                                                     {materials.map(mat => (
-                                                        <div key={mat.id} className="flex items-center gap-2 px-2 py-1.5 bg-gray-900/40 rounded-lg border border-gray-700/30 hover:border-gray-600/40 transition-colors">
-                                                            <span className="text-[10px] font-mono uppercase tracking-wide text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded flex-shrink-0">
-                                                                {MATERIAL_TYPE_LABELS[mat.type]}
-                                                            </span>
-                                                            <p className="text-xs font-medium text-gray-300 truncate flex-1">{mat.title}</p>
-                                                            {mat.notes && <p className="text-[10px] text-gray-600 truncate max-w-[100px]">{mat.notes}</p>}
-                                                            <a href={mat.url} target="_blank" rel="noopener noreferrer"
-                                                                className="p-1 text-gray-600 hover:text-blue-400 flex-shrink-0 transition-colors" title="Apri">
-                                                                <LinkIcon className="h-3.5 w-3.5" />
-                                                            </a>
-                                                            <button
-                                                                onClick={() => onRemoveMaterial(selectedOption!.convoId, selectedOption!.blockIndex, mat.id)}
-                                                                className="p-1 text-gray-600 hover:text-red-400 flex-shrink-0 transition-colors" title="Rimuovi">
-                                                                <TrashIcon className="h-3.5 w-3.5" />
-                                                            </button>
+                                                        <div key={mat.id} className="flex flex-col gap-1 px-2 py-1.5 bg-gray-900/40 rounded-lg border border-gray-700/30 hover:border-gray-600/40 transition-colors">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-mono uppercase tracking-wide text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded flex-shrink-0">
+                                                                    {MATERIAL_TYPE_LABELS[mat.type]}
+                                                                </span>
+                                                                <p className="text-xs font-medium text-gray-300 truncate flex-1">{mat.title}</p>
+                                                                {mat.notes && <p className="text-[10px] text-gray-600 truncate max-w-[80px]">{mat.notes}</p>}
+                                                                <button
+                                                                    onClick={() => setProductionModal({
+                                                                        sourceName: mat.title,
+                                                                        sourceContent: mat.notes ?? mat.title,
+                                                                        sourceType: mat.type,
+                                                                        materialId: mat.id,
+                                                                    })}
+                                                                    className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors flex-shrink-0"
+                                                                    title="Produci con Ada"
+                                                                >
+                                                                    <SparklesIcon className="h-3 w-3" />
+                                                                </button>
+                                                                <a href={mat.url} target="_blank" rel="noopener noreferrer"
+                                                                    className="p-1 text-gray-600 hover:text-blue-400 flex-shrink-0 transition-colors" title="Apri">
+                                                                    <LinkIcon className="h-3.5 w-3.5" />
+                                                                </a>
+                                                                <button
+                                                                    onClick={() => onRemoveMaterial(selectedOption!.convoId, selectedOption!.blockIndex, mat.id)}
+                                                                    className="p-1 text-gray-600 hover:text-red-400 flex-shrink-0 transition-colors" title="Rimuovi">
+                                                                    <TrashIcon className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
+                                                            {mat.productionBrief && (
+                                                                <div className="flex items-center gap-1.5 pl-1">
+                                                                    {mat.outputTool && (
+                                                                        <span className="text-[10px] font-mono text-purple-400/70 bg-purple-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">
+                                                                            {mat.outputTool === 'ada_diretta' ? 'Ada' : mat.outputTool === 'gemini_immagini' ? 'Gemini' : mat.outputTool}
+                                                                        </span>
+                                                                    )}
+                                                                    <p className="text-[11px] text-gray-500 truncate flex-1">{mat.productionBrief.slice(0, 80)}</p>
+                                                                    <button
+                                                                        onClick={() => setProductionModal({
+                                                                            sourceName: mat.title,
+                                                                            sourceContent: mat.notes ?? mat.title,
+                                                                            sourceType: mat.type,
+                                                                            materialId: mat.id,
+                                                                        })}
+                                                                        className="p-0.5 text-gray-600 hover:text-purple-400 transition-colors flex-shrink-0"
+                                                                        title="Modifica brief"
+                                                                    >
+                                                                        <SparklesIcon className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -964,6 +1027,31 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                     showToast('Materiale aggiunto!', 'success');
                 }}
             />
+
+            {productionModal && selectedOption && (
+                <MaterialProductionModal
+                    isOpen={!!productionModal}
+                    onClose={() => setProductionModal(null)}
+                    sourceName={productionModal.sourceName}
+                    sourceContent={productionModal.sourceContent}
+                    sourceMaterialType={productionModal.sourceType}
+                    systemInstruction={masterContext.systemInstruction}
+                    onSaveBrief={(brief, outputTool) => {
+                        if (productionModal.materialId) {
+                            onSaveMaterialBrief(
+                                selectedOption.convoId,
+                                selectedOption.blockIndex,
+                                productionModal.materialId,
+                                brief,
+                                outputTool
+                            );
+                        } else {
+                            showToast('Brief copiato. Usalo nel tuo tool preferito!', 'info');
+                        }
+                        setProductionModal(null);
+                    }}
+                />
+            )}
         </>
     );
 };

@@ -140,6 +140,28 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     });
   };
 
+  const handleSaveMaterialBrief = (
+    convoId: string,
+    blockIndex: number,
+    materialId: string,
+    brief: string,
+    outputTool: LessonMaterial['outputTool']
+  ) => {
+    updateConversation(convoId, convo => {
+      if (!convo.weekPlan) return convo;
+      const newBlocks = [...convo.weekPlan.blocks];
+      const current = newBlocks[blockIndex].lessonMaterials ?? [];
+      newBlocks[blockIndex] = {
+        ...newBlocks[blockIndex],
+        lessonMaterials: current.map(m =>
+          m.id === materialId ? { ...m, productionBrief: brief, outputTool } : m
+        ),
+      };
+      return { ...convo, weekPlan: { ...convo.weekPlan, blocks: newBlocks } };
+    });
+    showToast('Brief salvato sul materiale.', 'success');
+  };
+
   const handleRemoveLessonMaterial = (convoId: string, blockIndex: number, materialId: string) => {
     updateConversation(convoId, convo => {
       if (!convo.weekPlan) return convo;
@@ -261,6 +283,7 @@ export function createBlockNoteHandlers(deps: BlockNoteHandlerDeps) {
     handleUpdateBlockLinkedNotebooks,
     handleAddLessonMaterial,
     handleRemoveLessonMaterial,
+    handleSaveMaterialBrief,
     handleAutoSaveLessonNotes,
     handleUpdateLiveAttendance,
     handleAddLessonEvaluation,

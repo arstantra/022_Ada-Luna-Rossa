@@ -255,6 +255,8 @@ export interface LessonMaterial {
     targetAudience: 'classe' | 'gruppo' | 'studente';
     targetId?: string;
     addedAt: string;
+    outputTool?: 'canva' | 'powerpoint' | 'ada_diretta' | 'gemini_immagini' | 'firefly' | 'altro';
+    productionBrief?: string;
 }
 
 export interface LessonEvaluation {
