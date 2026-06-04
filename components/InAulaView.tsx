@@ -744,6 +744,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         onSaveGroups={onSaveGroups}
                         onSaveClassroomUrl={onSaveClassroomUrl}
                         onSavePreparationSources={onSavePreparationSources ?? (() => {})}
+                        onAvviaLezione={onAvviaLezione}
                         masterContext={masterContext}
                         showToast={showToast}
                     />

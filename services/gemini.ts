@@ -314,9 +314,14 @@ export const generateGroupSuggestionWithCriteria = async (
     };
     const criteriaDesc = criteria.map(c => criteriaMap[c] ?? c).join('; ');
     const studentList = students
-        .map(s => {
-            const notes = [s.notes, s.besNotes, s.dsaNotes].filter(Boolean).join(' — ');
-            return `- ${s.name} (ID: ${s.id})${notes ? `: ${notes}` : ''}`;
+        .map((s, idx) => {
+            // Tronca le note a 120 caratteri per evitare prompt eccessivamente lunghi
+            const notes = [s.notes, s.besNotes, s.dsaNotes]
+                .filter(Boolean)
+                .map(n => (n ?? '').slice(0, 120))
+                .join(' — ');
+            const tags = [s.hasBES && 'BES', s.hasDSA && 'DSA', s.hasPEI && 'PEI'].filter(Boolean).join('/');
+            return `- ${s.name} (ID: ${s.id})${tags ? ` [${tags}]` : ''}${notes ? `: ${notes}` : ''}`;
         })
         .join('\n');
     const prompt = `Sei un assistente per un insegnante. Crea gruppi di lavoro per la classe, ${groupSize} studenti per gruppo.
@@ -326,7 +331,9 @@ Usa ESATTAMENTE gli ID forniti nella lista. Ogni studente deve comparire in un s
 Lista studenti:
 ${studentList}
 
-Crea gruppi di circa ${groupSize} persone (alcuni possono avere ±1 se il totale non è divisibile). Fornisci un nome creativo per ogni gruppo e una motivazione breve sulla composizione.`;
+Crea gruppi di circa ${groupSize} persone (alcuni possono avere ±1 se il totale non è divisibile).
+Assegna nomi semplici e numerici ai gruppi: "Gruppo 1", "Gruppo 2", ecc.
+Per la motivazione scrivi al massimo una frase breve sul criterio di bilanciamento applicato.`;
 
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',

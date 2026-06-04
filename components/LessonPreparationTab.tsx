@@ -94,6 +94,7 @@ interface LessonPreparationTabProps {
     onSaveGroups: (convoId: string, blockIndex: number, groups: GroupDefinition[]) => void;
     onSaveClassroomUrl: (convoId: string, blockIndex: number, url: string) => void;
     onSavePreparationSources: (convoId: string, blockIndex: number, sources: PreparationSource[]) => void;
+    onAvviaLezione?: (convoId: string, blockIndex: number) => void;
     masterContext: ReturnType<typeof useMasterContext>;
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
 }
@@ -171,7 +172,7 @@ function buildLMExport(
 const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     conversations, availableWeeks, students, notebooks,
     onSaveGroups, onSaveClassroomUrl, onSavePreparationSources,
-    masterContext, showToast,
+    onAvviaLezione, masterContext, showToast,
 }) => {
 
     // ── 1. SELEZIONE — deriva da availableWeeks × conversations (fix bug) ───
@@ -374,16 +375,33 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
         }
     };
 
-    // ── 4. GRUPPI (min 1) ────────────────────────────────────────────────────
+    // ── 4. ASSEGNAZIONE GRUPPI ──────────────────────────────────────────────
     const [isGruppiOpen, setIsGruppiOpen] = useState(false);
     const [groupSize, setGroupSize] = useState(3);
     const [selectedCriteria, setSelectedCriteria] = useState<string[]>(['Livello competenza']);
     const [proposedGroups, setProposedGroups] = useState<GroupDefinition[]>([]);
     const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+    const [editingGroupNameIndex, setEditingGroupNameIndex] = useState<number | null>(null);
+    const [draggingStudent, setDraggingStudent] = useState<{ sid: string; fromGroup: number } | null>(null);
+    const [dragOverGroup, setDragOverGroup] = useState<number | null>(null);
 
     const toggleCriteria = (id: string) => {
         setSelectedCriteria(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
         setProposedGroups([]);
+    };
+
+    // Drag-and-drop: sposta uno studente tra gruppi proposti
+    const handleDropStudentOnGroup = (toGroupIndex: number) => {
+        if (!draggingStudent || draggingStudent.fromGroup === toGroupIndex) {
+            setDraggingStudent(null); setDragOverGroup(null); return;
+        }
+        setProposedGroups(prev => {
+            const next = prev.map(g => ({ ...g, studentIds: [...g.studentIds] }));
+            next[draggingStudent.fromGroup].studentIds = next[draggingStudent.fromGroup].studentIds.filter(id => id !== draggingStudent.sid);
+            next[toGroupIndex].studentIds = [...next[toGroupIndex].studentIds, draggingStudent.sid];
+            return next;
+        });
+        setDraggingStudent(null); setDragOverGroup(null);
     };
 
     const getStudentName = (id: string) => students.find(s => s.id === id)?.name ?? 'Sconosciuto';
@@ -686,7 +704,7 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                             >
                                 <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
                                     <SparklesIcon className="h-4 w-4 text-purple-400" />
-                                    Distribuzione
+                                    Materiali per la lezione
                                 </span>
                                 <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDistribuzioneOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -801,10 +819,15 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                         </div>
 
                         {/* ── Link Classroom ────────────────────────────────── */}
-                        <div>
-                            <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
-                                Link Classroom
-                            </label>
+                        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 px-4 py-3 space-y-2">
+                            <div>
+                                <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                                    Google Classroom — Compito / Materiali
+                                </label>
+                                <p className="text-[11px] text-gray-600 mt-0.5">
+                                    Incolla qui il link del compito Classroom dove carichi i materiali da distribuire alla classe.
+                                </p>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <input
                                     type="url"
@@ -829,7 +852,7 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                             </div>
                         </div>
 
-                        {/* ── 4. GRUPPI (min 1) ─────────────────────────────── */}
+                        {/* ── 4. ASSEGNAZIONE GRUPPI ────────────────────────── */}
                         <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
                             <button
                                 onClick={() => setIsGruppiOpen(o => !o)}
@@ -837,7 +860,7 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                             >
                                 <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
                                     <UsersIcon className="h-4 w-4 text-indigo-400" />
-                                    Crea Gruppi con Ada
+                                    Assegnazione gruppi
                                     {savedGroups.length > 0 && (
                                         <span className="text-[10px] font-mono text-gray-500 bg-gray-700/60 px-1.5 py-0.5 rounded">
                                             {savedGroups.length} salvati
@@ -850,10 +873,10 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                             {isGruppiOpen && (
                                 <div className="px-4 pb-4 border-t border-gray-700/40 pt-3 space-y-4">
                                     {students.length === 0 ? (
-                                        <p className="text-sm text-gray-600">Nessuno studente nel registro. Aggiungili prima in "L'Equipaggio".</p>
+                                        <p className="text-sm text-gray-600">Nessuno studente nel registro. Aggiungili prima in "Studenti".</p>
                                     ) : (
                                         <>
-                                            {/* Dimensione gruppo — da 1 (individuale) a 5 */}
+                                            {/* Dimensione gruppo */}
                                             <div>
                                                 <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">
                                                     Persone per gruppo
@@ -866,13 +889,13 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                                             onClick={() => { setGroupSize(n); setProposedGroups([]); }}
                                                             className={`w-10 h-10 rounded-lg text-sm font-semibold border transition-colors ${groupSize === n ? 'bg-purple-600/80 border-purple-500 text-white' : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-white'}`}
                                                         >
-                                                            {n === 1 ? '1' : n}
+                                                            {n}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            {/* Criteri */}
+                                            {/* Criteri (solo se gruppi > 1) */}
                                             {groupSize > 1 && (
                                                 <div>
                                                     <label className="block text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-1.5">Criteri di bilanciamento</label>
@@ -903,43 +926,76 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                                 }
                                             </button>
 
+                                            {/* Gruppi proposti con drag-and-drop e nome editabile */}
                                             {proposedGroups.length > 0 && (
                                                 <div className="space-y-3">
-                                                    <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Proposta Ada</p>
+                                                    <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">
+                                                        Trascina gli studenti tra i gruppi per riorganizzarli
+                                                    </p>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {proposedGroups.map((group, gi) => {
-                                                            return (
-                                                                <div key={gi} className="bg-gray-900/60 rounded-lg border border-gray-700/50 p-3">
-                                                                    <p className="text-xs font-semibold text-white mb-1">{group.name}</p>
-                                                                    {group.justification && <p className="text-[11px] text-gray-500 mb-2 italic">{group.justification}</p>}
-                                                                    <ul className="space-y-0.5">
-                                                                        {group.studentIds.map(sid => {
-                                                                            const stu = students.find(s => s.id === sid);
-                                                                            return (
-                                                                                <li key={sid} className="flex items-center justify-between text-xs text-gray-300">
-                                                                                    <span className="flex items-center gap-1.5">
-                                                                                        {getStudentName(sid)}
-                                                                                        {stu?.hasBES && <span className="text-[9px] font-mono bg-amber-500/15 text-amber-400/80 px-1 py-0.5 rounded">BES</span>}
-                                                                                        {stu?.hasDSA && <span className="text-[9px] font-mono bg-sky-500/15 text-sky-400/80 px-1 py-0.5 rounded">DSA</span>}
-                                                                                        {stu?.hasPEI && <span className="text-[9px] font-mono bg-purple-500/15 text-purple-400/80 px-1 py-0.5 rounded">PEI</span>}
-                                                                                    </span>
-                                                                                    <button
-                                                                                        onClick={() => setProposedGroups(prev => {
-                                                                                            const next = [...prev];
-                                                                                            next[gi] = { ...next[gi], studentIds: next[gi].studentIds.filter(id => id !== sid) };
-                                                                                            return next;
-                                                                                        })}
-                                                                                        className="text-gray-600 hover:text-red-400 ml-2"
-                                                                                    >
-                                                                                        <XIcon className="h-3 w-3" />
-                                                                                    </button>
-                                                                                </li>
-                                                                            );
-                                                                        })}
-                                                                    </ul>
+                                                        {proposedGroups.map((group, gi) => (
+                                                            <div
+                                                                key={gi}
+                                                                className={`bg-gray-900/60 rounded-lg border p-3 transition-colors ${dragOverGroup === gi ? 'border-indigo-500/60 bg-indigo-900/20' : 'border-gray-700/50'}`}
+                                                                onDragOver={e => { e.preventDefault(); setDragOverGroup(gi); }}
+                                                                onDragLeave={() => setDragOverGroup(null)}
+                                                                onDrop={() => handleDropStudentOnGroup(gi)}
+                                                            >
+                                                                {/* Nome editabile */}
+                                                                <div className="flex items-center gap-1.5 mb-2">
+                                                                    <span className="text-[10px] font-mono text-gray-600">{gi + 1}.</span>
+                                                                    {editingGroupNameIndex === gi ? (
+                                                                        <input
+                                                                            autoFocus
+                                                                            type="text"
+                                                                            value={group.name}
+                                                                            onChange={e => setProposedGroups(prev => {
+                                                                                const next = [...prev];
+                                                                                next[gi] = { ...next[gi], name: e.target.value };
+                                                                                return next;
+                                                                            })}
+                                                                            onBlur={() => setEditingGroupNameIndex(null)}
+                                                                            onKeyDown={e => { if (e.key === 'Enter') setEditingGroupNameIndex(null); }}
+                                                                            className="flex-1 text-xs font-semibold bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-white focus:outline-none focus:border-indigo-400"
+                                                                        />
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => setEditingGroupNameIndex(gi)}
+                                                                            className="text-xs font-semibold text-white hover:text-indigo-300 transition-colors truncate text-left"
+                                                                            title="Clicca per rinominare"
+                                                                        >
+                                                                            {group.name}
+                                                                        </button>
+                                                                    )}
+                                                                    <span className="text-[10px] text-gray-600 ml-auto flex-shrink-0">{group.studentIds.length} pers.</span>
                                                                 </div>
-                                                            );
-                                                        })}
+
+                                                                {/* Tag studenti draggable */}
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {group.studentIds.map(sid => {
+                                                                        const stu = students.find(s => s.id === sid);
+                                                                        return (
+                                                                            <span
+                                                                                key={sid}
+                                                                                draggable
+                                                                                onDragStart={() => setDraggingStudent({ sid, fromGroup: gi })}
+                                                                                onDragEnd={() => { setDraggingStudent(null); setDragOverGroup(null); }}
+                                                                                className="flex items-center gap-1 text-[11px] text-gray-300 bg-gray-700/60 border border-gray-600/40 px-2 py-0.5 rounded-full cursor-grab active:cursor-grabbing select-none"
+                                                                                title="Trascina per spostare"
+                                                                            >
+                                                                                {stu?.name ?? 'Sconosciuto'}
+                                                                                {stu?.hasBES && <span className="text-[9px] font-mono text-amber-400/80">BES</span>}
+                                                                                {stu?.hasDSA && <span className="text-[9px] font-mono text-sky-400/80">DSA</span>}
+                                                                                {stu?.hasPEI && <span className="text-[9px] font-mono text-purple-400/80">PEI</span>}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                    {group.studentIds.length === 0 && (
+                                                                        <span className="text-[10px] text-gray-600 italic">Nessuno studente</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                     <button
                                                         onClick={handleSaveGroups}
@@ -1063,6 +1119,27 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                             </div>
                         )}
                     </>
+                )}
+
+                {/* ── Pulsante Avvia Lezione ────────────────────────────────── */}
+                {selectedOption?.convoId && block && block.lessonState !== 'in_corso' && block.lessonState !== 'archiviata' && onAvviaLezione && (
+                    <div className="pt-2 pb-4">
+                        <button
+                            onClick={() => onAvviaLezione(selectedOption.convoId!, selectedOption.blockIndex)}
+                            className="w-full py-3 rounded-xl bg-emerald-600/80 text-white font-semibold text-sm hover:bg-emerald-500 shadow-sm shadow-emerald-900/40 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span className="text-base">▶</span>
+                            Avvia Lezione
+                        </button>
+                    </div>
+                )}
+                {selectedOption?.convoId && block?.lessonState === 'in_corso' && (
+                    <div className="pt-2 pb-4">
+                        <div className="w-full py-3 rounded-xl bg-emerald-900/30 border border-emerald-700/40 text-emerald-400 font-medium text-sm flex items-center justify-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            Lezione in corso
+                        </div>
+                    </div>
                 )}
             </div>
 
