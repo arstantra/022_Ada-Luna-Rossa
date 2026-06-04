@@ -184,6 +184,7 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
             for (let i = 0; i < week.totalBlocks; i++) {
                 const block = convo?.weekPlan?.blocks[i] ?? null;
                 if (block && (block.status === 'saltato' || block.status === 'annullato')) continue;
+                if (block && block.lessonState === 'archiviata') continue; // le lezioni archiviate vivono nel tab Archivio
                 const title = block?.blockTitle || block?.objective || block?.lessonTitle;
                 opts.push({
                     key: convo ? `${convo.id}-${i}` : `stub-${week.weekNumber}-${i}`,
