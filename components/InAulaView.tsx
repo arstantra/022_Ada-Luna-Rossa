@@ -628,8 +628,8 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                     convoId: convo.id, 
                     blockIndex: index 
                 }))
-                .filter(block => (block.contentBlocks && block.contentBlocks.length > 0) || block.status === 'saltato' || block.status === 'annullato')
-        }).filter(block => block.status !== 'saltato');
+                .filter(block => block.lessonState === 'archiviata')
+        });
 
         const filteredBlocks = allBlocks.filter(block => {
             const query = searchQuery.toLowerCase();
@@ -705,7 +705,7 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                     <div className="flex items-center justify-between px-6 pt-3.5 pb-2">
                         <div className="flex items-center gap-3">
                             <BriefcaseIcon className={`h-5 w-5 ${activeTab === 'in_corso' ? 'text-emerald-400' : 'text-purple-400'}`} />
-                            <h2 className="text-base font-display font-semibold text-white">In Aula</h2>
+                            <h2 className="text-base font-display font-semibold text-white">Lezione</h2>
                             {hasActiveLessons && activeTab !== 'in_corso' && (
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
                             )}
@@ -817,8 +817,8 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                                 <details key={week.weekPlan.weekNumber} className="group/week bg-gray-800 rounded-lg overflow-hidden border border-gray-700/50" open={index === 0}>
                                     <summary className="list-none [&::-webkit-details-marker]:hidden p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/50 bg-gray-900/50">
                                         <div>
-                                            <h3 className="font-bold text-xl text-white">Settimana {week.weekPlan.weekNumber} <span className="text-lg font-normal text-gray-400">({week.weekPlan.dates})</span></h3>
-                                            <p className="text-sm text-gray-400 mt-1">{week.weekPlan.theme}</p>
+                                            <h3 className="font-display font-semibold text-base text-white">Settimana {week.weekPlan.weekNumber} <span className="text-sm font-normal text-gray-400">· {week.weekPlan.dates}</span></h3>
+                                            {week.weekPlan.theme && <p className="text-xs font-mono text-gray-500 mt-0.5">{week.weekPlan.theme}</p>}
                                         </div>
                                         <ChevronDownIcon className="h-6 w-6 text-gray-400 transition-transform duration-300 group-open/week:rotate-180" />
                                     </summary>
@@ -880,9 +880,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                         ) : (
                             <div className="text-center py-20 px-4 bg-gray-800 rounded-lg border border-gray-700/50">
                                 <BriefcaseIcon className="h-16 w-16 mx-auto text-gray-600" />
-                                <p className="mt-4 text-gray-300 font-semibold">Nessun blocco trovato</p>
+                                <p className="mt-4 text-gray-300 font-semibold">Nessuna lezione archiviata</p>
                                 <p className="text-gray-400 text-sm mt-1">
-                                    {searchQuery ? "Prova a modificare i filtri di ricerca." : "Completa la progettazione di alcuni blocchi per vederli apparire qui."}
+                                    {searchQuery ? "Prova a modificare i filtri di ricerca." : "Le lezioni chiuse compariranno qui dopo essere state archiviate dal tab In Corso."}
                                 </p>
                             </div>
                         )}

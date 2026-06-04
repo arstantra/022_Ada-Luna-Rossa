@@ -17,6 +17,7 @@ import type { WeekRouteInfo } from '../types';
 import type { useMasterContext } from '../hooks/useMasterContext';
 import * as GeminiService from '../services/gemini';
 import { LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
+import { getExactDateForBlock } from '../utils';
 import {
     SparklesIcon, PlusCircleIcon, TrashIcon, ChevronDownIcon,
     LinkIcon, DocumentTextIcon, XIcon, UsersIcon, BookOpenIcon,
@@ -473,6 +474,10 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     const activeSources = localSources.filter(s => s.isActive);
     const hasMasterContent = (block?.contentBlocks?.length ?? 0) > 0;
 
+    const exactDate = block?.day && selectedOption
+        ? getExactDateForBlock(selectedOption.weekDates, block.day, masterContext.teacherProfile)
+        : null;
+
     // ── RENDER ───────────────────────────────────────────────────────────────
     return (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -496,6 +501,54 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                         <p className="text-xs text-amber-500/70 mt-1.5 font-mono">
                             ⚠ Questo blocco non è ancora stato aperto in Laboratorio. Le sezioni di distribuzione e abbinamento saranno limitate.
                         </p>
+                    )}
+
+                    {/* ── Mini-card metadati blocco ──────────────────────── */}
+                    {block && (
+                        <div className="mt-3 px-3 py-2.5 bg-gray-800/60 border border-gray-700/40 rounded-lg flex flex-wrap gap-x-4 gap-y-1.5">
+                            {/* Data */}
+                            {block.day && (
+                                <span className="text-[10px] font-mono text-gray-400">
+                                    {block.day}{exactDate ? ` ${exactDate.getDate()} ${exactDate.toLocaleString('it-IT', { month: 'short' })}` : ''}
+                                </span>
+                            )}
+                            {/* Cosa */}
+                            {block.module && (
+                                <span className="text-[10px] font-mono text-sky-400/80 bg-sky-500/10 border border-sky-500/20 rounded px-1.5 py-0.5">
+                                    {block.module}
+                                </span>
+                            )}
+                            {/* Come */}
+                            {block.tipologia && (
+                                <span className="text-[10px] font-mono text-blue-400/80 bg-blue-500/10 border border-blue-500/20 rounded px-1.5 py-0.5">
+                                    {LESSON_TYPE_LABELS[block.tipologia]}
+                                </span>
+                            )}
+                            {/* Approccio */}
+                            {block.metodologia && (
+                                <span className="text-[10px] font-mono text-violet-400/80 bg-violet-500/10 border border-violet-500/20 rounded px-1.5 py-0.5">
+                                    {TEACHING_METHODOLOGY_LABELS[block.metodologia]}
+                                </span>
+                            )}
+                            {/* Contesto */}
+                            {block.isFslPeriod && (
+                                <span className="text-[10px] font-mono text-sky-400/80 bg-sky-500/10 border border-sky-500/20 rounded px-1.5 py-0.5">FSL</span>
+                            )}
+                            {block.hasExternalExpert && (
+                                <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5">
+                                    ESP{block.externalExpertName ? ` · ${block.externalExpertName}` : ''}
+                                </span>
+                            )}
+                            {block.isFuoriAula && (
+                                <span className="text-[10px] font-mono text-teal-400/80 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5">
+                                    Fuori aula{block.luogo ? ` · ${block.luogo}` : ''}
+                                </span>
+                            )}
+                            {/* Fallback se nessun metadato */}
+                            {!block.module && !block.tipologia && !block.metodologia && !block.isFslPeriod && !block.hasExternalExpert && !block.isFuoriAula && !block.day && (
+                                <span className="text-[10px] font-mono text-gray-600">Nessun dettaglio configurato — vai in Progettazione del Corso</span>
+                            )}
+                        </div>
                     )}
                 </div>
 
