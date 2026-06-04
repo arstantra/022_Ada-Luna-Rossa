@@ -1162,33 +1162,38 @@ export const generateDistributionSuggestion = async (
 ): Promise<{ outputType: string; description: string; workflow: string[]; toolSuggestion: string }> => {
     const contesto = isFuoriAula ? 'fuori dall\'aula' : 'in aula';
     const expertNote = hasExternalExpert ? 'con esperto esterno' : '';
-    const prompt = `${systemInstruction}
+    const prompt = `Sei Ada, assistente AI per la didattica. Analizza il contesto della lezione e suggerisci UN solo materiale da preparare.
 
-Sei Ada, assistente AI per la didattica. Analizza il contesto della lezione e suggerisci il materiale didattico più adatto da preparare.
-
-**CONTESTO:**
+CONTESTO:
 - Tipologia lezione: ${tipologia ?? 'non specificata'}
 - Approccio metodologico: ${metodologia ?? 'non specificato'}
 - Contesto fisico: ${contesto}${expertNote ? ' — ' + expertNote : ''}
 - Obiettivo: ${objective || 'non specificato'}
 
-**FONTI DISPONIBILI (estratto):**
+FONTI DISPONIBILI (estratto):
 ${sourcesText.slice(0, 1200)}
 
-**COMPITO:** Suggerisci UN solo tipo di output da preparare per questa lezione. Rispondi in JSON con questa struttura esatta:
+Rispondi SOLO con un oggetto JSON puro (senza markdown), con questa struttura:
 {
-  "outputType": "slide | scheda_stampa | manuale_lab | sito | guida_visuale | spiegazione_adattata",
-  "description": "Descrizione breve (1-2 frasi) di cosa preparare e perché è il più adatto",
-  "workflow": ["Passo 1...", "Passo 2...", "Passo 3..."],
-  "toolSuggestion": "Canva | PowerPoint | Google Slides | Ada diretta | Altro"
+  "outputType": "<uno tra: slide, scheda_stampa, manuale_lab, sito, guida_visuale, spiegazione_adattata>",
+  "description": "<1-2 frasi su cosa preparare e perché>",
+  "workflow": ["<passo 1>", "<passo 2>", "<passo 3>"],
+  "toolSuggestion": "<uno tra: Canva, PowerPoint, Google Slides, Ada diretta, Altro>"
 }`;
 
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { temperature: 0.5, responseMimeType: 'application/json' }
+        config: { temperature: 0.5, thinkingConfig: { thinkingBudget: 0 } }
     });
-    return JSON.parse(response.text.trim());
+
+    try {
+        const cleaned = response.text
+            .replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        return JSON.parse(cleaned);
+    } catch {
+        throw new Error('Risposta AI non valida: ' + response.text.slice(0, 200));
+    }
 };
 
 /**
