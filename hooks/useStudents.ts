@@ -21,7 +21,42 @@ export const useStudents = (crewContext: string) => {
                 const validStudents = savedStudents.filter(
                     (s: any): s is Student => s && typeof s.id === 'string' && typeof s.name === 'string' && Array.isArray(s.evaluations)
                 );
-                setStudents(validStudents);
+
+                // Migrazione: corregge nomi corrotti dal bug parseCrewContextToNames.
+                // I nomi corrotti contengono il formato ricco di buildCrewContext:
+                // "Andrea Poletti [BES] — BES: scrive male | Note: ragazzo brillante"
+                // Estrae nome pulito, flag e note dal nome corrotto e aggiorna il record.
+                const migratedStudents: Student[] = validStudents.map(s => {
+                    if (!s.name.includes('[') && !s.name.includes(' — ')) return s;
+                    const flagMatch = s.name.match(/\[(.*?)\]/);
+                    const flags = flagMatch ? flagMatch[1].split(',').map(f => f.trim()) : [];
+                    const notesSection = (s.name.match(/—\s*(.*?)$/) ?? [])[1] ?? '';
+                    const extract = (key: string) =>
+                        (notesSection.match(new RegExp(`${key}:\\s*(.*?)(?:\\s*\\||\\s*$)`)) ?? [])[1]?.trim();
+                    const cleanName = s.name.replace(/\s*\[.*?\]/, '').replace(/\s*—.*$/, '').trim();
+                    const parts = cleanName.split(/\s+/);
+                    return {
+                        ...s,
+                        name: cleanName,
+                        firstName: s.firstName || (parts.length >= 2 ? parts.slice(0, -1).join(' ') : cleanName),
+                        lastName:  s.lastName  || (parts.length >= 2 ? parts.at(-1)! : ''),
+                        hasBES: s.hasBES || flags.includes('BES') || undefined,
+                        hasDSA: s.hasDSA || flags.includes('DSA') || undefined,
+                        hasPEI: s.hasPEI || flags.includes('PEI') || undefined,
+                        besNotes:           s.besNotes           || extract('BES'),
+                        dsaNotes:           s.dsaNotes           || extract('DSA'),
+                        peiNotes:           s.peiNotes           || extract('PEI'),
+                        certificationNotes: s.certificationNotes || extract('Certificazioni'),
+                        notes:              s.notes              || extract('Note') || '',
+                    };
+                });
+                const toRepair = migratedStudents.filter((s, i) => s.name !== validStudents[i].name);
+                if (toRepair.length > 0) {
+                    await db.bulkSaveStudents(toRepair);
+                    console.info(`[useStudents] Migrati ${toRepair.length} record con nome corrotto.`);
+                }
+
+                setStudents(migratedStudents);
             } catch (error) {
                 console.error("Failed to load students from DB:", error);
             } finally {
