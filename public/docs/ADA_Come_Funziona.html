@@ -551,8 +551,191 @@ footer {
   border-top: 1px solid #1f2937;
 }
 
+/* ── PAESAGGIO STRUMENTI ── */
+.ls-section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #4b5563;
+  margin-bottom: 18px;
+}
+
+.ls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ls-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid;
+}
+
+.ls-card-head {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ls-card-icon { font-size: 18px; flex-shrink: 0; }
+.ls-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.ls-card-role {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+.ls-card-body { padding: 14px 18px; }
+
+.ls-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 3px 0;
+  line-height: 1.5;
+}
+.ls-check { color: #10b981; font-size: 10px; flex-shrink: 0; }
+.ls-x     { color: #6b7280; font-size: 10px; flex-shrink: 0; }
+
+.ls-sep {
+  border: none;
+  border-top: 1px solid;
+  margin: 10px 0;
+}
+
+.ls-ada-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: #1e1b4b;
+  color: #a5b4fc;
+  border: 1px solid #6366f125;
+  margin-top: 4px;
+}
+
+/* card colors */
+.ls-book {
+  background: #0e1117;
+  border-color: #374151;
+}
+.ls-book .ls-card-head { background: #111827; border-bottom-color: #1f2937; }
+.ls-book .ls-card-name  { color: #d1d5db; }
+.ls-book .ls-card-role  { color: #4b5563; }
+.ls-book .ls-sep        { border-color: #1f2937; }
+
+.ls-classroom {
+  background: #0a1120;
+  border-color: #1e3a5f60;
+}
+.ls-classroom .ls-card-head { background: #0d1628; border-bottom-color: #1e3a5f50; }
+.ls-classroom .ls-card-name  { color: #93c5fd; }
+.ls-classroom .ls-card-role  { color: #2563eb80; }
+.ls-classroom .ls-sep        { border-color: #1e3a5f50; }
+
+.ls-registro {
+  background: #110e06;
+  border-color: #78350f50;
+}
+.ls-registro .ls-card-head { background: #171007; border-bottom-color: #78350f40; }
+.ls-registro .ls-card-name  { color: #fcd34d; }
+.ls-registro .ls-card-role  { color: #92400e; }
+.ls-registro .ls-sep        { border-color: #78350f40; }
+
+/* Gap box */
+.gap-box {
+  border-radius: 12px;
+  background: #100a1c;
+  border: 1px solid #6d28d935;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.gap-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #6d28d9, #8b5cf6, #6d28d9);
+  opacity: 0.5;
+}
+.gap-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #7c3aed;
+  margin-bottom: 10px;
+}
+.gap-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #f3f4f6;
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+.gap-text {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.gap-text em { color: #c4b5fd; font-style: normal; font-weight: 600; }
+
+.gap-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.gap-item {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(109,40,217,0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(109,40,217,0.1);
+}
+.gap-item::before { content: "○ "; color: #6d28d9; font-size: 9px; }
+
+/* Ada bridge */
+.ada-bridge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(109,40,217,0.06);
+  border: 1px solid rgba(109,40,217,0.14);
+  margin-bottom: 52px;
+}
+.ab-spark { font-size: 16px; color: #a78bfa; flex-shrink: 0; animation: sparkMain 3s ease-in-out infinite; }
+.ab-text  { font-size: 13px; color: #9ca3af; line-height: 1.6; }
+.ab-text strong { color: #d1d5db; font-weight: 600; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
+  .ls-grid { grid-template-columns: 1fr; }
+  .gap-items { grid-template-columns: 1fr; }
   .hub { grid-template-columns: 1fr; grid-template-rows: auto; gap: 14px; }
   .sat-top, .sat-left, .sat-right, .sat-bottom { grid-column: 1; grid-row: auto; max-width: none; }
   .ada-node { grid-column: 1; width: 140px; height: 140px; margin: 0 auto; }
@@ -571,6 +754,100 @@ footer {
   <div class="eyebrow">ada · assistente didattico · guida</div>
   <h1 class="page-title">Come funziona <em>Ada</em></h1>
   <p class="page-subtitle">Ada è al centro del tuo lavoro. Non sostituisce il registro elettronico, né il libro di testo — sta in mezzo: pensa con te, ricorda il contesto, ti accompagna in aula.</p>
+
+  <!-- ══════════════════════════════════
+       IL PAESAGGIO DEGLI STRUMENTI
+  ══════════════════════════════════ -->
+  <div class="ls-section-label">il paesaggio degli strumenti</div>
+
+  <div class="ls-grid">
+
+    <!-- Libro di testo -->
+    <div class="ls-card ls-book">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">📚</div>
+        <div>
+          <div class="ls-card-name">Il Libro di Testo</div>
+          <div class="ls-card-role">il programma</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Organizza i contenuti disciplinari</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Propone sequenze e esercizi</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> È un <em>programma</em>, non un progetto: dice <em>cosa</em>, non <em>come</em></div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non conosce la tua classe, i tuoi studenti, il tuo contesto</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non si adatta né si aggiorna</div>
+      </div>
+    </div>
+
+    <!-- Google Classroom -->
+    <div class="ls-card ls-classroom">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">🎓</div>
+        <div>
+          <div class="ls-card-name">Google Classroom</div>
+          <div class="ls-card-role">la distribuzione</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Distribuisce compiti e materiali</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Mantiene il contatto con gli studenti</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Raccoglie consegne in modo ordinato</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> Distribuisce in modo <em>standard</em>: lo stesso per tutti</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non personalizza per le individualità</div>
+        <div style="margin-top:8px;"><span class="ls-ada-badge">✦ integrato con Ada</span></div>
+      </div>
+    </div>
+
+    <!-- Registro elettronico -->
+    <div class="ls-card ls-registro">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">📋</div>
+        <div>
+          <div class="ls-card-name">Il Registro Elettronico</div>
+          <div class="ls-card-role">il documento ufficiale</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Registra presenze e voti ufficiali</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Ha valore legale, è obbligatorio</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Comunica con famiglie e segreteria</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> Non ragiona: è un archivio, non uno strumento di insegnamento</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non aiuta a capire <em>perché</em> uno studente è in difficoltà</div>
+      </div>
+    </div>
+
+  </div><!-- /.ls-grid -->
+
+  <!-- Il gap -->
+  <div class="gap-box">
+    <div class="gap-eyebrow">il gap</div>
+    <div class="gap-title">Cosa manca ancora</div>
+    <p class="gap-text">
+      Abbiamo strumenti per i <em>contenuti</em>, per la <em>distribuzione</em> e per la <em>documentazione ufficiale</em>.
+      Non abbiamo ancora nulla per la parte più importante: progettare <em>come</em> insegnare —
+      con quale ritmo, quale approccio metodologico, quale attenzione alle individualità.
+    </p>
+    <div class="gap-items">
+      <div class="gap-item">Come adattare il ritmo alla classe reale</div>
+      <div class="gap-item">Come tenere conto delle individualità degli studenti</div>
+      <div class="gap-item">Come collegare obiettivo, metodo e pratica quotidiana</div>
+      <div class="gap-item">Come riflettere su quello che è successo davvero in aula</div>
+    </div>
+  </div>
+
+  <!-- Bridge ad Ada -->
+  <div class="ada-bridge">
+    <span class="ab-spark">✦</span>
+    <p class="ab-text">
+      <strong>Ada colma questo spazio.</strong>
+      Non sostituisce nessuno degli strumenti sopra — li integra e aggiunge il livello che mancava:
+      la progettazione didattica consapevole, contestualizzata alla tua classe, che impara con te nel tempo.
+    </p>
+  </div>
 
   <!-- ══════════════════════════════════
        HUB DIAGRAM
