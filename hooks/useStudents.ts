@@ -79,7 +79,12 @@ export const useStudents = (crewContext: string) => {
             for (const name of studentNamesFromContext) {
                 const existingStudent = dbStudentMap.get(name);
                 if (existingStudent) {
-                    finalStudentList.push(existingStudent);
+                    // Garanzia: evaluations deve sempre essere un array (difesa da record DB legacy)
+                    finalStudentList.push(
+                        Array.isArray(existingStudent.evaluations)
+                            ? existingStudent
+                            : { ...existingStudent, evaluations: [] }
+                    );
                 } else {
                     const newStudent: Student = {
                         id: `student-${Date.now()}-${Math.random()}`,

@@ -103,7 +103,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
             const summaryContent = await GeminiService.generateStudentSummary(
                 student.name,
                 student.notes || '',
-                student.evaluations || []
+                student.evaluations ?? []
             );
             onUpdateSummary(student.id, {
                 content: summaryContent,
@@ -118,7 +118,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
     };
 
     const logbookData = useMemo<GroupedLogbook>(() => {
-        return student.evaluations
+        return (student.evaluations ?? [])
             .filter((e): e is LogbookEntry => typeof e.weekNumber === 'number')
             .reduce((acc, entry) => {
                 const week = entry.weekNumber!;
