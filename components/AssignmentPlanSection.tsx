@@ -39,7 +39,7 @@ const AssignmentPlanSection: React.FC<AssignmentPlanSectionProps> = ({
     const [copiedPlan, setCopiedPlan] = useState(false);
     const [groupSize, setGroupSize] = useState(3);
 
-    const materialMap = new Map(materials.map(m => [m.id, m]));
+    const materialMap = new Map<string, LessonMaterial>(materials.map(m => [m.id, m]));
     const studentMap = new Map(students.map(s => [s.id, s]));
 
     const buildGroups = useCallback((): GroupDefinition[] => {

@@ -210,7 +210,7 @@ ${htmlContent}
         <button
             onClick={handleExportHtml}
             disabled={isExportingHtml}
-            className="editor-toolbar-button flex items-center gap-2 !px-3 !bg-green-600/20 !text-green-300 hover:!bg-green-600/40 disabled:opacity-50 disabled:cursor-wait"
+            className="editor-toolbar-button flex items-center gap-2 !px-3 !bg-emerald-600/20 !text-emerald-300 hover:!bg-emerald-600/40 disabled:opacity-50 disabled:cursor-wait"
             title="Esporta in HTML"
         >
             <ArrowDownTrayIcon className="h-5 w-5" />

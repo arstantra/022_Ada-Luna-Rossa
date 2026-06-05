@@ -41,7 +41,7 @@ const ImportEvaluationModal: React.FC<ImportEvaluationModalProps> = ({ isOpen, o
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Importa Valutazione per ${studentName}`} footer={footer}>
-            <p className="text-gray-400 text-sm mb-4">Incolla qui il resoconto della valutazione da Google Classroom. Ada lo analizzerà e lo aggiungerà in modo strutturato al diario della studentessa.</p>
+            <p className="text-gray-400 text-sm mb-4">Incolla qui il resoconto della valutazione da Google Classroom. Ada lo analizzerà e lo aggiungerà in modo strutturato al diario dello studente.</p>
             <textarea
                 ref={textareaRef}
                 value={text}

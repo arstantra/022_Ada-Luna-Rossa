@@ -20,7 +20,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
     const baseClasses = "fixed bottom-5 right-5 z-50 px-4 py-3 rounded-md shadow-lg text-white text-sm font-medium flex items-center transition-all duration-300 ease-in-out";
     
     const typeClasses = {
-        success: 'bg-green-600',
+        success: 'bg-emerald-600',
         info: 'bg-blue-600',
         error: 'bg-red-600'
     };

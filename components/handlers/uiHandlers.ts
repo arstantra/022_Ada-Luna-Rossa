@@ -4,7 +4,7 @@ import type { Conversation, Student, Notebook } from '../../types';
 export interface UiHandlerDeps {
   updateConversation: (id: string, updater: Partial<Conversation> | ((c: Conversation) => Conversation)) => void;
   handleSelectConversation: (id: string) => void;
-  setSelectedStudent: React.Dispatch<React.SetStateAction<Student | null>>;
+  setSelectedStudentId: React.Dispatch<React.SetStateAction<string | null>>;
   setInitialPlanningTab: React.Dispatch<React.SetStateAction<'laboratorio' | 'contenutoMaster' | null>>;
   setNotebookToEdit: React.Dispatch<React.SetStateAction<Partial<Notebook> | null>>;
   setModalState: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
@@ -12,10 +12,10 @@ export interface UiHandlerDeps {
 }
 
 export function createUiHandlers(deps: UiHandlerDeps) {
-  const { updateConversation, handleSelectConversation, setSelectedStudent, setInitialPlanningTab, setNotebookToEdit, setModalState, setView } = deps;
+  const { updateConversation, handleSelectConversation, setSelectedStudentId, setInitialPlanningTab, setNotebookToEdit, setModalState, setView } = deps;
 
   const handleSelectStudent = (student: Student) => {
-    setSelectedStudent(student);
+    setSelectedStudentId(student.id);
     setView('student_profile');
   };
 

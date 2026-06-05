@@ -293,7 +293,7 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
 
     const handleAddEval = () => {
         if (!evalForm || !evalForm.value.trim()) { showToast('Inserisci un valore.', 'error'); return; }
-        if (!evalForm.studentId) { showToast('Seleziona una studentessa.', 'error'); return; }
+        if (!evalForm.studentId) { showToast('Seleziona uno studente.', 'error'); return; }
         onAddEvaluation(activeBlock.convoId, activeBlock.blockIndex, {
             studentId: evalForm.studentId,
             value: evalForm.value.trim(),
@@ -351,7 +351,7 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
                         title={`Presenze — ${presentCount + lateCount}/${students.length} presenti${lateCount > 0 ? ` · ${lateCount} in ritardo` : ''}`}
                     >
                         {students.length === 0 ? (
-                            <p className="mt-3 text-sm text-gray-600 italic">Nessuna studentessa nel registro.</p>
+                            <p className="mt-3 text-sm text-gray-600 italic">Nessuno studente nel registro.</p>
                         ) : (
                             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                 {students.map(student => {
@@ -624,7 +624,7 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
                             <div className="mt-3 p-3 bg-gray-900/60 rounded-lg border border-gray-700/40 space-y-3">
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Studentessa</label>
+                                        <label className="block text-[10px] font-mono text-gray-500 uppercase mb-1">Studente</label>
                                         <select
                                             value={evalForm.studentId}
                                             onChange={e => setEvalForm(f => f && ({ ...f, studentId: e.target.value }))}

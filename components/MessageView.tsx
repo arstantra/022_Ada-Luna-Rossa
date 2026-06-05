@@ -123,7 +123,7 @@ const MessageView: React.FC<MessageViewProps> = ({ message, onShowToast, highlig
                 {!isUser && message.content && message.content !== '...' && (
                     <div className="absolute top-0 right-0 -mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button onClick={handleCopy} className="p-1.5 rounded-full bg-gray-800 hover:bg-gray-600 text-gray-300 hover:text-white" aria-label="Copia messaggio">
-                            {copied ? <CheckIcon className="h-4 w-4 text-green-400" /> : <CopyIcon className="h-4 w-4" />}
+                            {copied ? <CheckIcon className="h-4 w-4 text-emerald-400" /> : <CopyIcon className="h-4 w-4" />}
                         </button>
                     </div>
                 )}

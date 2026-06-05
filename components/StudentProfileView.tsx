@@ -14,6 +14,7 @@ interface StudentProfileViewProps {
     onUpdateSummary: (studentId: string, summary: { content: string; date: string; }) => void;
     onOpenImportModal: (student: Student) => void;
     conversations?: Conversation[];
+    showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 interface LogbookEntry extends Evaluation {
@@ -21,7 +22,7 @@ interface LogbookEntry extends Evaluation {
 }
 
 interface GroupedLogbook {
-    [weekNumber: number]: {
+    [weekNumber: string]: {
         blocks: LogbookEntry[];
     };
 }
@@ -42,8 +43,8 @@ const LogbookAccordion: React.FC<{ weekNumber: number; blocks: LogbookEntry[] }>
                 <div className="border-t border-gray-600/50 p-3 space-y-2">
                     {blocks.sort((a, b) => (a.blockIndex ?? 0) - (b.blockIndex ?? 0)).map(block => (
                          <div key={block.id} className="flex items-start gap-3 p-2 rounded-md bg-gray-800/50">
-                            {block.value === 'Presente' 
-                                ? <CheckCircleIcon className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" /> 
+                            {block.value === 'Presente'
+                                ? <CheckCircleIcon className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                                 : <XCircleIcon className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />}
                            <div>
                                <p className="font-medium text-gray-200">{block.notes}</p>
@@ -59,7 +60,7 @@ const LogbookAccordion: React.FC<{ weekNumber: number; blocks: LogbookEntry[] }>
     );
 });
 
-const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onUpdateNotes, onUpdateSummary, onOpenImportModal, conversations = [] }) => {
+const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onUpdateNotes, onUpdateSummary, onOpenImportModal, conversations = [], showToast }) => {
     const [currentNotes, setCurrentNotes] = useState(student.notes || '');
     const autosaveTimeoutRef = useRef<number | null>(null);
     const [isSummarizing, setIsSummarizing] = useState(false);
@@ -111,7 +112,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
             });
         } catch (error) {
             console.error("Failed to generate student summary", error);
-            // In a real app, you'd show a toast notification here.
+            showToast("Errore nella generazione della sintesi. Riprova.", 'error');
         } finally {
             setIsSummarizing(false);
         }
@@ -121,16 +122,16 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         return (student.evaluations ?? [])
             .filter((e): e is LogbookEntry => typeof e.weekNumber === 'number')
             .reduce((acc, entry) => {
-                const week = entry.weekNumber!;
+                const week = String(entry.weekNumber!);
                 if (!acc[week]) {
                     acc[week] = { blocks: [] };
                 }
-                acc[week].blocks.push({ ...entry, id: entry.date });
+                acc[week].blocks.push({ ...entry, id: `${entry.date}-${acc[week].blocks.length}` });
                 return acc;
             }, {} as GroupedLogbook);
     }, [student.evaluations]);
 
-    const sortedWeeks = useMemo(() => Object.keys(logbookData).sort((a, b) => parseInt(a) - parseInt(b)), [logbookData]);
+    const sortedWeeks = useMemo(() => Object.keys(logbookData).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)), [logbookData]);
 
     // ── Data from archived blocks (Step 8) ───────────────────────────────────
 
@@ -143,7 +144,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                 if (block.lessonState !== 'archiviata') continue;
                 const presentIds = block.presentStudentIds ?? [];
                 const lateIds = block.lateStudentIds ?? [];
-                if (presentIds.length === 0 && lateIds.length === 0) continue;
+                // Salta blocchi senza presenze registrate (arrays vuoti = nessun dato di presenza)
+            if (presentIds.length === 0 && lateIds.length === 0) continue;
                 total++;
                 if (lateIds.includes(student.id)) { present++; late++; }
                 else if (presentIds.includes(student.id)) { present++; }
@@ -314,10 +316,13 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
             setObsInsights(prev => ({ ...prev, [activityId]: insights }));
         } catch (err) {
             console.error(err);
+            showToast("Errore nell'analisi delle osservazioni.", 'error');
         } finally {
             setIsAnalyzingObs(false);
         }
     };
+
+    if (!student) return null; // guard difensivo — non dovrebbe mai arrivare qui
 
     return (
         <main className="flex-1 flex flex-col bg-gray-800 overflow-hidden">
@@ -339,17 +344,17 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-xl font-bold text-white">Note e Osservazioni</h3>
                                 <div className="flex items-center gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => onOpenImportModal(student)}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 transition-colors"
+                                        className="flex items-center gap-2 px-3 py-1.5 text-xs text-sky-400/70 border border-sky-500/20 rounded-md hover:bg-sky-500/15 transition-colors"
                                     >
                                         <ClipboardDocumentCheckIcon className="h-4 w-4"/>
                                         Importa Valutazione
                                     </button>
-                                    <button 
-                                        onClick={handleGenerateSummary} 
+                                    <button
+                                        onClick={handleGenerateSummary}
                                         disabled={isSummarizing}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors disabled:opacity-60"
+                                        className="flex items-center gap-2 px-3 py-1.5 text-xs text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50"
                                     >
                                         <SparklesIcon className={`h-4 w-4 ${isSummarizing ? 'animate-pulse' : ''}`}/>
                                         {isSummarizing ? 'Analisi...' : (student.adaSummary ? 'Aggiorna' : 'Crea Sintesi')}
@@ -359,7 +364,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                             <textarea
                                 value={currentNotes}
                                 onChange={(e) => setCurrentNotes(e.target.value)}
-                                placeholder="Inserisci qui note non strutturate sulla studentessa (estratti PEI, osservazioni, stile di apprendimento...)"
+                                placeholder="Inserisci note non strutturate sullo studente: stile di apprendimento, estratti PEI/DSA, osservazioni..."
                                 className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-gray-200 resize-none min-h-[250px]"
                             />
                             <p className="text-xs text-right text-gray-400 mt-2">Le note vengono salvate automaticamente.</p>
@@ -392,10 +397,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                         <div className="space-y-3">
                             {sortedWeeks.length > 0 ? (
                                 sortedWeeks.map(weekNum => (
-                                    <LogbookAccordion 
-                                        key={weekNum}
-                                        weekNumber={parseInt(weekNum)}
-                                        blocks={logbookData[parseInt(weekNum)].blocks}
+                                    <LogbookAccordion
+                                        key={`week-${weekNum}`}
+                                        weekNumber={parseInt(weekNum, 10)}
+                                        blocks={logbookData[weekNum].blocks}
                                     />
                                 ))
                             ) : (

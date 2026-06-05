@@ -328,7 +328,7 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
                 )}
                 {block.status === 'annullato' && (
                     <div className="my-4">
-                        <button onClick={handleRestoreLesson} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-300 bg-green-900/50 rounded-md hover:bg-green-900/80 transition-colors border border-green-500/50">
+                        <button onClick={handleRestoreLesson} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-300 bg-emerald-900/50 rounded-md hover:bg-emerald-900/80 transition-colors border border-emerald-500/50">
                             <RefreshIcon className="h-4 w-4"/>
                             Ripristina Lezione
                         </button>

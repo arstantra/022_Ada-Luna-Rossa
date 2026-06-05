@@ -34,7 +34,7 @@ const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ presentStudentIds
             {isOpen && (
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm animate-fade-in-down">
                     <div>
-                        <h4 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                        <h4 className="font-semibold text-emerald-400 mb-2 flex items-center gap-2">
                             <CheckCircleIcon className="h-4 w-4" />
                             Presenti ({presentStudents.length})
                         </h4>

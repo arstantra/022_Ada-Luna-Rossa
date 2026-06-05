@@ -209,7 +209,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                                                 </h3>
 
                                                 {allGroupsComplete && lastCompletionDate && (
-                                                    <div className="text-sm font-semibold text-green-400 mt-2 flex items-center gap-2">
+                                                    <div className="text-sm font-semibold text-emerald-400 mt-2 flex items-center gap-2">
                                                         <CheckCircleIcon className="h-5 w-5" />
                                                         <span>Missione Conclusa il:</span>
                                                         {editingMissionCompletionDate === lessonId ? (
@@ -264,7 +264,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                                                             today.setHours(0,0,0,0);
                                                             
                                                             const borderColor = group.isComplete
-                                                                ? 'border-green-500'
+                                                                ? 'border-emerald-500'
                                                                 : (deadline && deadline < today)
                                                                 ? 'border-red-500'
                                                                 : 'border-gray-700';
@@ -283,7 +283,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                                                                                 type="checkbox"
                                                                                 checked={!!group.isComplete}
                                                                                 onChange={(e) => handleUpdateGroup(lesson, groupIndex, { isComplete: e.target.checked, completionDate: e.target.checked ? new Date().toISOString().split('T')[0] : undefined })}
-                                                                                className="h-4 w-4 rounded border-gray-500 text-green-500 focus:ring-green-600 bg-gray-700"
+                                                                                className="h-4 w-4 rounded border-gray-500 text-emerald-500 focus:ring-emerald-600 bg-gray-700"
                                                                             />
                                                                             <span className="ml-2 text-white">Lavoro Concluso</span>
                                                                         </label>

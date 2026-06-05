@@ -30,7 +30,7 @@ const GroupCreationModal: React.FC<GroupCreationModalProps> = ({ isOpen, onClose
 
     const handleGenerate = useCallback(() => {
         if (studentsInWeek.length === 0) {
-            setError("Nessuna studentessa presente per formare i gruppi.");
+            setError("Nessun studente presente per formare i gruppi.");
             return;
         }
         setIsLoading(true);
