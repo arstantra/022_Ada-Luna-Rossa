@@ -4,6 +4,19 @@
 
 > ⚠️ **SUBITO DOPO questo file, leggi `CLAUDE_PROTOCOL.md`** — contiene le regole operative anti-troncamento. Ignorarle causa file troncati silenziosamente e spreco di token. È obbligatorio, non opzionale.
 
+## Guida Utente — Manutenzione Obbligatoria
+
+La guida "Come funziona Ada" è il manuale delle istruzioni dell'app per i docenti.
+
+**File canonical (quello che l'app serve):** `public/docs/ADA_Come_Funziona.html`
+**File standalone (per aprire direttamente nel browser):** `docs/ADA_Come_Funziona.html`
+
+**Regola operativa:** ogni volta che aggiungi, modifichi o rimuovi una funzione visibile all'utente (nuova view, nuovo tool, cambio di flusso, rinomina di sezione), aggiorna **entrambi** i file sopra. Fallo nello stesso commit/sessione in cui cambia il codice — non rimandare.
+
+Non è necessario aggiornare la guida per: refactoring interni, cambio di handler, modifiche a tipi TypeScript non visibili in UI, fix di bug che non cambiano il comportamento percepito.
+
+---
+
 ## Cos'è ADA
 
 App React/TypeScript per insegnanti. Aiuta nella **pianificazione del corso**, nella **gestione della classe** e nel lavoro **in aula**, con un assistente AI (Gemini) integrato. Dominio: `ada.nuovadidattica.eu`. Utente: Andrea Poletti (`andrea.poletti@nuovadidattica.eu`).
@@ -775,3 +788,6 @@ progettata → in_corso → archiviata
 - Non azzerare manualmente `externalExpertName`/`luogo` nel codice chiamante — gli handler `handleToggleExternalExpert` e `handleToggleFuoriAula` lo fanno automaticamente quando il toggle passa a `false`.
 - Non mostrare la chip list delle attività lanciate nella sezione expanded del blocco — rimossa (2026-05-30) perché ridondante con i dot nel summary dell'accordion. Tenere solo il bottone "↗ Lancia attività".
 - Non usare `constitutionParser.ts` o `ConstitutionCacheContext.tsx` — i nomi corretti sono `progettazioneParser.ts` e `ProgettazioneCacheContext.tsx`. I nomi legacy non esistono nel codebase.
+- Non dimenticare di aggiornare `public/docs/ADA_Come_Funziona.html` (e `docs/ADA_Come_Funziona.html`) quando cambia una funzione visibile all'utente — la guida è un documento vivo, non uno snapshot.
+- Non modificare la sorgente della guida solo in `docs/` e dimenticare `public/docs/` — Vite serve solo `public/`, quindi la versione nell'app rimarrebbe obsoleta.
+- Non aggiungere la guida alla sidebar — il suo punto di ingresso è esclusivamente la Lobby (`LobbyView.tsx`), come link "Come funziona Ada ?" in fondo alla schermata iniziale.

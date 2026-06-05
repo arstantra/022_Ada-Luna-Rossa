@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { SparklesIcon, SendIcon } from './Icons';
+import { SparklesIcon, SendIcon, XIcon } from './Icons';
 import { parseTeacherName } from '../utils';
 
 // ── Posizioni fisse del pattern stelline — distribuzione irregolare intenzionale
@@ -35,6 +35,7 @@ interface LobbyViewProps {
 
 const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) => {
   const [input, setInput] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const teacherName = parseTeacherName(teacherProfile);
   const firstName = teacherName ? teacherName.split(' ')[0] : null;
@@ -61,6 +62,34 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
       handleSubmit();
     }
   }, [handleSubmit]);
+
+  // ── Pannello "Come funziona Ada" ─────────────────────────────────────────
+  if (showHelp) {
+    return (
+      <main className="relative flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
+        {/* Header fisso */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-gray-800/60 bg-gray-900/40 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <SparklesIcon className="w-4 h-4 text-purple-400/70" />
+            <span className="text-[11px] font-mono text-gray-400 tracking-widest uppercase">Come funziona Ada</span>
+          </div>
+          <button
+            onClick={() => setShowHelp(false)}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 hover:bg-gray-800/60 rounded-md px-2.5 py-1.5 text-[11px] font-mono transition-all duration-150"
+          >
+            <XIcon className="w-3.5 h-3.5" />
+            chiudi
+          </button>
+        </div>
+        {/* Iframe guida */}
+        <iframe
+          src="/docs/ADA_Come_Funziona.html"
+          className="flex-1 w-full border-none"
+          title="Come funziona Ada"
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="relative flex-1 flex flex-col items-center justify-center overflow-hidden bg-[#0D1117]">
@@ -153,6 +182,14 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
             </button>
           ))}
         </div>
+
+        {/* Link "Come funziona Ada" */}
+        <button
+          onClick={() => setShowHelp(true)}
+          className="text-[11px] font-mono text-gray-600 hover:text-gray-400 transition-colors duration-150"
+        >
+          Come funziona Ada ?
+        </button>
 
       </div>
     </main>

@@ -16,11 +16,9 @@
 
 - [ ] **Caricamento diretto file Drive in Materiali di Lezione**: invece di incollare URL, permettere il pick diretto di PDF/PPTX/immagini dal Drive tramite connector.
 
-## Laboratorio di Preparazione — in sviluppo (vedere `PROMPT_PREPARAZIONE.md`)
+## Laboratorio di Preparazione — in sviluppo
 
-- [ ] **Fase A — Produzione materiali**: Ada trasforma le fonti (master + materiali) in brief per tool esterni (Canva, PowerPoint, Gemini immagini, Firefly) o contenuto diretto (testo, scheda). Aggiunge `outputTool` e `productionBrief` a `LessonMaterial`. Nuovo `MaterialProductionModal.tsx` e `generateMaterialBrief` in gemini.ts.
-- [ ] **Fase B — Consegne intelligenti**: gruppi bilanciati + gruppi da 1 come consegne individuali. Ada legge i profili studenti e suggerisce quale materiale assegnare a ciascun gruppo con motivazione. Nuovo tipo `LessonAssignment`, `AssignmentPlanSection.tsx`, `generateAssignmentPlan` in gemini.ts.
-- [ ] **Fase C — Distribuzione**: per ogni assegnazione, il docente sceglie il canale (Classroom, stampa, QR, Padlet, Drive link, verbale). Piano di distribuzione riepilogativo copiabile.
+Spec completa (Fasi A, B, C) in `docs/PROMPT_PREPARAZIONE.md`.
 
 ## Verifiche e Attività in Preparazione *(post Fase C)*
 

@@ -18,20 +18,21 @@
 
 ## 2. File a rischio troncamento (> 500 righe — solo `Edit`)
 
-| File | Righe |
+| File | Righe (2026-06-05) |
 |---|---|
-| `components/InAulaView.tsx` | ~988 |
-| `services/gemini.ts` | ~863 |
-| `components/GanttView.tsx` | ~800+ |
-| `components/StrategicDashboardView.tsx` | ~800+ |
-| `components/BlockWorkspaceView.tsx` | ~601 |
-| `components/FoundingDocumentsView.tsx` | ~578 |
-| `hooks/usePlanning.ts` | ~462 |
-| `components/PlanningView.tsx` | ~482 |
-| `components/MainApp.tsx` | ~510 |
-| `components/handlers/blockHandlers_status.ts` | ~290 |
+| `components/GanttView.tsx` | 1486 |
+| `components/LessonPreparationTab.tsx` | 1285 |
+| `services/gemini.ts` | 1243 |
+| `components/InAulaView.tsx` | 973 |
+| `components/StrategicDashboardView.tsx` | 867 |
+| `components/FoundingDocumentsView.tsx` | 618 |
+| `components/BlockWorkspaceView.tsx` | 614 |
+| `components/MainApp.tsx` | 594 |
+| `components/PlanningView.tsx` | 572 |
+| `hooks/usePlanning.ts` | 458 |
+| `components/handlers/blockHandlers_status.ts` | 302 |
 
-Handler in `components/handlers/` (45–228 righe): sempre `Edit`, mai `Write` — sono file esistenti.
+Handler in `components/handlers/` (file multipli, 45–302 righe): sempre `Edit`, mai `Write` — sono file esistenti.
 
 ### Se si trova un file troncato
 1. Non riscrivere con `Write` — peggiora il problema
@@ -94,13 +95,24 @@ Implementazione: aggiungere `pendingContent?: DetachedLesson[]` su `Conversation
 
 ## 6. Agenda aperta
 
+### Implementato ✓
+- [x] `tipologia` → 5 LessonType fissi, radar pentagono
+- [x] `metodologia` → 13 TeachingMethodology, dropdown contestuale dal Progetto Didattico
+- [x] `isFslPeriod` / `hasExternalExpert` / `isFuoriAula` — flag ortogonali con badge e campi testo
+- [x] `blockTitle` + `TitleSuggestionModal` (3 varianti Diretto/Narrativo/Evocativo)
+- [x] `ObjectiveSuggestionModal` (3 varianti Sintetico/Bilanciato/Articolato)
+- [x] `classroomUrl` in `LessonPreparationTab`
+- [x] `ContestoFisicoChart` in GanttView (fuori aula per modulo)
+
+### Da fare
+- [ ] `gemini.ts`: iniettare `metodologia` e `isFuoriAula`/`luogo` nel contesto AI dei blocchi (attualmente non passati al LLM)
+- [ ] `ContestoFisicoChart`: incrocio metodologia x fuori aula
+- [ ] Laboratorio di Preparazione Fasi A/B/C — spec in `docs/PROMPT_PREPARAZIONE.md`
 - [ ] Dimensioni radar per studente: mappatura EQF vs dimensioni operative (partecipazione, autonomia, completamento, comprensione)
-- [ ] Formato `DetachedLesson` e punto di ingresso UI per la coda contenuti
+- [ ] Formato `DetachedLesson` e punto di ingresso UI per la coda contenuti (feature 5 — Coda dei contenuti)
 - [ ] URL Classroom costruibili dai dati ADA (classe, compito, attività asincrona)
 - [ ] Verifica sommativa in fase di progettazione (gap consapevole — ADA delega a Classroom via link)
-- [ ] `gemini.ts`: iniettare `metodologia` e `isFuoriAula`/`luogo` nel contesto AI dei blocchi (attualmente non passati al LLM)
-- [ ] `ContestoFisicoChart` in GanttView: aggiungere eventuale incrocio con metodologia (fuori aula × approccio)
 
 ---
 
-*Ultima revisione: 2026-05-30*
+*Ultima revisione: 2026-06-05*

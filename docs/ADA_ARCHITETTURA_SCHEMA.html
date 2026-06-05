@@ -230,7 +230,7 @@
 </head>
 <body>
 
-<h1>ADA — <span>Architettura Applicazione</span> · ada.nuovadidattica.eu · 2026-05-27</h1>
+<h1>ADA — <span>Architettura Applicazione</span> · ada.nuovadidattica.eu · 2026-06-05</h1>
 
 <!-- ── FLUSSO DOCENTE ── -->
 <div class="section-sub-title">Flusso completo del docente</div>
@@ -246,7 +246,7 @@
   </div>
   <div class="flow-arrow">→</div>
   <div class="flow-step highlight">
-    <div class="label">Preparazione <span class="badge badge-new">NUOVO</span></div>
+    <div class="label">Preparazione</div>
     <div class="sub">formato materiali · gruppi · tool</div>
   </div>
   <div class="flow-arrow">→</div>
@@ -274,7 +274,7 @@
 
   <!-- TAB PREPARAZIONE -->
   <div class="section section-blue">
-    <div class="section-title">Tab Preparazione <span class="badge badge-new">NUOVO</span></div>
+    <div class="section-title">Tab Preparazione</div>
 
     <div class="item item-blue">
       <div class="item-title">📐 Formato materiali</div>
@@ -324,7 +324,7 @@
 
   <!-- TAB ARCHIVIO -->
   <div class="section section-gray">
-    <div class="section-title">Tab Archivio <span class="badge badge-changed">UNIFICATO</span></div>
+    <div class="section-title">Tab Archivio</div>
 
     <div class="item item-gray">
       <div class="item-title">📋 Lista lezioni archiviate</div>
@@ -421,7 +421,7 @@
     </div>
   </div>
   <div class="section section-green">
-    <div class="section-title">Studentesse / Studenti</div>
+    <div class="section-title">Studenti</div>
     <div class="item item-green">
       <div class="item-title">Profilo individuale</div>
       <div class="item-sub">Presenze % · valutazioni trend · segnali Ada</div>
@@ -461,11 +461,11 @@
     <div class="sidebar-section">
       <div class="sidebar-label">In Aula <span class="badge badge-changed">RIORGANIZZATA</span></div>
       <div class="sidebar-item active">Lezione <span class="badge badge-changed">tab: Prep · In Corso · Archivio</span></div>
-      <div class="sidebar-item">↳ Laboratori e Strumenti <span class="badge badge-changed">SPOSTATO QUI</span></div>
+      <div class="sidebar-item">↳ Laboratori e Strumenti</div>
       <div class="sidebar-item sub">Toolkit</div>
       <div class="sidebar-item sub">I Miei Notebook</div>
-      <div class="sidebar-item sub">Classroom</div>
       <div class="sidebar-item sub">Gruppi</div>
+      <div class="sidebar-item sub">Atelier Visivo (disabilitato)</div>
     </div>
   </div>
   <div>
@@ -473,7 +473,7 @@
       <div class="sidebar-label">Monitoraggio <span class="badge badge-changed">POTENZIATO</span></div>
       <div class="sidebar-item">Andamento Aula <span class="badge badge-changed">Gantt + Radar CONSUNTIVI</span></div>
       <div class="sidebar-item">Gruppi</div>
-      <div class="sidebar-item">Studentesse</div>
+      <div class="sidebar-item">Studenti</div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Gestione del Corso</div>
@@ -487,11 +487,73 @@
 
 <hr>
 
+<!-- ── PROGETTAZIONE BLOCCO — SELETTORI ── -->
+<div class="section-sub-title">Progettazione blocco — accordion StrategicDashboardView</div>
+<div class="grid">
+  <div class="section section-blue">
+    <div class="section-title">Cosa / Come / Metodo</div>
+    <div class="item item-blue">
+      <div class="item-title">Cosa (select)</div>
+      <div class="item-sub">CourseContentUnit dal Progetto Didattico — Modulo · UDA · EC · FSL — groupby tipo</div>
+    </div>
+    <div class="item item-blue">
+      <div class="item-title">Come (select) — 5 LessonType fissi → radar</div>
+      <div class="item-sub">frontale_teorica · frontale_operativa · laboratorio · verifica · discussione</div>
+    </div>
+    <div class="item item-blue">
+      <div class="item-title">Approccio / Metodo (select) — 13 TeachingMethodology</div>
+      <div class="item-sub">Dropdown contestuale: metodologie dal Progetto Didattico in cima · altre sotto</div>
+    </div>
+  </div>
+  <div class="section section-purple">
+    <div class="section-title">Flag ortogonali</div>
+    <div class="item item-purple">
+      <div class="item-title">Toggle FSL <span style="color:#38bdf8">sky</span></div>
+      <div class="item-sub">isFslPeriod — badge visivo, non altera stato né tipologia</div>
+    </div>
+    <div class="item item-purple">
+      <div class="item-title">Toggle ESP <span style="color:#fbbf24">ambra</span></div>
+      <div class="item-sub">hasExternalExpert + externalExpertName — badge ambra nell'header</div>
+    </div>
+    <div class="item item-purple">
+      <div class="item-title">Toggle FUORI <span style="color:#2dd4bf">teal</span></div>
+      <div class="item-sub">isFuoriAula + luogo — badge teal nell'header</div>
+    </div>
+  </div>
+  <div class="section section-gray">
+    <div class="section-title">Titolo e obiettivo</div>
+    <div class="item item-gray">
+      <div class="item-title">blockTitle (EditableField nell'header)</div>
+      <div class="item-sub">Titolo accattivante per studenti · fallback su objective · Ada genera 3 varianti (TitleSuggestionModal)</div>
+    </div>
+    <div class="item item-gray">
+      <div class="item-title">objective (EditableTextarea nella sezione espansa)</div>
+      <div class="item-sub">Obiettivo istituzionale · Ada suggerisce 3 varianti (ObjectiveSuggestionModal)</div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
 <!-- ── NUOVI TIPI ── -->
-<div class="section-sub-title">Nuovi tipi in types.ts</div>
+<div class="section-sub-title">Tipi in types.ts</div>
 <div class="types-grid">
   <div class="type-block">
-    <div class="type-name">LessonMaterial <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-name">LessonType — "come" (5 fissi, radar)</div>
+    <div class="type-field"><span class="ftype">frontale_teorica · frontale_operativa</span></div>
+    <div class="type-field"><span class="ftype">laboratorio · verifica · discussione</span></div>
+  </div>
+  <div class="type-block">
+    <div class="type-name">TeachingMethodology — "metodo" (13)</div>
+    <div class="type-field"><span class="ftype">tradizionale · flipped_classroom · project_based</span></div>
+    <div class="type-field"><span class="ftype">problem_based · cooperative_learning · peer_teaching</span></div>
+    <div class="type-field"><span class="ftype">debate · design_thinking · gamification</span></div>
+    <div class="type-field"><span class="ftype">studio_di_caso · inquiry_based · role_playing · jigsaw</span></div>
+  </div>
+</div>
+<div class="types-grid">
+  <div class="type-block">
+    <div class="type-name">LessonMaterial</div>
     <div class="type-field"><span class="fname">id</span>: <span class="ftype">string</span></div>
     <div class="type-field"><span class="fname">title</span>: <span class="ftype">string</span></div>
     <div class="type-field"><span class="fname">url</span>: <span class="ftype">string</span> <span class="fcomment">// Drive, Canva, Gamma…</span></div>
@@ -502,7 +564,7 @@
     <div class="type-field"><span class="fname">addedAt</span>: <span class="ftype">string</span> <span class="fcomment">// ISO</span></div>
   </div>
   <div class="type-block">
-    <div class="type-name">LessonEvaluation <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-name">LessonEvaluation</div>
     <div class="type-field"><span class="fname">id</span>: <span class="ftype">string</span></div>
     <div class="type-field"><span class="fname">studentId</span>: <span class="ftype">string</span></div>
     <div class="type-field"><span class="fname">value</span>: <span class="ftype">string</span> <span class="fcomment">// "7" o "ottimo"</span></div>
@@ -511,7 +573,7 @@
     <div class="type-field"><span class="fname">date</span>: <span class="ftype">string</span> <span class="fcomment">// ISO</span></div>
   </div>
   <div class="type-block">
-    <div class="type-name">LessonNoteAnalysis <span class="badge badge-new">NUOVO</span></div>
+    <div class="type-name">LessonNoteAnalysis</div>
     <div class="type-field"><span class="fname">engagementLevel</span>: <span class="ftype">'basso'|'medio'|'alto'</span></div>
     <div class="type-field"><span class="fname">studentSignals</span>: <span class="ftype">Array&lt;{studentId, signal, type}&gt;</span></div>
     <div class="type-field"><span class="fname">groupNotes</span>: <span class="ftype">Array&lt;{groupId?, note}&gt;</span></div>
@@ -520,17 +582,28 @@
     <div class="type-field"><span class="fname">analyzedAt</span>: <span class="ftype">string</span></div>
   </div>
   <div class="type-block">
-    <div class="type-name">BlockDetails — aggiunte <span class="badge badge-changed">AGGIORNATO</span></div>
+    <div class="type-name">BlockDetails — campi chiave</div>
+    <div class="type-field"><span class="fname">tipologia?</span>: <span class="ftype">LessonType</span> <span class="fcomment">// "come" — 5 voci fisse → radar</span></div>
+    <div class="type-field"><span class="fname">metodologia?</span>: <span class="ftype">TeachingMethodology</span> <span class="fcomment">// "metodo" — 13 voci, ortogonale</span></div>
+    <div class="type-field"><span class="fname">blockTitle?</span>: <span class="ftype">string</span> <span class="fcomment">// titolo accattivante per studenti (Ada genera)</span></div>
+    <div class="type-field"><span class="fname">objective?</span>: <span class="ftype">string</span> <span class="fcomment">// obiettivo istituzionale</span></div>
+    <div class="type-field"><span class="fname">isFslPeriod?</span>: <span class="ftype">boolean</span> <span class="fcomment">// badge sky FSL, ortogonale allo stato</span></div>
+    <div class="type-field"><span class="fname">hasExternalExpert?</span>: <span class="ftype">boolean</span> <span class="fcomment">// badge ambra ESP</span></div>
+    <div class="type-field"><span class="fname">externalExpertName?</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">isFuoriAula?</span>: <span class="ftype">boolean</span> <span class="fcomment">// badge teal FUORI</span></div>
+    <div class="type-field"><span class="fname">luogo?</span>: <span class="ftype">string</span></div>
+    <div class="type-field"><span class="fname">presentStudentIds?</span>: <span class="ftype">string[]</span></div>
+    <div class="type-field"><span class="fname">lateStudentIds?</span>: <span class="ftype">string[]</span></div>
     <div class="type-field"><span class="fname">lessonMaterials?</span>: <span class="ftype">LessonMaterial[]</span></div>
     <div class="type-field"><span class="fname">lessonEvaluations?</span>: <span class="ftype">LessonEvaluation[]</span></div>
     <div class="type-field"><span class="fname">lessonNoteAnalysis?</span>: <span class="ftype">LessonNoteAnalysis</span></div>
-    <div class="type-field"><span class="fname">lessonGroups?</span>: <span class="ftype">StudentGroup[]</span> <span class="fcomment">// per questa lezione</span></div>
+    <div class="type-field"><span class="fname">classroomUrl?</span>: <span class="ftype">string</span> <span class="fcomment">// link Google Classroom della lezione</span></div>
   </div>
 </div>
 
 <footer>
-  ADA · ada.nuovadidattica.eu · andrea.poletti@nuovadidattica.eu · Schema generato 2026-05-27
-  <br>Leggi anche: CLAUDE.md · ADA_INAULA_ARCHITETTURA.md · ADA_INAULA_IMPLEMENTAZIONE_STEPS.md
+  ADA · ada.nuovadidattica.eu · andrea.poletti@nuovadidattica.eu · Aggiornato 2026-06-05
+  <br>Leggi anche: CLAUDE.md · CLAUDE_PROTOCOL.md · docs/PROMPT_PREPARAZIONE.md
 </footer>
 
 </body>
