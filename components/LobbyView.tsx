@@ -183,12 +183,14 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
           ))}
         </div>
 
-        {/* Link "Come funziona Ada" */}
+        {/* Bottone "Come funziona Ada" — aspetto distinto dalle chip */}
         <button
           onClick={() => setShowHelp(true)}
-          className="text-[11px] font-mono text-gray-600 hover:text-gray-400 transition-colors duration-150"
+          className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border border-purple-500/20 bg-purple-950/20 text-gray-400 hover:text-gray-200 hover:border-purple-400/35 hover:bg-purple-900/30 transition-all duration-200 shadow-sm shadow-purple-950/30"
         >
-          Come funziona Ada ?
+          <SparklesIcon className="w-3.5 h-3.5 text-purple-400/50 group-hover:text-purple-300/80 transition-colors duration-200 flex-shrink-0" />
+          <span className="text-[11px] font-mono tracking-wider">Come funziona Ada</span>
+          <span className="text-[10px] text-purple-500/35 group-hover:text-purple-400/60 transition-colors duration-200 ml-0.5">→</span>
         </button>
 
       </div>

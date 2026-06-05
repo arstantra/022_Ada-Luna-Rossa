@@ -4,582 +4,662 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ADA — Come funziona</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: #0D1117;
-    color: #e5e7eb;
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-    padding: 40px 28px 60px;
-    min-height: 100vh;
-    max-width: 900px;
-    margin: 0 auto;
-  }
+body {
+  background: #0D1117;
+  color: #e5e7eb;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-  /* ── TIPOGRAFIA ── */
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: #f3f4f6;
-    letter-spacing: -0.02em;
-    margin-bottom: 6px;
-  }
-  h1 span { color: #a78bfa; }
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
 
-  .subtitle {
-    font-size: 13px;
-    color: #6b7280;
-    margin-bottom: 48px;
-    line-height: 1.6;
-  }
+/* ── HEADER ── */
+.eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #4b5563;
+  margin-bottom: 20px;
+}
 
-  h2 {
-    font-size: 11px;
-    font-family: 'DM Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: #6b7280;
-    margin-bottom: 20px;
-    margin-top: 48px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #1f2937;
-  }
+.page-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #f9fafb;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+.page-title em { color: #a78bfa; font-style: normal; }
 
-  h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: #e5e7eb;
-    margin-bottom: 6px;
-  }
+.page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 52px;
+  line-height: 1.65;
+  max-width: 520px;
+}
 
-  p {
-    font-size: 13px;
-    color: #9ca3af;
-    line-height: 1.7;
-    margin-bottom: 12px;
-  }
+/* ── HUB DIAGRAM ── */
+.hub-outer {
+  position: relative;
+  margin-bottom: 64px;
+}
 
-  /* ── METAFORA INIZIALE ── */
-  .metaphor {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 16px;
-    align-items: center;
-    margin-bottom: 48px;
-    margin-top: 32px;
-  }
-  .metaphor-box {
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-  }
-  .metaphor-box .icon { font-size: 28px; margin-bottom: 8px; }
-  .metaphor-box .label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #d1d5db;
-    margin-bottom: 4px;
-  }
-  .metaphor-box .desc {
-    font-size: 11px;
-    color: #6b7280;
-    line-height: 1.5;
-  }
-  .metaphor-box.ada {
-    background: #0f0f1f;
-    border-color: #6366f1;
-  }
-  .metaphor-box.ada .label { color: #a5b4fc; }
-  .metaphor-sep {
-    text-align: center;
-    color: #374151;
-    font-size: 20px;
-    padding: 0 4px;
-  }
+/* 3×3 grid: top/bottom centered, left/right flanking Ada */
+.hub {
+  display: grid;
+  grid-template-columns: 1fr 200px 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 28px 20px;
+  align-items: center;
+  justify-items: center;
+  position: relative;
+  z-index: 2;
+}
 
-  /* ── FLUSSO ── */
-  .flow {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    margin-bottom: 40px;
-    overflow-x: auto;
-  }
-  .flow-step {
-    flex: 1;
-    min-width: 100px;
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 0;
-    padding: 14px 12px;
-    text-align: center;
-    position: relative;
-  }
-  .flow-step:first-child { border-radius: 10px 0 0 10px; }
-  .flow-step:last-child  { border-radius: 0 10px 10px 0; }
-  .flow-step + .flow-step { border-left: none; }
+/* SVG sits behind the grid nodes */
+.hub-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
 
-  .flow-step.blue   { background: #0a1628; border-color: #3b82f6; }
-  .flow-step.indigo { background: #0c0c22; border-color: #6366f1; }
-  .flow-step.purple { background: #0d0a1f; border-color: #7c3aed; }
-  .flow-step.gray   { background: #111827; border-color: #374151; }
-  .flow-step.green  { background: #091a10; border-color: #10b981; }
+/* ── ADA CENTER NODE ── */
+.ada-node {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  z-index: 4;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #1c0f38 0%, #0d0820 65%);
+  border: 1.5px solid #6d28d9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow:
+    0 0 0 1px #2d1b6920,
+    0 0 28px rgba(109, 40, 217, 0.22),
+    0 0 60px rgba(109, 40, 217, 0.09),
+    inset 0 0 24px rgba(109, 40, 217, 0.07);
+}
 
-  .flow-step .num {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: #4b5563;
-    margin-bottom: 4px;
-  }
-  .flow-step .name {
-    font-size: 11px;
-    font-weight: 600;
-    color: #d1d5db;
-    margin-bottom: 3px;
-  }
-  .flow-step.blue .name   { color: #93c5fd; }
-  .flow-step.indigo .name { color: #a5b4fc; }
-  .flow-step.purple .name { color: #c4b5fd; }
-  .flow-step.green .name  { color: #6ee7b7; }
-  .flow-step .detail {
-    font-size: 9px;
-    color: #6b7280;
-    line-height: 1.5;
-  }
+/* Floating micro-sparkles around Ada */
+.ada-spark {
+  position: absolute;
+  color: #a78bfa;
+  line-height: 1;
+  pointer-events: none;
+  animation: sparkFloat 3s ease-in-out infinite;
+}
+.ada-spark-main {
+  font-size: 30px;
+  position: static;
+  animation: sparkMain 3s ease-in-out infinite;
+  display: block;
+  filter: drop-shadow(0 0 8px #a78bfa80);
+}
+.ada-spark-a { font-size: 9px;  top: 18%;  left: 18%;  animation-delay: 0.0s; opacity: 0.5; }
+.ada-spark-b { font-size: 7px;  top: 14%;  right: 20%; animation-delay: 0.9s; opacity: 0.4; color: #c4b5fd; }
+.ada-spark-c { font-size: 8px;  bottom: 20%; left: 22%; animation-delay: 1.8s; opacity: 0.35; color: #7c3aed; }
+.ada-spark-d { font-size: 6px;  bottom: 16%; right: 18%; animation-delay: 1.2s; opacity: 0.45; }
 
-  /* ── SEZIONI GRANDI ── */
-  .area-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 8px;
-  }
-  .area {
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid;
-  }
-  .area-blue   { background: #0a1628; border-color: #3b82f650; }
-  .area-indigo { background: #0c0c22; border-color: #6366f150; }
-  .area-green  { background: #091a10; border-color: #10b98150; }
-  .area-gray   { background: #111827; border-color: #37415150; }
+@keyframes sparkMain {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 6px #a78bfa70); opacity: 0.9; }
+  50%       { transform: scale(1.1); filter: drop-shadow(0 0 14px #a78bfaaa); opacity: 1; }
+}
+@keyframes sparkFloat {
+  0%, 100% { transform: scale(0.7) translateY(0px);   opacity: 0.15; }
+  50%       { transform: scale(1.3) translateY(-3px);  opacity: 0.75; }
+}
 
-  .area-icon {
-    font-size: 20px;
-    margin-bottom: 10px;
-  }
-  .area h3 { margin-bottom: 8px; }
-  .area p { margin-bottom: 0; font-size: 12px; }
+.ada-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #f3f4f6;
+  letter-spacing: -0.02em;
+}
+.ada-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #6d28d9;
+}
 
-  .area-blue h3   { color: #93c5fd; }
-  .area-indigo h3 { color: #a5b4fc; }
-  .area-green h3  { color: #6ee7b7; }
-  .area-gray h3   { color: #d1d5db; }
+/* ── SATELLITE NODES ── */
+.sat {
+  position: relative;
+  z-index: 3;
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid;
+  text-align: center;
+  width: 100%;
+  max-width: 220px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sat:hover { transform: translateY(-2px); }
 
-  /* ── ADA L'ASSISTENTE ── */
-  .ada-can {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 8px;
-  }
-  .can-do, .cant-do {
-    border-radius: 10px;
-    padding: 18px;
-    border: 1px solid;
-  }
-  .can-do {
-    background: #0a1628;
-    border-color: #6366f140;
-  }
-  .cant-do {
-    background: #111827;
-    border-color: #37415150;
-  }
-  .can-do .label {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #818cf8;
-    margin-bottom: 12px;
-  }
-  .cant-do .label {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #6b7280;
-    margin-bottom: 12px;
-  }
-  .can-item, .cant-item {
-    font-size: 12px;
-    color: #9ca3af;
-    padding: 5px 0;
-    border-bottom: 1px solid #1f2937;
-    line-height: 1.5;
-  }
-  .can-item:last-child, .cant-item:last-child { border-bottom: none; }
-  .can-item::before  { content: "✦ "; color: #818cf8; font-size: 9px; }
-  .cant-item::before { content: "○ "; color: #4b5563; font-size: 9px; }
+/* placement */
+.sat-top    { grid-column: 2; grid-row: 1; }
+.sat-left   { grid-column: 1; grid-row: 2; }
+.sat-right  { grid-column: 3; grid-row: 2; }
+.sat-bottom { grid-column: 2; grid-row: 3; }
 
-  /* ── IN AULA — tre tab ── */
-  .three-tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-  .tab-card {
-    border-radius: 10px;
-    padding: 16px;
-    border: 1px solid;
-    background: #0c0c22;
-    border-color: #6366f140;
-  }
-  .tab-card .tab-num {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    color: #4b5563;
-    margin-bottom: 6px;
-  }
-  .tab-card h3 {
-    font-size: 13px;
-    color: #a5b4fc;
-    margin-bottom: 8px;
-  }
-  .tab-card .tab-when {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    color: #4b5563;
-    margin-bottom: 10px;
-    padding: 3px 6px;
-    background: #111827;
-    border-radius: 4px;
-    display: inline-block;
-  }
-  .tab-card ul {
-    list-style: none;
-    padding: 0;
-  }
-  .tab-card ul li {
-    font-size: 11px;
-    color: #9ca3af;
-    padding: 3px 0;
-    line-height: 1.5;
-  }
-  .tab-card ul li::before { content: "· "; color: #6366f1; }
+/* colors */
+.sat-top {
+  background: #0a1120;
+  border-color: #3b82f640;
+  box-shadow: 0 4px 20px rgba(59,130,246,0.07);
+}
+.sat-top:hover { box-shadow: 0 8px 28px rgba(59,130,246,0.13); }
 
-  /* ── TOOL ── */
-  .tool-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-  .tool-card {
-    background: #0a1a2a;
-    border: 1px solid #0ea5e930;
-    border-radius: 10px;
-    padding: 14px;
-  }
-  .tool-card .tool-icon { font-size: 18px; margin-bottom: 6px; }
-  .tool-card h3 { font-size: 12px; color: #38bdf8; margin-bottom: 4px; }
-  .tool-card p { font-size: 11px; color: #6b7280; margin: 0; line-height: 1.5; }
+.sat-left {
+  background: #111827;
+  border-color: #37415180;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.sat-left:hover { box-shadow: 0 8px 28px rgba(255,255,255,0.03); }
 
-  /* ── CONSIGLI ── */
-  .tips {
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 8px;
-  }
-  .tip {
-    display: flex;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #1f2937;
-  }
-  .tip:last-child { border-bottom: none; padding-bottom: 0; }
-  .tip .tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .tip-text h3 { font-size: 12px; color: #d1d5db; margin-bottom: 2px; }
-  .tip-text p  { font-size: 11px; color: #6b7280; margin: 0; line-height: 1.5; }
+.sat-right {
+  background: #0c0c22;
+  border-color: #6366f140;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.07);
+}
+.sat-right:hover { box-shadow: 0 8px 28px rgba(99,102,241,0.13); }
 
-  footer {
-    text-align: center;
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    color: #374151;
-    margin-top: 56px;
-    padding-top: 16px;
-    border-top: 1px solid #1f2937;
-  }
+.sat-bottom {
+  background: #071510;
+  border-color: #10b98140;
+  box-shadow: 0 4px 20px rgba(16,185,129,0.07);
+}
+.sat-bottom:hover { box-shadow: 0 8px 28px rgba(16,185,129,0.13); }
 
-  @media (max-width: 640px) {
-    .metaphor      { grid-template-columns: 1fr; }
-    .metaphor-sep  { display: none; }
-    .area-grid     { grid-template-columns: 1fr; }
-    .ada-can       { grid-template-columns: 1fr; }
-    .three-tabs    { grid-template-columns: 1fr; }
-    .tool-row      { grid-template-columns: 1fr; }
-    .flow          { flex-direction: column; }
-    .flow-step:first-child { border-radius: 10px 10px 0 0; }
-    .flow-step:last-child  { border-radius: 0 0 10px 10px; }
-    .flow-step + .flow-step { border-left: 1px solid; border-top: none; }
-    .flow-step.blue   { border-top-color: #3b82f6; }
-    .flow-step.indigo { border-top-color: #6366f1; }
-    .flow-step.purple { border-top-color: #7c3aed; }
-    .flow-step.green  { border-top-color: #10b981; }
-  }
+.sat-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+.sat-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.sat-top    .sat-name { color: #93c5fd; }
+.sat-left   .sat-name { color: #d1d5db; }
+.sat-right  .sat-name { color: #a5b4fc; }
+.sat-bottom .sat-name { color: #6ee7b7; }
+
+.sat-items {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.9;
+  font-family: 'DM Mono', monospace;
+}
+
+.sat-badge {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+.badge-blue   { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f625; }
+.badge-indigo { background: #1e1b4b; color: #a5b4fc; border: 1px solid #6366f125; }
+.badge-green  { background: #052e16; color: #6ee7b7; border: 1px solid #10b98125; }
+
+/* ── SVG CONNECTION LINES ── */
+@keyframes dashFlow {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+.conn-line {
+  animation: dashFlow 2.4s linear infinite;
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #4b5563;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1f2937;
+  margin-bottom: 24px;
+  margin-top: 52px;
+}
+
+/* ── DETAIL CARDS ── */
+.detail-section {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid;
+  margin-bottom: 20px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid;
+}
+.detail-icon { font-size: 20px; flex-shrink: 0; }
+.detail-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #4b5563;
+  margin-bottom: 3px;
+}
+.detail-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.detail-body {
+  padding: 20px 22px;
+}
+.detail-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+/* section themes */
+.ds-gestione  { background: #0e1117; border-color: #1f2937; }
+.ds-gestione  .detail-header { background: #111827; border-bottom-color: #1f2937; }
+.ds-gestione  .detail-name   { color: #d1d5db; }
+
+.ds-contenuti { background: #0a1120; border-color: #1e3a5f40; }
+.ds-contenuti .detail-header { background: #0d1628; border-bottom-color: #1e3a5f40; }
+.ds-contenuti .detail-name   { color: #93c5fd; }
+
+.ds-aula      { background: #0a0a1e; border-color: #31315e40; }
+.ds-aula      .detail-header { background: #0c0c22; border-bottom-color: #31315e40; }
+.ds-aula      .detail-name   { color: #a5b4fc; }
+
+.ds-monitor   { background: #071510; border-color: #14532d40; }
+.ds-monitor   .detail-header { background: #091810; border-bottom-color: #14532d40; }
+.ds-monitor   .detail-name   { color: #6ee7b7; }
+
+/* ── ITEMS GRID ── */
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.item-card {
+  background: rgba(0,0,0,0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d1d5db;
+  margin-bottom: 5px;
+}
+.item-desc {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.65;
+}
+.item-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 100px;
+}
+
+/* ── TAB PREVIEW (In Aula) ── */
+.tab-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #31315e40;
+  margin-bottom: 16px;
+  background: #31315e20;
+}
+.tab-pane {
+  padding: 14px;
+  background: #0c0c22;
+}
+.tab-pane-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: #4b5563;
+  margin-bottom: 4px;
+}
+.tab-pane-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a5b4fc;
+  margin-bottom: 8px;
+}
+.tab-pane-list {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.8;
+}
+
+/* ── CRUSCOTTO CALLOUT ── */
+.cruscotto-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(16,185,129,0.04);
+  border: 1px solid rgba(16,185,129,0.12);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 16px;
+}
+.cruscotto-box .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.cruscotto-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6ee7b7;
+  margin-bottom: 5px;
+}
+.cruscotto-text {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.65;
+}
+.cruscotto-text strong { color: #a5b4fc; font-weight: 600; }
+.cruscotto-text em     { color: #6ee7b7; font-style: normal; font-weight: 600; }
+
+/* ── ADA PUÒ / NON PUÒ ── */
+.can-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.can-box, .cant-box {
+  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid;
+}
+.can-box  { background: #0a1120; border-color: #6366f130; }
+.cant-box { background: #111827; border-color: #37415150; }
+
+.can-label, .cant-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+.can-label  { color: #818cf8; }
+.cant-label { color: #4b5563; }
+
+.can-item, .cant-item {
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 5px 0;
+  border-bottom: 1px solid #1f2937;
+  line-height: 1.5;
+}
+.can-item:last-child, .cant-item:last-child { border-bottom: none; }
+.can-item::before  { content: "✦ "; color: #818cf8; font-size: 9px; }
+.cant-item::before { content: "○ "; color: #4b5563; font-size: 9px; }
+
+/* ── TOOLS ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.tool-card {
+  background: #0a1a2a;
+  border: 1px solid #0ea5e930;
+  border-radius: 10px;
+  padding: 14px;
+}
+.tool-icon { font-size: 18px; margin-bottom: 6px; }
+.tool-title { font-size: 12px; color: #38bdf8; font-weight: 600; margin-bottom: 4px; }
+.tool-desc  { font-size: 11px; color: #6b7280; line-height: 1.5; }
+
+/* ── TIPS ── */
+.tips-list {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 4px 20px;
+}
+.tip {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #1f2937;
+}
+.tip:last-child { border-bottom: none; }
+.tip-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #6d28d9;
+  flex-shrink: 0;
+  margin-top: 2px;
+  min-width: 22px;
+}
+.tip-title { font-size: 13px; font-weight: 600; color: #d1d5db; margin-bottom: 3px; }
+.tip-desc  { font-size: 12px; color: #6b7280; line-height: 1.55; }
+
+/* ── CHAT FOOTER ── */
+.chat-footer {
+  margin-top: 60px;
+  text-align: center;
+  padding: 36px 32px;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at center, #1a0f35 0%, #0d1117 65%);
+  border: 1px solid #6d28d925;
+  position: relative;
+  overflow: hidden;
+}
+.chat-glow {
+  position: absolute;
+  top: -80px; left: 50%;
+  transform: translateX(-50%);
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, rgba(109,40,217,0.12), transparent 70%);
+  pointer-events: none;
+}
+.footer-sparkle {
+  display: block;
+  font-size: 22px;
+  color: #a78bfa;
+  margin-bottom: 14px;
+  animation: sparkMain 3s ease-in-out infinite;
+}
+.footer-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #f3f4f6;
+  margin-bottom: 8px;
+}
+.footer-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.65;
+  max-width: 380px;
+  margin: 0 auto 18px;
+}
+.footer-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 100px;
+  border: 1px solid #6d28d925;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #6d28d9;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── PAGE FOOTER ── */
+footer {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: #374151;
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #1f2937;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .hub { grid-template-columns: 1fr; grid-template-rows: auto; gap: 14px; }
+  .sat-top, .sat-left, .sat-right, .sat-bottom { grid-column: 1; grid-row: auto; max-width: none; }
+  .ada-node { grid-column: 1; width: 140px; height: 140px; margin: 0 auto; }
+  .hub-svg { display: none; }
+  .can-grid { grid-template-columns: 1fr; }
+  .tools-grid { grid-template-columns: 1fr; }
+  .tab-preview { grid-template-columns: 1fr; }
+  .cruscotto-box { flex-direction: column; }
+}
 </style>
 </head>
 <body>
+<div class="page">
 
-<h1>Come funziona <span>Ada</span></h1>
-<p class="subtitle">
-  Una mappa per orientarti — dal primo giorno di scuola all'ultimo, Ada è con te in ogni fase del lavoro.
-</p>
+  <!-- HEADER -->
+  <div class="eyebrow">ada · assistente didattico · guida</div>
+  <h1 class="page-title">Come funziona <em>Ada</em></h1>
+  <p class="page-subtitle">Ada è al centro del tuo lavoro. Non sostituisce il registro elettronico, né il libro di testo — sta in mezzo: pensa con te, ricorda il contesto, ti accompagna in aula.</p>
 
-<!-- ── METAFORA ── -->
-<h2>Ada — il punto di incontro</h2>
-<div class="metaphor">
-  <div class="metaphor-box">
-    <div class="icon">📚</div>
-    <div class="label">Il Libro di Testo</div>
-    <div class="desc">Pianifica i contenuti.<br>Non conosce la tua classe.<br>Non si aggiorna.</div>
-  </div>
-  <div class="metaphor-sep">+</div>
-  <div class="metaphor-box ada">
-    <div class="icon">✦</div>
-    <div class="label">Ada</div>
-    <div class="desc">Aiuta a progettare, ricorda il contesto, annota con te durante la lezione, riconosce pattern nel tempo.</div>
-  </div>
-  <div class="metaphor-sep">+</div>
-  <div class="metaphor-box">
-    <div class="icon">📋</div>
-    <div class="label">Il Registro Elettronico</div>
-    <div class="desc">Registra presenze e voti.<br>È ufficiale e legale.<br>Non ragiona.</div>
-  </div>
-</div>
+  <!-- ══════════════════════════════════
+       HUB DIAGRAM
+  ══════════════════════════════════ -->
+  <div class="hub-outer">
+    <div class="hub" id="hub">
 
-<p style="color:#6b7280; font-size:12px; text-align:center; margin-bottom:48px;">
-  Ada non sostituisce il registro — è quello che sta in mezzo: ti aiuta a lavorare meglio, non a fare più scartoffie.
-</p>
+      <!-- SVG overlay per le linee -->
+      <svg class="hub-svg" id="hub-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg-blue"   x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="lg-gray"   x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#6b7280" stop-opacity="0.3"/>
+          </linearGradient>
+          <linearGradient id="lg-indigo" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="lg-green"  x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+      </svg>
 
-<!-- ── FLUSSO ── -->
-<h2>Il flusso del tuo lavoro</h2>
-<div class="flow">
-  <div class="flow-step gray">
-    <div class="num">01</div>
-    <div class="name">Gestione Corso</div>
-    <div class="detail">documenti fondanti · profilo · rotta · studenti</div>
-  </div>
-  <div class="flow-step blue">
-    <div class="num">02</div>
-    <div class="name">Progettazione</div>
-    <div class="detail">settimane · blocchi · cosa · come · approccio</div>
-  </div>
-  <div class="flow-step indigo">
-    <div class="num">03</div>
-    <div class="name">Preparazione</div>
-    <div class="detail">materiali · gruppi · tool · link classroom</div>
-  </div>
-  <div class="flow-step purple">
-    <div class="num">04</div>
-    <div class="name">In Corso</div>
-    <div class="detail">presenze · note · valutazioni · analisi Ada</div>
-  </div>
-  <div class="flow-step gray">
-    <div class="num">05</div>
-    <div class="name">Archivio</div>
-    <div class="detail">storico lezioni · consulta · riapri</div>
-  </div>
-  <div class="flow-step green">
-    <div class="num">06</div>
-    <div class="name">Monitoraggio</div>
-    <div class="detail">trend · presenze · radar didattico · studenti</div>
-  </div>
-</div>
+      <!-- TOP: Contenuti del Corso -->
+      <div class="sat sat-top" id="sat-top">
+        <div class="sat-num">02 · contenuti del corso</div>
+        <div class="sat-name">Progettazione &amp;<br>Analisi</div>
+        <div class="sat-items">
+          Progettazione del Corso<br>
+          Analisi del Corso
+        </div>
+        <div class="sat-badge badge-blue">📊 cruscotti visivi</div>
+      </div>
 
-<!-- ── QUATTRO AREE ── -->
-<h2>Le quattro aree principali</h2>
-<div class="area-grid">
+      <!-- LEFT: Gestione del Corso -->
+      <div class="sat sat-left" id="sat-left">
+        <div class="sat-num">01 · gestione del corso</div>
+        <div class="sat-name">Setup &amp;<br>Fondamenta</div>
+        <div class="sat-items">
+          Documenti Fondanti<br>
+          La Rotta<br>
+          Personalità di Ada
+        </div>
+      </div>
 
-  <div class="area area-blue">
-    <div class="area-icon">🗓</div>
-    <h3>Progettazione del Corso</h3>
-    <p>La visione d'insieme. Qui pianifichi le settimane, colleghi ogni blocco a un modulo del tuo progetto didattico, scegli la tipologia di lezione e l'approccio metodologico. Ada ti suggerisce obiettivi e titoli accattivanti. Il Gantt e il Radar ti mostrano l'equilibrio del corso nel tempo.</p>
-  </div>
+      <!-- CENTER: Ada -->
+      <div class="ada-node" id="ada-node">
+        <span class="ada-spark ada-spark-a">✦</span>
+        <span class="ada-spark ada-spark-b">✦</span>
+        <span class="ada-spark ada-spark-c">✦</span>
+        <span class="ada-spark ada-spark-d">✦</span>
+        <span class="ada-spark-main">✦</span>
+        <div class="ada-name">Ada</div>
+        <div class="ada-tag">sempre con te</div>
+      </div>
 
-  <div class="area area-indigo">
-    <div class="area-icon">🏫</div>
-    <h3>In Aula</h3>
-    <p>Il cuore operativo. Tre momenti distinti: prima (prepari materiali e gruppi), durante (registri presenze, note e valutazioni), dopo (archivi e consulti). Ada analizza le tue note libere e ti restituisce osservazioni strutturate su engagement e segnali degli studenti.</p>
-  </div>
+      <!-- RIGHT: In Aula -->
+      <div class="sat sat-right" id="sat-right">
+        <div class="sat-num">03 · in aula</div>
+        <div class="sat-name">Lezione &amp;<br>Strumenti</div>
+        <div class="sat-items">
+          Preparazione · In Corso<br>
+          Archivio · Toolkit<br>
+          Notebook · Gruppi
+        </div>
+        <div class="sat-badge badge-indigo">✦ ai in aula</div>
+      </div>
 
-  <div class="area area-green">
-    <div class="area-icon">📊</div>
-    <h3>Monitoraggio</h3>
-    <p>I dati raccolti durante le lezioni diventano leggibili. Vedi l'andamento delle presenze, il confronto tra tipologie pianificate ed effettive, i segnali ripetuti per singolo studente. Non è un giudizio — è uno specchio del percorso.</p>
-  </div>
+      <!-- BOTTOM: Monitoraggio -->
+      <div class="sat sat-bottom" id="sat-bottom">
+        <div class="sat-num">04 · monitoraggio</div>
+        <div class="sat-name">Andamento &amp;<br>Studenti</div>
+        <div class="sat-items">
+          Andamento Aula<br>
+          Studenti
+        </div>
+        <div class="sat-badge badge-green">📊 cruscotti live</div>
+      </div>
 
-  <div class="area area-gray">
-    <div class="area-icon">⚙️</div>
-    <h3>Gestione del Corso</h3>
-    <p>I documenti fondanti del tuo corso: il Profilo, il Progetto Didattico, il Patto Formativo, la Rotta (il calendario dei blocchi). È anche qui che definisci la Personalità di Ada — come si comporta, che tono usa, cosa sa del tuo contesto.</p>
-  </div>
+    </div><!-- /.hub -->
+  </div><!-- /.hub-outer -->
 
-</div>
 
-<!-- ── IN AULA — TRE TAB ── -->
-<h2>In Aula — tre momenti</h2>
-<div class="three-tabs">
-
-  <div class="tab-card">
-    <div class="tab-num">TAB 1</div>
-    <h3>Preparazione</h3>
-    <div class="tab-when">prima della lezione</div>
-    <ul>
-      <li>Seleziona il blocco da tenere</li>
-      <li>Aggiungi link a materiali (Drive, Canva, Gamma…)</li>
-      <li>Crea i gruppi con Ada</li>
-      <li>Chiedi ad Ada quale tool usare</li>
-      <li>Collega la classe di Google Classroom</li>
-    </ul>
-  </div>
-
-  <div class="tab-card">
-    <div class="tab-num">TAB 2</div>
-    <h3>In Corso</h3>
-    <div class="tab-when">durante la lezione</div>
-    <ul>
-      <li>Registro presenze P / A / R</li>
-      <li>Materiali attivi come card cliccabili</li>
-      <li>Inserimento valutazioni al volo</li>
-      <li>Note libere con autosalvataggio</li>
-      <li>Ada analizza le note → estrae segnali</li>
-    </ul>
-  </div>
-
-  <div class="tab-card">
-    <div class="tab-num">TAB 3</div>
-    <h3>Archivio</h3>
-    <div class="tab-when">dopo la lezione</div>
-    <ul>
-      <li>Lista lezioni archiviate per data</li>
-      <li>Riepilogo presenze e note</li>
-      <li>Puoi riaprire una lezione archiviata</li>
-      <li>Vai direttamente al blocco in Progettazione</li>
-    </ul>
-  </div>
-
-</div>
-
-<!-- ── ADA COSA SA FARE ── -->
-<h2>Ada — cosa sa fare (e cosa no)</h2>
-<div class="ada-can">
-
-  <div class="can-do">
-    <div class="label">✦ Ada può aiutarti a</div>
-    <div class="can-item">Generare un titolo accattivante per gli studenti</div>
-    <div class="can-item">Suggerire l'obiettivo didattico di un blocco</div>
-    <div class="can-item">Analizzare le tue note di lezione</div>
-    <div class="can-item">Identificare segnali su singoli studenti</div>
-    <div class="can-item">Suggerire la composizione ottimale dei gruppi</div>
-    <div class="can-item">Consigliare quale tool usare per una lezione</div>
-    <div class="can-item">Costruire documenti del corso (Patto Formativo, ecc.)</div>
-    <div class="can-item">Rispondere a domande sul tuo corso e sulla tua classe</div>
-  </div>
-
-  <div class="cant-do">
-    <div class="label">○ Ada non fa</div>
-    <div class="cant-item">Inviare comunicazioni a studenti o famiglie</div>
-    <div class="cant-item">Registrare voti ufficiali sul registro elettronico</div>
-    <div class="cant-item">Accedere a dati esterni (Argo, Axios, Classroom…)</div>
-    <div class="cant-item">Generare documenti con valore legale</div>
-    <div class="cant-item">Sostituire la tua valutazione professionale</div>
-    <div class="cant-item">Connettersi a internet durante la lezione</div>
-  </div>
-
-</div>
-
-<!-- ── TOOL ── -->
-<h2>Laboratori e strumenti</h2>
-<div class="tool-row">
-
-  <div class="tool-card">
-    <div class="tool-icon">🧰</div>
-    <h3>Toolkit</h3>
-    <p>Link rapidi agli strumenti che usi: Gemini Apps, Microsoft, registro elettronico, libro digitale adottato, risorse disciplinari. Personalizzabile.</p>
-  </div>
-
-  <div class="tool-card">
-    <div class="tool-icon">📓</div>
-    <h3>I Miei Notebook</h3>
-    <p>Galleria dei tuoi NotebookLM. Aprili con un clic nel browser. Usa il kit di prompt integrato per estrarre contenuti strutturati da incollare in Ada.</p>
-  </div>
-
-  <div class="tool-card">
-    <div class="tool-icon">👥</div>
-    <h3>Gruppi</h3>
-    <p>Archivio di tutte le composizioni passate. Vedi chi ha lavorato con chi e quante volte. Ada suggerisce nuovi gruppi bilanciati in fase di preparazione.</p>
-  </div>
-
-</div>
-
-<!-- ── CONSIGLI PER INIZIARE ── -->
-<h2>Da dove iniziare</h2>
-<div class="tips">
-
-  <div class="tip">
-    <div class="tip-icon">1️⃣</div>
-    <div class="tip-text">
-      <h3>Compila il Profilo del Corso</h3>
-      <p>Vai in Gestione del Corso → Documenti Fondanti. Il Profilo è il punto di partenza: Ada lo usa come contesto per tutto quello che genera. Senza di lui, i suggerimenti sono generici.</p>
-    </div>
-  </div>
-
-  <div class="tip">
-    <div class="tip-icon">2️⃣</div>
-    <div class="tip-text">
-      <h3>Incolla il tuo Progetto Didattico</h3>
-      <p>Ada legge il Progetto Didattico e riconosce moduli, UDA, metodologie. Da quel momento, i selettori in Progettazione diventano contestuali al tuo corso specifico.</p>
-    </div>
-  </div>
-
-  <div class="tip">
-    <div class="tip-icon">3️⃣</div>
-    <div class="tip-text">
-      <h3>Configura La Rotta</h3>
-      <p>In La Rotta imposti i giorni in cui tieni i blocchi e le date delle settimane. Da lì nascono le card in Progettazione del Corso.</p>
-    </div>
-  </div>
-
-  <div class="tip">
-    <div class="tip-icon">4️⃣</div>
-    <div class="tip-text">
-      <h3>Aggiungi gli studenti</h3>
-      <p>Con la lista studenti compilata, Ada può lavorare sui gruppi, sulle presenze e sui profili individuali in Monitoraggio.</p>
-    </div>
-  </div>
-
-  <div class="tip">
-    <div class="tip-icon">5️⃣</div>
-    <div class="tip-text">
-      <h3>Inizia a progettare</h3>
-      <p>Apri Progettazione del Corso, espandi una settimana e inizia a compilare i blocchi. Collegali ai moduli, scegli tipologia e approccio. Poi clicca su "Progetta" per entrare nel Laboratorio con Ada.</p>
-    </div>
-  </div>
-
-</div>
-
-<footer>
-  ADA · ada.nuovadidattica.eu · andrea.poletti@nuovadidattica.eu · Aggiornato 2026-06-05
-</footer>
-
-</body>
-</html>
+  <!-- ══════════════════════════════════
+       SEZIONI DETTAGLIO
+  ═══�
