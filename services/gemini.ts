@@ -1,11 +1,22 @@
 // services/gemini.ts
-import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, FunctionCallingConfigMode, Part } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, FunctionDeclaration, GenerateContentParameters, Content, Part } from "@google/genai";
+// `FunctionCallingConfigMode` SOLO come tipo (import type → cancellato a runtime).
+// Importarlo come valore rompeva l'intero modulo a runtime: il publish 0.14.x di
+// @google/genai è rotto (vedi scripts/fix-genai-exports.mjs) e il bundle ottimizzato
+// da Vite non ri-esporta questo enum. Un singolo binding mancante manda in errore tutto
+// il modulo gemini.ts → App non monta → schermo totalmente nero. Vedi FUNCTION_CALLING_MODE_ANY.
+import type { FunctionCallingConfigMode } from "@google/genai";
 import type { Message, Attachment, Mode, Student, GroupDefinition, AdaAnalysis, Evaluation, Conversation, WeekRouteInfo, MasterContextData, BlockSource, CourseModule, ModuleSection, LessonType } from '../types';
 import { getBlockFile } from './db';
 import { MODES } from '../constants';
 import TurndownService from 'turndown';
 
 export const ADA_API_KEY_STORAGE = 'ada_gemini_api_key';
+
+// Sostituisce `FunctionCallingConfigMode.ANY`. NON importare l'enum come valore: il dep
+// ottimizzato di @google/genai non lo espone e romperebbe il modulo (→ schermo nero).
+// È uno string enum, quindi il valore è la stringa 'ANY'.
+const FUNCTION_CALLING_MODE_ANY = 'ANY' as FunctionCallingConfigMode;
 
 // SDK tipizza FunctionCall.args come opaco; doppio cast è il pattern TS approvato per questo boundary.
 function extractArgs<T>(args: Record<string, unknown> | undefined): T {
@@ -288,7 +299,7 @@ export const generateGroupSuggestions = async (students: Student[], objective: s
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [groupSuggestionSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -340,7 +351,7 @@ Per la motivazione scrivi al massimo una frase breve sul criterio di bilanciamen
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [groupSuggestionSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 0 }
         }
     });
@@ -377,7 +388,7 @@ export const generateLessonAnalysis = async (notes: string, studentNames: string
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [lessonAnalysisSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -413,7 +424,7 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [evaluationAnalysisSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -500,7 +511,7 @@ Usa la funzione 'suggest_week_theme' per la tua risposta.`;
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [weekThemeSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -561,7 +572,7 @@ Usa la funzione 'generate_objective_suggestions' per fornire le tre varianti.`;
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [objectiveSuggestionsSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             temperature: 0.6,
             thinkingConfig: { thinkingBudget: 8192 }
         }
@@ -629,7 +640,7 @@ Usa la funzione 'generate_block_title_suggestions' per fornire le tre varianti.`
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [blockTitleSuggestionsSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             temperature: 0.85,
             thinkingConfig: { thinkingBudget: 8192 }
         }
@@ -671,7 +682,7 @@ Usa la funzione 'generate_strategic_suggestions' per la tua risposta. Fornisci u
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
             tools: [{ functionDeclarations: [strategicSuggestionsSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });
@@ -989,7 +1000,7 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
             tools: [{ functionDeclarations: [blockDetailsSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.ANY } },
+            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
             thinkingConfig: { thinkingBudget: 8192 }
         }
     });

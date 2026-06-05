@@ -34,7 +34,14 @@
       "PowerShell(Get-Command node, tsc -ErrorAction SilentlyContinue)",
       "Bash(del \"C:\\\\Users\\\\unoav\\\\OneDrive\\\\Etichetta_Rossa\\\\Area_Personale\\\\2026\\\\022_Ada Luna Rossa\\\\ADA_INAULA_IMPLEMENTAZIONE_STEPS.md\")",
       "Bash(git stash *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr LISTENING)",
+      "Bash(findstr \":5173 :5174 :3000\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \"const p=require\\('./node_modules/@google/genai/package.json'\\); console.log\\(JSON.stringify\\({main:p.main, module:p.module, browser:p.browser, exports:p.exports, type:p.type}, null, 2\\)\\)\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
