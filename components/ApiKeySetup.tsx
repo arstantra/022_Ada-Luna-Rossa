@@ -20,10 +20,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, isModal = false,
       setError('Inserisci una chiave API valida.');
       return;
     }
-    if (!trimmed.startsWith('AIza')) {
-      setError('La chiave API Gemini dovrebbe iniziare con "AIza". Controlla e riprova.');
-      return;
-    }
+
     setIsLoading(true);
     // Breve pausa per feedback visivo
     await new Promise(r => setTimeout(r, 400));
@@ -58,7 +55,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, isModal = false,
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-            placeholder="AIzaSy..."
+            placeholder="AIzaSy... oppure AQ..."
             autoFocus
           />
         </div>

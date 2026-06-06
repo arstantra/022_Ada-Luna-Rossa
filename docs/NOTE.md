@@ -16,6 +16,12 @@
 
 - [ ] **Caricamento diretto file Drive in Materiali di Lezione**: invece di incollare URL, permettere il pick diretto di PDF/PPTX/immagini dal Drive tramite connector.
 
+## Progettazione del Corso
+
+- [ ] **Livello Bloom sugli obiettivi didattici**: aggiungere campo opzionale `bloomLevel` su `BlockDetails` (tipo `BloomLevel`: `ricordare | comprendere | applicare | analizzare | valutare | creare`). Il livello viene selezionato nell'`ObjectiveSuggestionModal` e passato a `generateObjectiveSuggestions` per orientare il verbo d'azione dell'obiettivo generato.
+
+  Prompt chirurgico in `docs/PROMPT_PREPARAZIONE.md` — sezione "Bloom — Livello cognitivo sugli obiettivi".
+
 ## Laboratorio di Preparazione — in sviluppo
 
 Spec completa (Fasi A, B, C) in `docs/PROMPT_PREPARAZIONE.md`.
