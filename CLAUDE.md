@@ -635,14 +635,14 @@ const availableWeeks = useMemo(
 'lezione'             — InAulaView unificata: tre tab Preparazione | In Corso | Archivio
                         (sostituisce 'lezione_in_corso' + 'archivio_lezioni' rimossi in Step 3 — 2026-05-27)
 'students'            — StudentRosterView
-'student_profile'     — StudentProfileView (include sezioni presenze/valutazioni/segnali Ada + Radar Operativo StudentDimensionRadar + cella "Lavori di Gruppo" — zoom studente→gruppi)
+'student_profile'     — StudentProfileView (Diario di Bordo con "Importa Valutazione" nell'header + sezioni presenze/valutazioni/segnali Ada + Radar Operativo StudentDimensionRadar + cella "Lavori di Gruppo" — zoom studente→gruppi. Rimossi 2026-07-06: sezione "Note e Osservazioni"/Crea Sintesi (le note vivono in Equipaggio) e celle morte "Sentiment Attività"/"Alert ADA")
 'classroom_trend'     — ClassroomTrendView (Andamento Aula: KPI di sintesi + Monitoraggio Consuntivo + Progettato vs Realizzato + Sentiment Aula + Diario Qualitativo; drill-down: onSelectStudent su nomi/dot, onOpenGroups → groups_archive)
 'founding_documents'  — FoundingDocumentsView (Documenti Fondanti)
 'la_rotta'            — RouteView (La Rotta — calendario settimane e giorni blocchi)
 'ada_personality'     — AdaPersonalityView (Personalità di Ada — istruzioni di sistema)
 'notebooklm'          — NotebookLMView
 'toolkit'             — ToolkitView
-'groups_archive'      — GroupsArchiveView (GroupsReportSection: KPI, donut stato lavori, dimensione gruppi, partecipazione per studente cliccabile, note/osservazioni qualitative + archivio; gruppi da 1 = badge "individuale"; props activities + onSelectStudent)
+'groups_archive'      — GroupsArchiveView "Attività di Gruppo" (rinominata 2026-07-06, era "Archivio Gruppi di Lavoro". GroupsReportSection: KPI, donut stato lavori, dimensione gruppi, partecipazione per studente cliccabile, note/osservazioni qualitative + lista attività; gruppi da 1 = badge "individuale"; props activities + onSelectStudent. ActivityDashboard: cruscotto per singola attività dentro l'accordion espanso — KPI, donut vs scadenza, note gruppo + osservazioni matchate via LessonWithGroups.blockId === ActivityObservation.blockId)
 'gantt'               — GanttView (Analisi del Corso — Gantt + Radar equilibrio didattico)
 ```
 
@@ -665,13 +665,12 @@ Tutte le sezioni principali usano `CollapsibleSectionLabel` (cliccabile, chevron
   ▾ Laboratori e Strumenti         (CollapsibleSection con icona, sotto-livello)
       ↳ Toolkit                    (→ toolkit)
       ↳ I Miei Notebook            (→ notebooklm)
-      ↳ Gruppi                     (→ groups_archive) ← composer Ada + archivio
       ↳ Atelier Visivo             (DISABILITATO — badge "API")
 
 ▾ MONITORAGGIO                 (CollapsibleSectionLabel, default: aperta)
   • Andamento Aula                 (→ classroom_trend) ← cruscotto qualitativo + consuntivo
-  • Gruppi                         (→ groups_archive)
-  • Studentesse                    (→ students / student_profile)
+  • Attività di Gruppo             (→ groups_archive) ← rinominata da "Gruppi" 2026-07-06
+  • Studenti                       (→ students / student_profile)
 
 ▾ GESTIONE DEL CORSO           (CollapsibleSectionLabel, default: chiusa)
   • Documenti Fondanti             (→ founding_documents)
@@ -796,3 +795,8 @@ progettata → in_corso → archiviata
 - Non dimenticare di aggiornare `public/docs/ADA_Come_Funziona.html` (e `docs/ADA_Come_Funziona.html`) quando cambia una funzione visibile all'utente — la guida è un documento vivo, non uno snapshot.
 - Non modificare la sorgente della guida solo in `docs/` e dimenticare `public/docs/` — Vite serve solo `public/`, quindi la versione nell'app rimarrebbe obsoleta.
 - Non aggiungere la guida alla sidebar — il suo punto di ingresso è esclusivamente la Lobby (`LobbyView.tsx`), come link "Come funziona Ada ?" in fondo alla schermata iniziale.
+- Non reintrodurre "Note e Osservazioni", "Crea Sintesi"/adaSummary nella scheda studente — rimossi (2026-07-06): le note libere vivono nei Documenti Fondanti > Equipaggio. "Importa Valutazione" vive nell'header del Diario di Bordo. `StudentProfileView` non ha più le props `onUpdateNotes`/`onUpdateSummary`/`showToast` (gli handler `updateStudentNotes`/`updateStudentSummary` restano in `useStudents` per il DB ma non sono più destrutturati in MainApp).
+- Non reintrodurre le celle "Sentiment Attività" e "Alert ADA" nella scheda studente — erano celle morte (2026-07-06): si popolavano solo da `handleAnalyzeObservations`, mai collegato a un pulsante dopo la rimozione del form osservazioni, e i risultati non erano persistiti. Gli avvisi persistiti sono già coperti dalla card "Segnali Ada" (da `lessonNoteAnalysis`).
+- Non usare "Archivio Gruppi di Lavoro" o "Gruppi" come label — la view `groups_archive` si chiama "Attività di Gruppo" (2026-07-06): header view, NavItem sidebar, pulsante drill-down in ClassroomTrendView ("Attività di Gruppo →") e titolo accordion ("Attività di Gruppo del {data}").
+- Non rimuovere `blockId` da `LessonWithGroups` — aggiunto (2026-07-06) per collegare l'`ActivityDashboard` alle osservazioni (`ActivityObservation.blockId === BlockDetails.id`). È il canale che porta le osservazioni Ada dentro il cruscotto per attività.
+- Non riportare il tab Archivio di `InAulaView` allo stile a tutta larghezza — allineato (2026-07-06) a Preparazione/In Corso: colonna `max-w-3xl mx-auto p-6 space-y-5`, card `rounded-xl border border-gray-700/50 bg-gray-800/40`, filtri in una card unica con label font-mono. Restano filtri, selezione multipla e Atelier Creativo.

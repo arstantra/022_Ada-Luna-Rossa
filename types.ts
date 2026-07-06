@@ -429,6 +429,8 @@ export interface LessonWithGroups {
     sortableDate: Date;
     weekDates: string;
     projectDeadline?: string;
+    /** BlockDetails.id — collega l'attività alle osservazioni (ActivityObservation.blockId) */
+    blockId?: string;
 }
 
 // --- Planning Action Payloads for Type Safety ---

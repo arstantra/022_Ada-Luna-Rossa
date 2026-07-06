@@ -288,7 +288,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             />
             <NavItem
               icon={<UsersIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-              label="Gruppi"
+              label="Attività di Gruppo"
               isActive={activeView === 'groups_archive'}
               onClick={onOpenGroupsArchive}
             />

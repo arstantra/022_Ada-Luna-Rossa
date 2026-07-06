@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef, memo } from 'react';
-import type { Student, Evaluation, Conversation, Activity, ActivityObservation, LessonType } from '../types';
-import { XIcon, UserIcon, ChevronDownIcon, CheckCircleIcon, XCircleIcon, SparklesIcon, ClipboardDocumentCheckIcon } from './Icons';
-import * as GeminiService from '../services/gemini';
-import * as db from '../services/db';
-import MarkdownRenderer from './MarkdownRenderer';
+import React, { useState, useMemo, memo } from 'react';
+import type { Student, Evaluation, Conversation, LessonType } from '../types';
+import { XIcon, UserIcon, ChevronDownIcon, CheckCircleIcon, XCircleIcon, ClipboardDocumentCheckIcon } from './Icons';
 import DidacticRadarChart, { type RadarDataPoint } from './DidacticRadarChart';
 import StudentDimensionRadar, { type StudentDimension } from './StudentDimensionRadar';
 
@@ -37,11 +34,8 @@ const parseEvaluationScore = (value: string): number | null => {
 interface StudentProfileViewProps {
     student: Student;
     onClose: () => void;
-    onUpdateNotes: (studentId: string, notes: string) => void;
-    onUpdateSummary: (studentId: string, summary: { content: string; date: string; }) => void;
     onOpenImportModal: (student: Student) => void;
     conversations?: Conversation[];
-    showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 interface LogbookEntry extends Evaluation {
@@ -87,64 +81,7 @@ const LogbookAccordion: React.FC<{ weekNumber: number; blocks: LogbookEntry[] }>
     );
 });
 
-const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onUpdateNotes, onUpdateSummary, onOpenImportModal, conversations = [], showToast }) => {
-    const [currentNotes, setCurrentNotes] = useState(student.notes || '');
-    const autosaveTimeoutRef = useRef<number | null>(null);
-    const [isSummarizing, setIsSummarizing] = useState(false);
-
-    // ── Attività ────────────────────────────────────────────────────────────
-    const [allActivities, setAllActivities] = useState<Activity[]>([]);
-    const [newObsText, setNewObsText] = useState('');
-    const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-    const [isAnalyzingObs, setIsAnalyzingObs] = useState(false);
-    const [obsInsights, setObsInsights] = useState<Record<string, { sentiment: 'positivo' | 'neutro' | 'critico'; tags: string[]; alerts: string[]; summary: string } | null>>({});
-    const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
-
-    useEffect(() => {
-        db.getAllActivities().then(setAllActivities).catch(console.error);
-    }, [student.id]);
-
-    useEffect(() => {
-        setCurrentNotes(student.notes || '');
-    }, [student]);
-
-    useEffect(() => {
-        if (autosaveTimeoutRef.current) {
-            clearTimeout(autosaveTimeoutRef.current);
-        }
-        autosaveTimeoutRef.current = window.setTimeout(() => {
-            if (currentNotes !== student.notes) {
-                onUpdateNotes(student.id, currentNotes);
-            }
-        }, 1500); // Autosave after 1.5 seconds of inactivity
-
-        return () => {
-            if (autosaveTimeoutRef.current) {
-                clearTimeout(autosaveTimeoutRef.current);
-            }
-        };
-    }, [currentNotes, student.id, student.notes, onUpdateNotes]);
-
-    const handleGenerateSummary = async () => {
-        setIsSummarizing(true);
-        try {
-            const summaryContent = await GeminiService.generateStudentSummary(
-                student.name,
-                student.notes || '',
-                student.evaluations ?? []
-            );
-            onUpdateSummary(student.id, {
-                content: summaryContent,
-                date: new Date().toISOString(),
-            });
-        } catch (error) {
-            console.error("Failed to generate student summary", error);
-            showToast("Errore nella generazione della sintesi. Riprova.", 'error');
-        } finally {
-            setIsSummarizing(false);
-        }
-    };
-
+const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClose, onOpenImportModal, conversations = [] }) => {
     const logbookData = useMemo<GroupedLogbook>(() => {
         return (student.evaluations ?? [])
             .filter((e): e is LogbookEntry => typeof e.weekNumber === 'number')
@@ -230,13 +167,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         }
         return signals.sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime());
     }, [conversations, student.id]);
-
-    const studentActivities = useMemo(() => {
-        return allActivities.filter(a =>
-            a.submissionRecords?.some(r => r.refType === 'student' && r.refId === student.id) ||
-            a.studentOverrides?.some(o => o.studentId === student.id)
-        );
-    }, [allActivities, student.id]);
 
     const radarActualData = useMemo<RadarDataPoint[]>(() => {
         const counts = new Map<LessonType, number>();
@@ -341,70 +271,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
         ];
     }, [presenzaStats, studentGroupWorks, lessonEvaluations, adaSignals]);
 
-    const sentimentScore = useMemo<number | null>(() => {
-        const values: number[] = [];
-        for (const v of Object.values(obsInsights)) {
-            if (!v) continue;
-            const sv = v as { sentiment: 'positivo' | 'neutro' | 'critico' };
-            values.push(sv.sentiment === 'positivo' ? 100 : sv.sentiment === 'neutro' ? 50 : 0);
-        }
-        if (values.length === 0) return null;
-        return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-    }, [obsInsights]);
-
-    const allAlerts = useMemo(() => {
-        const result: { key: string; text: string; urgent: boolean }[] = [];
-        for (const [actId, insights] of Object.entries(obsInsights)) {
-            if (!insights) continue;
-            const typedInsights = insights as { alerts: string[] };
-            typedInsights.alerts.forEach((alert, i) => {
-                result.push({
-                    key: `${actId}-${i}`,
-                    text: alert,
-                    urgent: /critico|urgente/i.test(alert),
-                });
-            });
-        }
-        return result;
-    }, [obsInsights]);
-
-    const handleAddObservation = async () => {
-        if (!selectedActivityId || !newObsText.trim()) return;
-        const activity = allActivities.find(a => a.id === selectedActivityId);
-        if (!activity) return;
-        const obs: ActivityObservation = {
-            id: crypto.randomUUID(),
-            timestamp: new Date().toISOString(),
-            text: newObsText.trim(),
-            refId: student.id,
-            refType: 'student',
-        };
-        const updated: Activity = {
-            ...activity,
-            observations: [...(activity.observations ?? []), obs],
-            updatedAt: new Date().toISOString(),
-        };
-        await db.saveActivity(updated);
-        setAllActivities(prev => prev.map(a => a.id === selectedActivityId ? updated : a));
-        setNewObsText('');
-    };
-
-    const handleAnalyzeObservations = async (activityId: string) => {
-        const activity = allActivities.find(a => a.id === activityId);
-        if (!activity) return;
-        const obs = (activity.observations ?? []).filter(o => o.refId === student.id && o.refType === 'student');
-        setIsAnalyzingObs(true);
-        try {
-            const insights = await GeminiService.generateActivityObservationInsights(obs, student.name, activity.title);
-            setObsInsights(prev => ({ ...prev, [activityId]: insights }));
-        } catch (err) {
-            console.error(err);
-            showToast("Errore nell'analisi delle osservazioni.", 'error');
-        } finally {
-            setIsAnalyzingObs(false);
-        }
-    };
-
     if (!student) return null; // guard difensivo — non dovrebbe mai arrivare qui
 
     return (
@@ -419,64 +285,19 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* LEFT COLUMN */}
-                    <div className="flex flex-col gap-8">
-                        {/* Notes Section */}
-                        <div className="flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xl font-bold text-white">Note e Osservazioni</h3>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => onOpenImportModal(student)}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-xs text-sky-400/70 border border-sky-500/20 rounded-md hover:bg-sky-500/15 transition-colors"
-                                    >
-                                        <ClipboardDocumentCheckIcon className="h-4 w-4"/>
-                                        Importa Valutazione
-                                    </button>
-                                    <button
-                                        onClick={handleGenerateSummary}
-                                        disabled={isSummarizing}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-xs text-purple-400 border border-purple-500/25 rounded-lg hover:bg-purple-500/10 hover:border-purple-400/40 transition-colors disabled:opacity-50"
-                                    >
-                                        <SparklesIcon className={`h-4 w-4 ${isSummarizing ? 'animate-pulse' : ''}`}/>
-                                        {isSummarizing ? 'Analisi...' : (student.adaSummary ? 'Aggiorna' : 'Crea Sintesi')}
-                                    </button>
-                                </div>
-                            </div>
-                            <textarea
-                                value={currentNotes}
-                                onChange={(e) => setCurrentNotes(e.target.value)}
-                                placeholder="Inserisci note non strutturate sullo studente: stile di apprendimento, estratti PEI/DSA, osservazioni..."
-                                className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-gray-200 resize-none min-h-[250px]"
-                            />
-                            <p className="text-xs text-right text-gray-400 mt-2">Le note vengono salvate automaticamente.</p>
-                        </div>
-                        
-                        {/* Ada Summary Section */}
-                        {isSummarizing && !student.adaSummary && (
-                             <div className="bg-gray-700/30 p-4 rounded-lg border border-purple-500/30 flex items-center justify-center h-48">
-                                <p className="text-purple-300 flex items-center gap-2"><SparklesIcon className="h-5 w-5 animate-pulse" /> Sto generando la sintesi...</p>
-                            </div>
-                        )}
-                        {student.adaSummary && (
-                            <div className="bg-gray-700/30 p-4 rounded-lg border border-purple-500/30 animate-fade-in-down">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h4 className="font-semibold text-purple-300 flex items-center gap-2">
-                                        <SparklesIcon className="h-5 w-5"/>
-                                        Sintesi Analitica di Ada
-                                    </h4>
-                                    <p className="text-xs text-gray-400">
-                                        Analisi del {new Date(student.adaSummary.date).toLocaleDateString('it-IT')}
-                                    </p>
-                                </div>
-                                <MarkdownRenderer content={student.adaSummary.content} />
-                            </div>
-                        )}
-                    </div>
+                <div className="max-w-6xl mx-auto">
                     {/* Logbook Section */}
                     <div>
-                        <h3 className="text-xl font-bold text-white mb-3">Diario di Bordo Individuale</h3>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xl font-bold text-white">Diario di Bordo Individuale</h3>
+                            <button
+                                onClick={() => onOpenImportModal(student)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs text-sky-400/70 border border-sky-500/20 rounded-md hover:bg-sky-500/15 transition-colors"
+                            >
+                                <ClipboardDocumentCheckIcon className="h-4 w-4"/>
+                                Importa Valutazione
+                            </button>
+                        </div>
                         <div className="space-y-3">
                             {sortedWeeks.length > 0 ? (
                                 sortedWeeks.map(weekNum => (
@@ -589,7 +410,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
 
                         {/* Cella 0b — Lavori di Gruppo (zoom studente → gruppi) */}
                         <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
-                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Lavori di Gruppo</p>
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Attività di Gruppo</p>
                             {studentGroupWorks.length === 0 ? (
                                 <p className="text-xs text-gray-500">Nessun lavoro di gruppo registrato per questo studente.</p>
                             ) : (
@@ -689,109 +510,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                             })()}
                         </div>
 
-                        {/* Cella 3 — Sentiment attività */}
-                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
-                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Sentiment Attività</p>
-                            {(() => {
-                                const cx = 100, cy = 88, R = 60;
-                                const p33x = cx + R * Math.cos(Math.PI * 0.67);
-                                const p33y = cy - R * Math.sin(Math.PI * 0.67);
-                                const p66x = cx + R * Math.cos(Math.PI * 0.34);
-                                const p66y = cy - R * Math.sin(Math.PI * 0.34);
-                                const roseArc = `M 40 88 A 60 60 0 0 1 ${p33x.toFixed(1)} ${p33y.toFixed(1)}`;
-                                const amberArc = `M ${p33x.toFixed(1)} ${p33y.toFixed(1)} A 60 60 0 0 1 ${p66x.toFixed(1)} ${p66y.toFixed(1)}`;
-                                const emeraldArc = `M ${p66x.toFixed(1)} ${p66y.toFixed(1)} A 60 60 0 0 1 160 88`;
-                                let nx = cx, ny = cy - R * 0.78;
-                                if (sentimentScore !== null) {
-                                    const angle = Math.PI * (1 - sentimentScore / 100);
-                                    nx = cx + R * 0.78 * Math.cos(angle);
-                                    ny = cy - R * 0.78 * Math.sin(angle);
-                                }
-                                const analysisCount = Object.values(obsInsights).filter(v => v !== null).length;
-                                return (
-                                    <div>
-                                        <svg width="100%" viewBox="0 0 200 100">
-                                            <path d="M 40 88 A 60 60 0 0 1 160 88" fill="none"
-                                                stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
-                                            <path d={roseArc} fill="none" stroke="#f43f5e"
-                                                strokeWidth="10" strokeOpacity="0.65" />
-                                            <path d={amberArc} fill="none" stroke="#f59e0b"
-                                                strokeWidth="10" strokeOpacity="0.65" />
-                                            <path d={emeraldArc} fill="none" stroke="#10b981"
-                                                strokeWidth="10" strokeOpacity="0.65" />
-                                            {sentimentScore !== null && (
-                                                <>
-                                                    <line x1={cx} y1={cy} x2={nx.toFixed(1)} y2={ny.toFixed(1)}
-                                                        stroke="white" strokeWidth="2" strokeLinecap="round" />
-                                                    <circle cx={cx} cy={cy} r={4} fill="rgba(255,255,255,0.9)" />
-                                                </>
-                                            )}
-                                            <text x={cx} y={72} textAnchor="middle" fontSize="16"
-                                                fontWeight="700" fill="white" fontFamily="monospace">
-                                                {sentimentScore !== null ? sentimentScore : '–'}
-                                            </text>
-                                            <text x={cx} y={83} textAnchor="middle" fontSize="6"
-                                                fill="rgba(156,163,175,0.6)" fontFamily="monospace">
-                                                {sentimentScore === null ? 'nessuna analisi'
-                                                    : sentimentScore >= 66 ? 'positivo'
-                                                    : sentimentScore >= 33 ? 'neutro'
-                                                    : 'critico'}
-                                            </text>
-                                            <text x={36} y={97} textAnchor="middle" fontSize="5"
-                                                fill="rgba(244,63,94,0.55)" fontFamily="monospace">critico</text>
-                                            <text x={164} y={97} textAnchor="middle" fontSize="5"
-                                                fill="rgba(16,185,129,0.55)" fontFamily="monospace">positivo</text>
-                                        </svg>
-                                        <p className="text-[10px] font-mono text-gray-600 text-center mt-1">
-                                            {analysisCount === 0
-                                                ? 'Esegui "Analizza con ADA" sulle attività per popolare il gauge'
-                                                : `Basato su ${analysisCount} analisi Ada`}
-                                        </p>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-
-                        {/* Cella 4 — Alert ADA */}
-                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
-                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Alert ADA</p>
-                            {(() => {
-                                const visible = allAlerts.filter(a => !dismissedAlerts.has(a.key));
-                                if (visible.length === 0) {
-                                    return (
-                                        <p className="text-xs text-gray-500">
-                                            {allAlerts.length > 0
-                                                ? 'Tutti gli alert sono stati ignorati.'
-                                                : 'Nessun alert attivo. Esegui "Analizza con ADA" sulle attività per generarli.'}
-                                        </p>
-                                    );
-                                }
-                                return (
-                                    <ul className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                        {visible.map(alert => (
-                                            <li key={alert.key} className={`flex items-start gap-2 text-xs px-2.5 py-2 rounded-lg border ${alert.urgent ? 'bg-red-900/15 border-red-700/30' : 'bg-amber-900/15 border-amber-700/30'}`}>
-                                                <span className={`flex-shrink-0 mt-0.5 font-mono text-[10px] ${alert.urgent ? 'text-red-400' : 'text-amber-400'}`}>
-                                                    {alert.urgent ? '!!' : '⚠'}
-                                                </span>
-                                                <div className="flex-1 min-w-0">
-                                                    {alert.urgent && (
-                                                        <span className="text-[9px] font-mono uppercase tracking-wider text-red-400 block mb-0.5">urgente</span>
-                                                    )}
-                                                    <p className={alert.urgent ? 'text-red-200' : 'text-amber-200'}>{alert.text}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => setDismissedAlerts(prev => new Set([...prev, alert.key]))}
-                                                    className="flex-shrink-0 text-[9px] font-mono text-gray-600 hover:text-gray-400 ml-1 mt-0.5"
-                                                    title="Ignora alert"
-                                                >
-                                                    Ignora
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                );
-                            })()}
-                        </div>
                     </div>
                 </div>
             </div>

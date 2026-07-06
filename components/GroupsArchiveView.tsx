@@ -121,7 +121,7 @@ const GroupsReportSection: React.FC<GroupsReportSectionProps> = ({ lessons, stud
                 onClick={() => setIsOpen(p => !p)}
                 className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-700/30 transition-colors"
             >
-                <span className="text-sm font-semibold text-white">Report Lavori di Gruppo</span>
+                <span className="text-sm font-semibold text-white">Report Attività di Gruppo</span>
                 <ChevronDownIcon className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             {isOpen && (
@@ -257,6 +257,155 @@ const GroupsReportSection: React.FC<GroupsReportSectionProps> = ({ lessons, stud
     );
 };
 
+// ── Cruscotto per singola attività (dentro l'accordion espanso) ──────────────
+
+interface ActivityDashboardProps {
+    lesson: LessonWithGroups;
+    activities: Activity[];
+}
+
+const ActivityDashboard: React.FC<ActivityDashboardProps> = ({ lesson, activities }) => {
+    const stats = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const deadline = lesson.projectDeadline ? new Date(lesson.projectDeadline) : null;
+        let onTime = 0, lateDone = 0, openOk = 0, openOverdue = 0, memberSum = 0, individual = 0;
+        const uniqueStudents = new Set<string>();
+        for (const g of lesson.groups) {
+            memberSum += g.studentIds.length;
+            if (g.studentIds.length === 1) individual++;
+            g.studentIds.forEach(id => uniqueStudents.add(id));
+            if (g.isComplete) {
+                if (deadline && g.completionDate && new Date(g.completionDate) > deadline) lateDone++;
+                else onTime++;
+            } else {
+                if (deadline && deadline < today) openOverdue++;
+                else openOk++;
+            }
+        }
+        const total = lesson.groups.length;
+        const completed = onTime + lateDone;
+
+        // Osservazioni Ada collegate a questo blocco (via ActivityObservation.blockId)
+        const observations = activities
+            .flatMap(a => (a.observations ?? [])
+                .filter(o => !!lesson.blockId && o.blockId === lesson.blockId)
+                .map(o => ({
+                    activity: a.title,
+                    refId: o.refId,
+                    text: o.text,
+                    sentiment: o.adaInsights?.sentiment,
+                    timestamp: o.timestamp,
+                })))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        const groupNotes = lesson.groups
+            .filter(g => g.notes?.trim())
+            .map(g => ({ group: g.name, note: g.notes!.trim() }));
+
+        return {
+            total, completed, individual,
+            students: uniqueStudents.size,
+            avgSize: total > 0 ? memberSum / total : 0,
+            pctComplete: total > 0 ? Math.round((completed / total) * 100) : 0,
+            onTime, lateDone, openOk, openOverdue,
+            observations, groupNotes,
+        };
+    }, [lesson, activities]);
+
+    if (stats.total === 0) return null;
+
+    const donutSegments = [
+        { label: 'Conclusi in tempo', value: stats.onTime, color: '#10b981' },
+        { label: 'Conclusi oltre scadenza', value: stats.lateDone, color: '#fbbf24' },
+        { label: 'Aperti', value: stats.openOk, color: '#64748b' },
+        { label: 'Aperti oltre scadenza', value: stats.openOverdue, color: '#f43f5e' },
+    ].filter(s => s.value > 0);
+    const donutTotal = donutSegments.reduce((s, x) => s + x.value, 0);
+    const R = 26, CIRC = 2 * Math.PI * R;
+    let accum = 0;
+
+    const sentimentDot: Record<string, string> = { positivo: 'bg-emerald-500', neutro: 'bg-amber-400', critico: 'bg-rose-500' };
+
+    return (
+        <div className="mb-4 rounded-lg bg-gray-900/50 border border-gray-700/40 p-3.5">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-3">Cruscotto attività</p>
+            <div className="flex flex-col sm:flex-row gap-5">
+                {/* Donut stato gruppi */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    <svg width="72" height="72" viewBox="0 0 72 72">
+                        <circle cx="36" cy="36" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" />
+                        {donutSegments.map(seg => {
+                            const frac = seg.value / donutTotal;
+                            const dash = `${(frac * CIRC).toFixed(2)} ${(CIRC - frac * CIRC).toFixed(2)}`;
+                            const offset = -(accum * CIRC);
+                            accum += frac;
+                            return (
+                                <circle key={seg.label} cx="36" cy="36" r={R} fill="none"
+                                    stroke={seg.color} strokeOpacity="0.85" strokeWidth="9"
+                                    strokeDasharray={dash} strokeDashoffset={offset.toFixed(2)}
+                                    transform="rotate(-90 36 36)">
+                                    <title>{seg.label}: {seg.value}</title>
+                                </circle>
+                            );
+                        })}
+                        <text x="36" y="34" textAnchor="middle" fontSize="13" fontWeight="700" fill="white" fontFamily="monospace">{stats.pctComplete}%</text>
+                        <text x="36" y="45" textAnchor="middle" fontSize="5.5" fill="rgba(156,163,175,0.7)" fontFamily="monospace">conclusi</text>
+                    </svg>
+                    <ul className="space-y-0.5">
+                        {donutSegments.map(seg => (
+                            <li key={seg.label} className="flex items-center gap-1.5 text-[9px] font-mono text-gray-400">
+                                <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: seg.color, opacity: 0.85 }} />
+                                {seg.label} · {seg.value}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* KPI */}
+                <div className="flex flex-wrap items-start content-start gap-2">
+                    {[
+                        { label: 'gruppi', value: stats.total },
+                        { label: 'studenti', value: stats.students },
+                        ...(stats.individual > 0 ? [{ label: 'individuali', value: stats.individual }] : []),
+                        { label: 'dim. media', value: stats.avgSize.toFixed(1) },
+                        { label: 'conclusi', value: `${stats.completed}/${stats.total}` },
+                    ].map(kpi => (
+                        <div key={kpi.label} className="flex items-baseline gap-1.5 bg-gray-800/60 border border-gray-700/40 rounded-lg px-2.5 py-1">
+                            <span className="text-base font-display font-bold text-white tabular-nums">{kpi.value}</span>
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-gray-500">{kpi.label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Qualitativo — note gruppo + osservazioni Ada di questa attività */}
+            {(stats.groupNotes.length > 0 || stats.observations.length > 0) && (
+                <div className="mt-3.5">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2">Note e osservazioni</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {stats.groupNotes.map((n, i) => (
+                            <div key={`note-${i}`} className="bg-gray-800/50 border border-gray-700/40 rounded-lg px-2.5 py-1.5 text-xs">
+                                <span className="font-mono text-[9px] uppercase tracking-wider text-gray-500">{n.group}</span>
+                                <p className="text-gray-300 mt-0.5">{n.note}</p>
+                            </div>
+                        ))}
+                        {stats.observations.map((o, i) => (
+                            <div key={`obs-${i}`} className="bg-gray-800/50 border border-gray-700/40 rounded-lg px-2.5 py-1.5 text-xs">
+                                <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-gray-500">
+                                    {o.sentiment && <span className={`w-1.5 h-1.5 rounded-full inline-block ${sentimentDot[o.sentiment]}`} title={`Sentiment: ${o.sentiment}`} />}
+                                    {o.activity}{o.refId ? ` · ${o.refId}` : ''}
+                                </span>
+                                <p className="text-gray-300 mt-0.5">{o.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, students, onClose, masterContext, onUpdateBlock, activities = [], onSelectStudent }) => {
     const [selectedWeek, setSelectedWeek] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -286,6 +435,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                             sortableDate,
                             weekDates: convo.weekPlan.dates,
                             projectDeadline: block.projectDeadline,
+                            blockId: block.id,
                         });
                         weekNumbers.add(convo.weekPlan.weekNumber);
                     }
@@ -373,7 +523,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                         <HomeIcon className="h-4 w-4" />
                     </button>
                     <UsersIcon className="h-5 w-5 text-gray-400" />
-                    <h2 className="text-base font-display font-semibold text-white">Archivio Gruppi di Lavoro</h2>
+                    <h2 className="text-base font-display font-semibold text-white">Attività di Gruppo</h2>
                 </div>
                 <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Chiudi">
                     <XIcon className="h-5 w-5" />
@@ -456,7 +606,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                                             <div className="group">
                                                 <p className="text-sm text-gray-400">Settimana {lesson.weekNumber}: {lesson.weekTheme}</p>
                                                 <h3 className="text-lg text-white mt-1">
-                                                    <strong className="font-bold">Lavoro di Gruppo di {formattedDate}:</strong>{' '}
+                                                    <strong className="font-bold">Attività di Gruppo del {formattedDate}:</strong>{' '}
                                                     <span className="font-normal">{lesson.blockObjective || 'Missione non specificata'}</span>
                                                 </h3>
 
@@ -492,6 +642,7 @@ const GroupsArchiveView: React.FC<GroupsArchiveViewProps> = ({ conversations, st
                                         <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                                             <div className="overflow-hidden">
                                                 <div className="p-4 border-t border-gray-700/50">
+                                                    <ActivityDashboard lesson={lesson} activities={activities} />
                                                     <div className="mb-4 flex items-center gap-4">
                                                         {editingDeadline === lessonId ? (
                                                             <input

@@ -296,7 +296,7 @@ const InAulaBlockItem: React.FC<InAulaBlockItemProps> = memo(({ block, isSelecte
     const showAsCancelled = isCancelled || isLessonLocallyCancelled;
 
     return (
-        <details className={`group/block bg-gray-800/60 rounded-lg border ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/50' : isCancelled ? 'border-red-500/30' : 'border-gray-700/50'} overflow-hidden`}>
+        <details className={`group/block bg-gray-900/40 rounded-lg border ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/50' : isCancelled ? 'border-red-500/30' : 'border-gray-700/40'} overflow-hidden`}>
             <summary className="list-none [&::-webkit-details-marker]:hidden p-4 flex items-start gap-4 cursor-pointer hover:bg-gray-700/30 transition-colors">
                 <div className="flex-shrink-0 pt-1">
                     <input 
@@ -775,57 +775,62 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                 )}
 
                 {/* ── ARCHIVIO: vista completa ──────────────────────────────── */}
-                {activeTab === 'archivio' && <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                    <div className="max-w-6xl mx-auto space-y-6">
+                {activeTab === 'archivio' && <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="max-w-3xl mx-auto p-6 space-y-5">
                         {/* Filters and Actions */}
-                        <div className="p-4 bg-gray-800 rounded-lg border border-gray-700/50 flex flex-col md:flex-row items-center gap-4">
-                            <div className="relative flex-grow w-full md:w-auto">
-                                <SearchIcon className="h-5 w-5 text-gray-400 absolute top-1/2 left-3 -translate-y-1/2" />
-                                <input 
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Cerca per obiettivo, modulo, contenuto..."
-                                    className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500"
-                                />
+                        <div>
+                            <label className="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">
+                                Lezioni archiviate
+                            </label>
+                            <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 p-3 space-y-2.5">
+                                <div className="relative">
+                                    <SearchIcon className="h-4 w-4 text-gray-500 absolute top-1/2 left-3 -translate-y-1/2" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Cerca per obiettivo, modulo, contenuto..."
+                                        className="w-full pl-9 pr-4 py-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                                    />
+                                </div>
+                                <div className="flex flex-col md:flex-row items-center gap-2.5">
+                                    <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="w-full md:flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50">
+                                        <option value="all">Tutte le settimane</option>
+                                        {availableWeeks.map(weekNum => <option key={weekNum} value={weekNum}>Settimana {weekNum}</option>)}
+                                    </select>
+                                    <select value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)} className="w-full md:flex-1 p-2 bg-gray-800 border border-gray-700/60 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50">
+                                        <option value="all">Tutti i moduli</option>
+                                        {availableModules.map(modName => <option key={modName} value={modName}>{modName}</option>)}
+                                    </select>
+                                    <button onClick={() => onFormatMultipleBlocks(selectedBlockIds)} disabled={selectedBlockIds.size === 0} className="w-full md:w-auto flex items-center justify-center gap-2 px-3.5 py-2 text-sm font-medium text-teal-400 border border-teal-500/25 rounded-lg hover:bg-teal-500/10 hover:border-teal-400/40 disabled:opacity-40 transition-colors">
+                                        <ChatBubbleOvalLeftEllipsisIcon className="h-4 w-4" />
+                                        Atelier Creativo ({selectedBlockIds.size})
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2.5 pt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        id="select-all-in-aula"
+                                        checked={selectedBlockIds.size > 0 && selectedBlockIds.size === archivedWeeks.flatMap(w => w.blocks).length}
+                                        onChange={handleSelectAll}
+                                        className="h-4 w-4 rounded border-gray-500 text-blue-500 focus:ring-blue-600 bg-gray-700"
+                                    />
+                                    <label htmlFor="select-all-in-aula" className="text-xs text-gray-400">Seleziona tutto</label>
+                                </div>
                             </div>
-                            <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="w-full md:w-auto bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="all">Tutte le settimane</option>
-                                {availableWeeks.map(weekNum => <option key={weekNum} value={weekNum}>Settimana {weekNum}</option>)}
-                            </select>
-                             <select value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)} className="w-full md:w-auto bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="all">Tutti i moduli</option>
-                                {availableModules.map(modName => <option key={modName} value={modName}>{modName}</option>)}
-                            </select>
-                            <div className="h-px md:h-6 w-full md:w-px bg-gray-700"></div>
-                            <button onClick={() => onFormatMultipleBlocks(selectedBlockIds)} disabled={selectedBlockIds.size === 0} className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50 transition-colors">
-                                <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5" />
-                                Atelier Creativo ({selectedBlockIds.size})
-                            </button>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                id="select-all-in-aula"
-                                checked={selectedBlockIds.size > 0 && selectedBlockIds.size === archivedWeeks.flatMap(w => w.blocks).length}
-                                onChange={handleSelectAll}
-                                className="h-4 w-4 rounded border-gray-500 text-blue-500 focus:ring-blue-600 bg-gray-700"
-                            />
-                             <label htmlFor="select-all-in-aula" className="text-sm text-gray-300">Seleziona tutto</label>
                         </div>
 
                         {archivedWeeks.length > 0 ? (
                             archivedWeeks.map((week, index) => (
-                                <details key={week.weekPlan.weekNumber} className="group/week bg-gray-800 rounded-lg overflow-hidden border border-gray-700/50" open={index === 0}>
-                                    <summary className="list-none [&::-webkit-details-marker]:hidden p-4 flex items-center justify-between cursor-pointer hover:bg-gray-700/50 bg-gray-900/50">
+                                <details key={week.weekPlan.weekNumber} className="group/week rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden" open={index === 0}>
+                                    <summary className="list-none [&::-webkit-details-marker]:hidden px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-700/30 transition-colors">
                                         <div>
                                             <h3 className="font-display font-semibold text-base text-white">Settimana {week.weekPlan.weekNumber} <span className="text-sm font-normal text-gray-400">· {week.weekPlan.dates}</span></h3>
                                             {week.weekPlan.theme && <p className="text-xs font-mono text-gray-500 mt-0.5">{week.weekPlan.theme}</p>}
                                         </div>
-                                        <ChevronDownIcon className="h-6 w-6 text-gray-400 transition-transform duration-300 group-open/week:rotate-180" />
+                                        <ChevronDownIcon className="h-5 w-5 text-gray-400 transition-transform duration-300 group-open/week:rotate-180" />
                                     </summary>
-                                    <div className="p-4 space-y-4">
+                                    <div className="p-4 border-t border-gray-700/40 space-y-4">
                                         {week.blocks.map(block => (
                                             <div key={block.uniqueId} className="relative">
                                               {/* Pulsante Avvia — visibile solo se il blocco non è archiviato */}
@@ -881,9 +886,9 @@ const InAulaView: React.FC<InAulaViewProps> = ({ conversations, onClose, student
                                 </details>
                             ))
                         ) : (
-                            <div className="text-center py-20 px-4 bg-gray-800 rounded-lg border border-gray-700/50">
-                                <BriefcaseIcon className="h-16 w-16 mx-auto text-gray-600" />
-                                <p className="mt-4 text-gray-300 font-semibold">Nessuna lezione archiviata</p>
+                            <div className="text-center py-20 px-4 rounded-xl border border-gray-700/50 bg-gray-800/40">
+                                <BriefcaseIcon className="h-14 w-14 mx-auto text-gray-700" />
+                                <p className="mt-4 text-gray-400 font-semibold">Nessuna lezione archiviata</p>
                                 <p className="text-gray-400 text-sm mt-1">
                                     {searchQuery ? "Prova a modificare i filtri di ricerca." : "Le lezioni chiuse compariranno qui dopo essere state archiviate dal tab In Corso."}
                                 </p>

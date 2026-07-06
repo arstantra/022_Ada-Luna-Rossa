@@ -225,10 +225,10 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                         <button
                             onClick={onOpenGroups}
                             className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-300 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-white transition-all"
-                            title="Zoom sul livello Gruppi: report dei lavori di gruppo"
+                            title="Zoom sul livello Gruppi: report delle attività di gruppo"
                         >
                             <UsersIcon className="h-3.5 w-3.5" />
-                            Report Gruppi →
+                            Attività di Gruppo →
                         </button>
                     )}
                 </div>
