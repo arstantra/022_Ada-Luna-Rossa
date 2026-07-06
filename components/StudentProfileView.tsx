@@ -5,6 +5,33 @@ import * as GeminiService from '../services/gemini';
 import * as db from '../services/db';
 import MarkdownRenderer from './MarkdownRenderer';
 import DidacticRadarChart, { type RadarDataPoint } from './DidacticRadarChart';
+import StudentDimensionRadar, { type StudentDimension } from './StudentDimensionRadar';
+
+/** Converte una valutazione testuale in punteggio 0–100 (best effort, null se non interpretabile). */
+const parseEvaluationScore = (value: string): number | null => {
+    const v = value.trim().toLowerCase();
+    const frac = v.match(/(\d+(?:[.,]\d+)?)\s*\/\s*(\d+)/);
+    if (frac) {
+        const num = parseFloat(frac[1].replace(',', '.'));
+        const den = parseInt(frac[2], 10);
+        if (den > 0) return Math.max(0, Math.min(100, Math.round((num / den) * 100)));
+    }
+    const plain = v.match(/^(\d+(?:[.,]\d+)?)$/);
+    if (plain) {
+        const n = parseFloat(plain[1].replace(',', '.'));
+        if (n <= 10) return Math.max(0, Math.min(100, Math.round(n * 10)));
+        if (n <= 100) return Math.round(n);
+        return null;
+    }
+    if (/gravemente insufficiente/.test(v)) return 25;
+    if (/insufficiente/.test(v)) return 40;
+    if (/sufficiente/.test(v)) return 60;
+    if (/discreto/.test(v)) return 68;
+    if (/buono|bene/.test(v)) return 78;
+    if (/distinto/.test(v)) return 88;
+    if (/ottimo|eccellente/.test(v)) return 95;
+    return null;
+};
 
 
 interface StudentProfileViewProps {
@@ -258,6 +285,62 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
             .map(([week, { present, total }]) => ({ week, pct: total > 0 ? Math.round((present / total) * 100) : 0 }));
     }, [conversations, student.id]);
 
+    // ── Lavori di gruppo dello studente (zoom inverso: studente → gruppi) ────
+    const studentGroupWorks = useMemo(() => {
+        const works: { weekNumber: number; day: string; groupName: string; size: number; isComplete: boolean; completionDate?: string; objective?: string }[] = [];
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const [i, block] of convo.weekPlan.blocks.entries()) {
+                const groups = block.allocations?.data.groups ?? [];
+                for (const g of groups) {
+                    if (!g.studentIds.includes(student.id)) continue;
+                    works.push({
+                        weekNumber: convo.weekPlan.weekNumber,
+                        day: block.day || `BL${i + 1}`,
+                        groupName: g.name,
+                        size: g.studentIds.length,
+                        isComplete: !!g.isComplete,
+                        completionDate: g.completionDate,
+                        objective: block.objective,
+                    });
+                }
+            }
+        }
+        return works.sort((a, b) => b.weekNumber - a.weekNumber);
+    }, [conversations, student.id]);
+
+    // ── Dimensioni operative (radar studente) ────────────────────────────────
+    const operationalDimensions = useMemo<StudentDimension[]>(() => {
+        // Partecipazione: % presenze sulle lezioni archiviate
+        const partecipazione = presenzaStats.total > 0 ? presenzaStats.pct : null;
+        // Puntualità: quota di presenze senza ritardo
+        const puntualita = presenzaStats.present > 0
+            ? Math.round(((presenzaStats.present - presenzaStats.late) / presenzaStats.present) * 100)
+            : null;
+        // Completamento: % lavori di gruppo conclusi
+        const completamento = studentGroupWorks.length > 0
+            ? Math.round((studentGroupWorks.filter(w => w.isComplete).length / studentGroupWorks.length) * 100)
+            : null;
+        // Valutazioni: media dei punteggi interpretabili
+        const scores = lessonEvaluations
+            .map(ev => parseEvaluationScore(ev.value))
+            .filter((s): s is number => s !== null);
+        const valutazioni = scores.length > 0
+            ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+            : null;
+        // Segnali Ada: quota di segnali positivi
+        const segnali = adaSignals.length > 0
+            ? Math.round((adaSignals.filter(s => s.type === 'positivo').length / adaSignals.length) * 100)
+            : null;
+        return [
+            { key: 'partecipazione', label: 'Partecipazione', axisLabel: 'Part.', value: partecipazione, detail: presenzaStats.total > 0 ? `${presenzaStats.present}/${presenzaStats.total} lezioni` : undefined },
+            { key: 'puntualita', label: 'Puntualità', axisLabel: 'Punt.', value: puntualita, detail: presenzaStats.late > 0 ? `${presenzaStats.late} ritardi` : undefined },
+            { key: 'completamento', label: 'Completamento', axisLabel: 'Compl.', value: completamento, detail: studentGroupWorks.length > 0 ? `${studentGroupWorks.filter(w => w.isComplete).length}/${studentGroupWorks.length} lavori` : undefined },
+            { key: 'valutazioni', label: 'Valutazioni', axisLabel: 'Valut.', value: valutazioni, detail: scores.length > 0 ? `${scores.length} valutazioni` : undefined },
+            { key: 'segnali', label: 'Segnali Ada', axisLabel: 'Segn.', value: segnali, detail: adaSignals.length > 0 ? `${adaSignals.length} segnali` : undefined },
+        ];
+    }, [presenzaStats, studentGroupWorks, lessonEvaluations, adaSignals]);
+
     const sentimentScore = useMemo<number | null>(() => {
         const values: number[] = [];
         for (const v of Object.values(obsInsights)) {
@@ -497,6 +580,40 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ student, onClos
                 <div className="mt-8">
                     <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80 mb-4">Cruscotto Qualitativo</p>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                        {/* Cella 0 — Radar dimensioni operative */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Radar Operativo</p>
+                            <StudentDimensionRadar dimensions={operationalDimensions} />
+                        </div>
+
+                        {/* Cella 0b — Lavori di Gruppo (zoom studente → gruppi) */}
+                        <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">
+                            <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">Lavori di Gruppo</p>
+                            {studentGroupWorks.length === 0 ? (
+                                <p className="text-xs text-gray-500">Nessun lavoro di gruppo registrato per questo studente.</p>
+                            ) : (
+                                <ul className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                    {studentGroupWorks.map((w, i) => (
+                                        <li key={i} className={`flex items-start gap-2 text-xs px-2.5 py-2 rounded-lg border ${w.isComplete ? 'bg-emerald-900/15 border-emerald-700/25' : 'bg-gray-900/40 border-gray-700/40'}`}>
+                                            <span className={`flex-shrink-0 mt-0.5 w-2 h-2 rounded-full ${w.isComplete ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-mono text-[9px] uppercase tracking-wider text-gray-500">
+                                                    S{w.weekNumber} · {w.day} · {w.groupName}
+                                                    {w.size === 1 && <span className="text-indigo-400/80 ml-1.5">individuale</span>}
+                                                </span>
+                                                {w.objective && <p className="text-gray-300 mt-0.5 truncate" title={w.objective}>{w.objective}</p>}
+                                                <p className={`text-[10px] mt-0.5 ${w.isComplete ? 'text-emerald-400/80' : 'text-gray-500'}`}>
+                                                    {w.isComplete
+                                                        ? `Concluso${w.completionDate ? ` il ${new Date(w.completionDate).toLocaleDateString('it-IT')}` : ''}`
+                                                        : 'In corso'}
+                                                </p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
 
                         {/* Cella 1 — Radar competenze */}
                         <div className="bg-gray-800/55 border border-gray-600/40 rounded-xl p-4">

@@ -449,7 +449,9 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
     const [isAbbinamentoOpen, setIsAbbinamentoOpen] = useState(false);
     const [groupOutputMap, setGroupOutputMap] = useState<Record<string, string>>({});
 
-    const savedGroups = block?.lessonGroups ?? [];
+    // I gruppi vengono salvati in block.allocations.data.groups (handleSaveGroupsForBlock);
+    // block.lessonGroups è un campo legacy mai scritto — fallback per retrocompatibilità DB.
+    const savedGroups = block?.allocations?.data.groups ?? block?.lessonGroups ?? [];
     const [openOutputIds, setOpenOutputIds] = useState<Set<string>>(new Set());
 
     const toggleOutput = (id: string) => setOpenOutputIds(prev => {

@@ -5,7 +5,7 @@ import { fileToAttachment } from '../utils';
 import * as GeminiService from '../services/gemini';
 import { marked } from 'marked';
 import { useProgettazioneCache } from '../contexts/ProgettazioneCacheContext';
-import { GEMINI_API_ERROR_MESSAGE } from '../constants';
+import { GEMINI_API_ERROR_MESSAGE, LESSON_TYPE_LABELS, TEACHING_METHODOLOGY_LABELS } from '../constants';
 
 type UpdateConversationFunction = (convoId: string, updater: Partial<Conversation> | ((convo: Conversation) => Conversation)) => void;
 type ShowToastFunction = (message: string, type?: 'success' | 'info' | 'error') => void;
@@ -353,7 +353,16 @@ export const usePlanning = (updateConversation: UpdateConversationFunction, show
             return { ...convo, weekPlan: { ...convo.weekPlan!, blocks: newBlocks }};
         });
 
-        const blockContextPrompt = `Stai progettando il Blocco ${blockIndex + 1} (${blockBeforeUpdate.day}) per la Settimana ${weekPlan.weekNumber}. Tema della settimana: ${weekPlan.theme}. Stato del blocco: ${blockBeforeUpdate.status}. ${blockBeforeUpdate.objective ? `Obiettivo didattico: ${blockBeforeUpdate.objective}` : ''} ${blockBeforeUpdate.module ? `Modulo di riferimento: ${blockBeforeUpdate.module}` : ''}. Dialoga con l'utente per definire il contenuto di questo blocco. Sii proattivo e fai domande per guidare la progettazione.`;
+        // Contesto pedagogico e logistico del blocco (tipologia = "come", metodologia = "metodo", contesto fisico + esperto)
+        const pedagogicalParts: string[] = [];
+        if (blockBeforeUpdate.tipologia) pedagogicalParts.push(`Modalità pedagogica (come): ${LESSON_TYPE_LABELS[blockBeforeUpdate.tipologia]}`);
+        if (blockBeforeUpdate.metodologia) pedagogicalParts.push(`Approccio metodologico (metodo): ${TEACHING_METHODOLOGY_LABELS[blockBeforeUpdate.metodologia]}`);
+        if (blockBeforeUpdate.isFuoriAula) pedagogicalParts.push(`Contesto fisico: attività FUORI dall'aula${blockBeforeUpdate.luogo ? ` — luogo: ${blockBeforeUpdate.luogo}` : ''}. Tieni conto della logistica dell'uscita nella progettazione.`);
+        if (blockBeforeUpdate.hasExternalExpert) pedagogicalParts.push(`Esperto esterno: la lezione è condotta con un esperto esterno${blockBeforeUpdate.externalExpertName ? ` (${blockBeforeUpdate.externalExpertName})` : ''}. Progetta tenendo conto del suo ruolo.`);
+        if (blockBeforeUpdate.isFslPeriod) pedagogicalParts.push(`Il blocco cade in un periodo FSL (Formazione Scuola-Lavoro).`);
+        const pedagogicalContext = pedagogicalParts.length > 0 ? ` ${pedagogicalParts.join(' ')}` : '';
+
+        const blockContextPrompt = `Stai progettando il Blocco ${blockIndex + 1} (${blockBeforeUpdate.day}) per la Settimana ${weekPlan.weekNumber}. Tema della settimana: ${weekPlan.theme}. Stato del blocco: ${blockBeforeUpdate.status}. ${blockBeforeUpdate.objective ? `Obiettivo didattico: ${blockBeforeUpdate.objective}` : ''} ${blockBeforeUpdate.module ? `Modulo di riferimento: ${blockBeforeUpdate.module}` : ''}.${pedagogicalContext} Dialoga con l'utente per definire il contenuto di questo blocco. Sii proattivo e fai domande per guidare la progettazione.`;
 
         try {
             const responseStream = await GeminiService.streamChatResponse(

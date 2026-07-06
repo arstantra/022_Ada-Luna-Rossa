@@ -8,9 +8,13 @@ interface ClassroomTrendViewProps {
     conversations: Conversation[];
     students: Student[];
     onClose: () => void;
+    /** Drill-down: click su uno studente apre la sua scheda personale */
+    onSelectStudent?: (student: Student) => void;
+    /** Zoom intermedio: apre l'Archivio/Report Gruppi */
+    onOpenGroups?: () => void;
 }
 
-const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, students, onClose }) => {
+const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, students, onClose, onSelectStudent, onOpenGroups }) => {
     // ── Consuntivo data ──────────────────────────────────────────────────────
 
     const archivedBlocks = useMemo(() => {
@@ -104,6 +108,48 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
     const [isConsuntivoOpen, setIsConsuntivoOpen] = useState(true);
     const [isProgVsRealOpen, setIsProgVsRealOpen] = useState(true);
     const [isSentimentOpen, setIsSentimentOpen] = useState(true);
+    const [isDiarioOpen, setIsDiarioOpen] = useState(true);
+
+    // ── KPI di sintesi aula ──────────────────────────────────────────────────
+    const aulaKpi = useMemo(() => {
+        const totalStudents = students.length;
+        let attendanceSum = 0, attendanceCount = 0;
+        const engScore = { basso: 0, medio: 50, alto: 100 } as const;
+        let engSum = 0, engCount = 0;
+        for (const b of archivedBlocks) {
+            if (totalStudents > 0 && (b.presentIds.length > 0 || b.lateIds.length > 0)) {
+                attendanceSum += new Set([...b.presentIds, ...b.lateIds]).size / totalStudents;
+                attendanceCount++;
+            }
+            if (b.engagementLevel) { engSum += engScore[b.engagementLevel]; engCount++; }
+        }
+        return {
+            lessons: archivedBlocks.length,
+            avgAttendance: attendanceCount > 0 ? Math.round((attendanceSum / attendanceCount) * 100) : null,
+            avgEngagement: engCount > 0 ? Math.round(engSum / engCount) : null,
+        };
+    }, [archivedBlocks, students]);
+
+    // ── Diario qualitativo aula (note di classe e di gruppo dalle analisi Ada) ──
+    const diarioEntries = useMemo(() => {
+        const entries: { weekNumber: number; day: string; kind: 'classe' | 'gruppo'; text: string; analyzedAt: string }[] = [];
+        for (const convo of conversations) {
+            if (!convo.weekPlan) continue;
+            for (const [i, block] of convo.weekPlan.blocks.entries()) {
+                const analysis = block.lessonNoteAnalysis;
+                if (!analysis) continue;
+                const weekNumber = convo.weekPlan.weekNumber;
+                const day = block.day || `BL${i + 1}`;
+                for (const note of analysis.classNotes ?? []) {
+                    entries.push({ weekNumber, day, kind: 'classe', text: note, analyzedAt: analysis.analyzedAt });
+                }
+                for (const gn of analysis.groupNotes ?? []) {
+                    entries.push({ weekNumber, day, kind: 'gruppo', text: gn.groupId ? `[${gn.groupId}] ${gn.note}` : gn.note, analyzedAt: analysis.analyzedAt });
+                }
+            }
+        }
+        return entries.sort((a, b) => new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime());
+    }, [conversations]);
 
     const [activities, setActivities] = useState<Activity[]>([]);
     useEffect(() => {
@@ -162,6 +208,31 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
             </div>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
 
+                {/* ── KPI di sintesi + zoom ─────────────────────────────────────── */}
+                <div className="flex flex-wrap items-center gap-2.5 mb-6">
+                    {[
+                        { label: 'lezioni archiviate', value: String(aulaKpi.lessons) },
+                        { label: 'presenza media', value: aulaKpi.avgAttendance !== null ? `${aulaKpi.avgAttendance}%` : '–' },
+                        { label: 'engagement medio', value: aulaKpi.avgEngagement !== null ? `${aulaKpi.avgEngagement}/100` : '–' },
+                        { label: 'alert attivi', value: String(attendanceAlerts.length) },
+                    ].map(kpi => (
+                        <div key={kpi.label} className="flex items-baseline gap-1.5 bg-gray-800/50 border border-gray-700/40 rounded-lg px-3 py-1.5">
+                            <span className="text-lg font-display font-bold text-white tabular-nums">{kpi.value}</span>
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-gray-500">{kpi.label}</span>
+                        </div>
+                    ))}
+                    {onOpenGroups && (
+                        <button
+                            onClick={onOpenGroups}
+                            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-300 border border-gray-700/80 rounded-lg hover:border-gray-500 hover:text-white transition-all"
+                            title="Zoom sul livello Gruppi: report dei lavori di gruppo"
+                        >
+                            <UsersIcon className="h-3.5 w-3.5" />
+                            Report Gruppi →
+                        </button>
+                    )}
+                </div>
+
                 {/* ── Sezione Monitoraggio Consuntivo ───────────────────────────── */}
                 <div className="rounded-xl border border-gray-600/55 bg-gray-800/30 mb-6 overflow-hidden">
                     <button
@@ -202,7 +273,13 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                                                             const presentCount = recentBlocks.filter(b => b.presentIds.includes(s.id) || b.lateIds.includes(s.id)).length;
                                                             return (
                                                                 <tr key={s.id}>
-                                                                    <td className="pr-3 text-gray-400 whitespace-nowrap py-0.5 max-w-[120px] truncate">{s.name}</td>
+                                                                    <td className="pr-3 whitespace-nowrap py-0.5 max-w-[120px] truncate">
+                                                                        {onSelectStudent ? (
+                                                                            <button onClick={() => onSelectStudent(s)} className="text-gray-400 hover:text-white hover:underline" title={`Apri la scheda di ${s.name}`}>{s.name}</button>
+                                                                        ) : (
+                                                                            <span className="text-gray-400">{s.name}</span>
+                                                                        )}
+                                                                    </td>
                                                                     {recentBlocks.map((b, i) => {
                                                                         const isLate = b.lateIds.includes(s.id);
                                                                         const isPresent = b.presentIds.includes(s.id);
@@ -435,9 +512,15 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                                                 : !inRightHalf && inTopHalf ? '#0ea5e9'
                                                 : inRightHalf && !inTopHalf ? '#f59e0b'
                                                 : '#f43f5e';
+                                            const studentObj = students.find(st => st.id === s.id);
                                             return (
-                                                <circle key={s.id} cx={cx} cy={cy} r="6" fill={fill} fillOpacity="0.85" stroke="rgba(255,255,255,0.15)" strokeWidth="1">
-                                                    <title>{s.name} — engagement: {Math.round(s.engagement * 100)}%, qualità: {Math.round(s.sentiment * 100)}%</title>
+                                                <circle
+                                                    key={s.id} cx={cx} cy={cy} r="6" fill={fill} fillOpacity="0.85"
+                                                    stroke="rgba(255,255,255,0.15)" strokeWidth="1"
+                                                    style={onSelectStudent ? { cursor: 'pointer' } : undefined}
+                                                    onClick={() => { if (onSelectStudent && studentObj) onSelectStudent(studentObj); }}
+                                                >
+                                                    <title>{s.name} — engagement: {Math.round(s.engagement * 100)}%, qualità: {Math.round(s.sentiment * 100)}%{onSelectStudent ? ' (click per aprire la scheda)' : ''}</title>
                                                 </circle>
                                             );
                                         })}
@@ -453,6 +536,38 @@ const ClassroomTrendView: React.FC<ClassroomTrendViewProps> = ({ conversations, 
                                     <p className="text-[10px] font-mono text-gray-600 text-center">
                                         Posizione calcolata su presenze (asse X) e sentiment medio osservazioni Ada (asse Y). Hover per nome.
                                     </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Sezione Diario Qualitativo (note classe/gruppo dalle analisi Ada) ── */}
+                <div className="rounded-xl border border-gray-600/55 bg-gray-800/30 mb-6 overflow-hidden">
+                    <button
+                        onClick={() => setIsDiarioOpen(p => !p)}
+                        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-700/30 transition-colors"
+                    >
+                        <span className="text-sm font-semibold text-white">Diario Qualitativo</span>
+                        <ChevronDownIcon className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isDiarioOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isDiarioOpen && (
+                        <div className="border-t border-gray-700/50 p-5">
+                            {diarioEntries.length === 0 ? (
+                                <p className="text-sm text-gray-500 text-center py-4">
+                                    Nessuna nota qualitativa. Le note compaiono quando analizzi con Ada gli appunti liberi delle lezioni (Lezione → In Corso).
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                    {diarioEntries.map((e, i) => (
+                                        <div key={i} className="bg-gray-900/50 border border-gray-700/40 rounded-lg px-3 py-2 text-xs">
+                                            <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-gray-500">
+                                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${e.kind === 'classe' ? 'bg-indigo-400/80' : 'bg-teal-400/80'}`} />
+                                                S{e.weekNumber} · {e.day} · {e.kind}
+                                            </span>
+                                            <p className="text-gray-300 mt-0.5">{e.text}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

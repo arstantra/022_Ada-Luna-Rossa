@@ -802,6 +802,59 @@ const ContestoFisicoChart: React.FC<{ rows: ContestoRow[] }> = ({ rows }) => {
   );
 };
 
+// ── Incrocio Metodologia × Contesto fisico (fuori aula) ──────────────────────
+
+interface MetodoContestoRow { metodologia: TeachingMethodology; inAula: number; fuoriAula: number; total: number }
+
+const MetodologiaContestoChart: React.FC<{ rows: MetodoContestoRow[] }> = ({ rows }) => {
+  if (rows.length === 0) return null;
+  return (
+    <div className="space-y-1.5 mt-3 pt-3 border-t border-gray-700/40">
+      <p className="text-[9px] font-mono tracking-[0.12em] uppercase text-gray-600 mb-1.5">Metodologia × contesto</p>
+      {rows.map(row => {
+        const fuoriPct = row.total > 0 ? (row.fuoriAula / row.total) * 100 : 0;
+        const inAulaPct = 100 - fuoriPct;
+        return (
+          <div key={row.metodologia} className="flex items-center gap-2">
+            <span
+              className="text-[9px] font-mono text-gray-500 flex-shrink-0 truncate"
+              style={{ width: 100 }}
+              title={TEACHING_METHODOLOGY_LABELS[row.metodologia]}
+            >
+              {TEACHING_METHODOLOGY_LABELS[row.metodologia]}
+            </span>
+            <div className="flex-1 flex h-3.5 rounded-sm overflow-hidden bg-gray-900/60">
+              {row.inAula > 0 && (
+                <div
+                  className="h-full bg-indigo-500/40 flex items-center justify-center transition-all"
+                  style={{ width: `${inAulaPct}%` }}
+                  title={`In aula: ${row.inAula} bl.`}
+                >
+                  {inAulaPct > 20 && (
+                    <span className="text-[7px] font-mono text-indigo-300/80 tabular-nums">{row.inAula}</span>
+                  )}
+                </div>
+              )}
+              {row.fuoriAula > 0 && (
+                <div
+                  className="h-full bg-teal-500/50 flex items-center justify-center transition-all"
+                  style={{ width: `${fuoriPct}%` }}
+                  title={`Fuori aula: ${row.fuoriAula} bl.`}
+                >
+                  {fuoriPct > 15 && (
+                    <span className="text-[7px] font-mono text-teal-300/80 tabular-nums">{row.fuoriAula}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <span className="text-[8px] font-mono text-gray-700 flex-shrink-0 tabular-nums w-6 text-right">{row.total}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // ── Componente principale ─────────────────────────────────────────────────────
 
 const GanttView: React.FC<GanttViewProps> = ({
@@ -1077,6 +1130,26 @@ const GanttView: React.FC<GanttViewProps> = ({
     return [...map.entries()]
       .map(([module, { inAula, fuoriAula }]) => ({ module, inAula, fuoriAula, total: inAula + fuoriAula }))
       .filter(r => r.fuoriAula > 0) // mostra solo moduli con almeno 1 blocco fuori aula
+      .sort((a, b) => b.fuoriAula - a.fuoriAula);
+  }, [conversations]);
+
+  // ── Incrocio metodologia × contesto fisico (solo metodologie con ≥1 blocco fuori aula) ──
+  const metodoContestoRows = useMemo((): MetodoContestoRow[] => {
+    const map = new Map<TeachingMethodology, { inAula: number; fuoriAula: number }>();
+    conversations.forEach(conv => {
+      if (!conv.weekPlan) return;
+      conv.weekPlan.blocks.forEach(block => {
+        if (block.status === 'saltato' || block.status === 'annullato') return;
+        if (!block.metodologia) return;
+        if (!map.has(block.metodologia)) map.set(block.metodologia, { inAula: 0, fuoriAula: 0 });
+        const entry = map.get(block.metodologia)!;
+        if (block.isFuoriAula) entry.fuoriAula++;
+        else entry.inAula++;
+      });
+    });
+    return [...map.entries()]
+      .map(([metodologia, { inAula, fuoriAula }]) => ({ metodologia, inAula, fuoriAula, total: inAula + fuoriAula }))
+      .filter(r => r.fuoriAula > 0)
       .sort((a, b) => b.fuoriAula - a.fuoriAula);
   }, [conversations]);
 
@@ -1393,6 +1466,7 @@ const GanttView: React.FC<GanttViewProps> = ({
               <span className="text-[9px] font-mono text-teal-600/60">{contestoRows.reduce((s, r) => s + r.fuoriAula, 0)} fuori aula</span>
             </div>
             <ContestoFisicoChart rows={contestoRows} />
+            <MetodologiaContestoChart rows={metodoContestoRows} />
           </div>
         )}
 

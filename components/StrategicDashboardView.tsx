@@ -39,9 +39,13 @@ interface StrategicDashboardViewProps {
     allActivities?: Activity[];
     showToast: (message: string, type: 'success' | 'info' | 'error') => void;
     teacherProfile: string;
+    /** Coda dei contenuti: archivia un contenuto distaccato (resta nella storia, esce dalla coda) */
+    onArchiveDetached?: (convoId: string, detachedId: string) => void;
+    /** Coda dei contenuti: ricolloca un contenuto distaccato sul primo blocco libero */
+    onRelocateDetached?: (convoId: string, detachedId: string) => void;
 }
 
-const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, allActivities: allActivitiesProp, showToast, teacherProfile }) => {
+const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ conversations, weeks, modules, contentUnits, progettazioneText, onClose, onUpdateWeekTheme, onUpdateBlockObjective, onUpdateBlockSubject, onUpdateBlockTitle, onGenerateStrategicSuggestions, onSaveStrategicData, onGenerateBlockDetails, onUpdateWeekDetails, onUpdateBlockDetails, onStartPlanning, onUpdateBlockModule, onUpdateBlockStatus, onUpdateBlockTipologia, onUpdateBlockMetodologia, parsedMethodologies, fslPeriods, onToggleExternalExpert, onUpdateExternalExpertName, onToggleFuoriAula, onUpdateLuogo, allActivities: allActivitiesProp, showToast, teacherProfile, onArchiveDetached, onRelocateDetached }) => {
     const [generatingThemeFor, setGeneratingThemeFor] = useState<number | null>(null);
     const [objectiveModalInfo, setObjectiveModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
     const [titleModalInfo, setTitleModalInfo] = useState<{ weekNumber: number; blockIndex: number; } | null>(null);
@@ -363,12 +367,17 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
     };
 
     // ── Contenuti in sospeso (blocchi saltati con contenuto da ricollocare) ─────
-    const pendingContentCount = useMemo(() => {
-        return conversations.reduce((acc, c) => {
-            const active = (c.pendingContent || []).filter(d => !d.archiviata);
-            return acc + active.length;
-        }, 0);
+    const pendingItems = useMemo(() => {
+        const items: { convoId: string; item: import('../types').DetachedLesson }[] = [];
+        for (const c of conversations) {
+            for (const d of c.pendingContent || []) {
+                if (!d.archiviata) items.push({ convoId: c.id, item: d });
+            }
+        }
+        return items.sort((a, b) => new Date(b.item.detachedAt).getTime() - new Date(a.item.detachedAt).getTime());
     }, [conversations]);
+    const pendingContentCount = pendingItems.length;
+    const [isQueueOpen, setIsQueueOpen] = useState(false);
 
     // ── Progresso globale del corso ────────────────────────────────────────────
     const progressStats = useMemo(() => {
@@ -463,13 +472,63 @@ const StrategicDashboardView: React.FC<StrategicDashboardViewProps> = ({ convers
                         {pendingContentCount > 0 && (
                             <>
                                 <span className="w-px h-3 bg-gray-800/70 flex-shrink-0" />
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-mono text-amber-400/90 whitespace-nowrap" title="Contenuti distaccati da blocchi saltati, in attesa di collocazione">
+                                <button
+                                    onClick={() => setIsQueueOpen(p => !p)}
+                                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-[10px] font-mono text-amber-400/90 whitespace-nowrap hover:bg-amber-500/20 hover:border-amber-400/40 transition-colors"
+                                    title="Contenuti distaccati da blocchi saltati, in attesa di collocazione — click per gestire la coda"
+                                >
                                     <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
                                     {pendingContentCount} {pendingContentCount === 1 ? 'contenuto in sospeso' : 'contenuti in sospeso'}
-                                </span>
+                                    <ChevronDownIcon className={`h-3 w-3 transition-transform duration-200 ${isQueueOpen ? 'rotate-180' : ''}`} />
+                                </button>
                             </>
                         )}
                     </div>
+
+                    {/* ── Coda dei contenuti (pannello inline) ─────────────────── */}
+                    {isQueueOpen && pendingContentCount > 0 && (
+                        <div className="px-6 pb-3">
+                            <div className="rounded-xl border border-amber-500/25 bg-gray-800/55 p-3.5 space-y-2">
+                                <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-400/80">Coda dei contenuti</p>
+                                {pendingItems.map(({ convoId, item }) => (
+                                    <div key={item.id} className="flex items-start gap-3 bg-gray-900/50 rounded-lg border border-gray-600/40 px-3 py-2.5">
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[9px] font-mono uppercase tracking-wider text-gray-500">
+                                                da Settimana {item.sourceWeekNumber} · {item.sourceDay} · staccato il {new Date(item.detachedAt).toLocaleDateString('it-IT')}
+                                                {item.distribuita && <span className="text-sky-400/80 ml-1.5">distribuito su Classroom</span>}
+                                            </span>
+                                            <p className="text-sm text-gray-200 mt-0.5 truncate" title={item.objective || item.lessonTitle}>
+                                                {item.lessonTitle || item.objective || 'Contenuto senza titolo'}
+                                            </p>
+                                            {item.objective && item.lessonTitle && (
+                                                <p className="text-xs text-gray-500 truncate" title={item.objective}>{item.objective}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            {onRelocateDetached && (
+                                                <button
+                                                    onClick={() => onRelocateDetached(convoId, item.id)}
+                                                    className="px-2.5 py-1 text-[11px] font-medium text-white bg-blue-600/80 rounded-lg hover:bg-blue-500 shadow-sm shadow-blue-900/40 transition-colors"
+                                                    title="Ricolloca sul primo blocco libero disponibile"
+                                                >
+                                                    Rimanda
+                                                </button>
+                                            )}
+                                            {onArchiveDetached && (
+                                                <button
+                                                    onClick={() => onArchiveDetached(convoId, item.id)}
+                                                    className="px-2.5 py-1 text-[11px] text-gray-300 hover:text-white rounded-md hover:bg-gray-800/60 transition-colors"
+                                                    title="Archivia: resta nella storia del corso, esce dalla coda"
+                                                >
+                                                    Archivia
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </header>
 
                 <div className="print-header hidden">

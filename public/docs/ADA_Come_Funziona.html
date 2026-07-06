@@ -928,7 +928,7 @@ footer {
         <div class="sat-name">Andamento &amp;<br>Studenti</div>
         <div class="sat-items">
           Andamento Aula<br>
-          Studenti
+          Gruppi · Studenti
         </div>
         <div class="sat-badge badge-green">📊 cruscotti live</div>
       </div>
@@ -984,11 +984,11 @@ footer {
       <div class="items-grid">
         <div class="item-card">
           <div class="item-title">Progettazione del Corso</div>
-          <div class="item-desc">Organizza settimane e blocchi. Per ogni blocco: obiettivo didattico, titolo per gli studenti, tipologia di lezione, approccio metodologico. Ada suggerisce — tu decidi.</div>
+          <div class="item-desc">Organizza settimane e blocchi. Per ogni blocco: obiettivo didattico, titolo per gli studenti, tipologia di lezione, approccio metodologico. Ada suggerisce — tu decidi. Se salti un blocco già progettato, il contenuto finisce nella <strong>Coda dei contenuti</strong> (badge ambra nell'header): da lì puoi rimandarlo al primo blocco libero o archiviarlo.</div>
         </div>
         <div class="item-card">
           <div class="item-title">Analisi del Corso</div>
-          <div class="item-desc">Gantt attività per modulo. Heatmap tipologie × argomenti. Matrice metodologie. Radar di equilibrio didattico (frontale, lab, verifica, discussione).</div>
+          <div class="item-desc">Gantt attività per modulo. Heatmap tipologie × argomenti. Matrice metodologie. Radar di equilibrio didattico (frontale, lab, verifica, discussione). Contesto fisico con incrocio metodologia × fuori aula.</div>
           <div class="item-badge" style="background:#1e3a5f; color:#93c5fd; border:1px solid #3b82f620;">📊 cruscotto di progetto</div>
         </div>
       </div>
@@ -1046,16 +1046,33 @@ footer {
       </div>
     </div>
     <div class="detail-body">
-      <p class="detail-desc">I dati raccolti durante le lezioni diventano leggibili. Presenze, tipologie effettive, trend per studente — visualizzati nei cruscotti, non sepolti nelle tabelle.</p>
+      <p class="detail-desc">I dati raccolti durante le lezioni diventano leggibili su tre livelli di zoom: <strong>Aula → Gruppi → Studente</strong>. Report grafici quantitativi e qualitativi, in sola lettura — Ada non genera nulla qui, mostra ciò che hai già raccolto.</p>
       <div class="items-grid">
         <div class="item-card">
           <div class="item-title">Andamento Aula</div>
-          <div class="item-desc">Cruscotto consuntivo: presenze aggregate, distribuzione tipologie di lezione effettive, radar didattico di quanto hai fatto davvero rispetto a quanto pianificato.</div>
-          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 cruscotto consuntivo</div>
+          <div class="item-desc">Livello classe: KPI di sintesi (presenza media, engagement, alert), heatmap presenze, radar consuntivo vs progettato, sentiment aula a quadranti e Diario Qualitativo con le note di classe estratte da Ada. Click su uno studente per aprire la sua scheda.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · aula</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Report Gruppi</div>
+          <div class="item-desc">Livello gruppi: stato dei lavori (conclusi in tempo, in ritardo, aperti), dimensione dei gruppi — anche da uno solo, marcati "individuale" — partecipazione per studente e note qualitative dei gruppi. In cima all'Archivio Gruppi.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · gruppi</div>
         </div>
         <div class="item-card">
           <div class="item-title">Studenti</div>
-          <div class="item-desc">Profilo per studente: presenze, valutazioni, segnali Ada nel tempo. Vista classe aggregata e profilo individuale con trend.</div>
+          <div class="item-desc">Livello individuale: Radar Operativo a 5 dimensioni (partecipazione, puntualità, completamento, valutazioni, segnali Ada), lavori di gruppo dello studente, trend presenze, sentiment e alert.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · studente</div>
+        </div>
+      </div>
+      <div class="cruscotto-box">
+        <div class="icon">🔍</div>
+        <div>
+          <div class="cruscotto-label">La visione a zoom</div>
+          <div class="cruscotto-text">
+            Da <strong>Andamento Aula</strong> il pulsante "Report Gruppi →" scende al livello gruppi;<br>
+            da lì il click su uno studente apre la sua <em>Scheda Personale</em>, che a sua volta elenca i suoi lavori di gruppo.<br>
+            Stessa storia, tre altezze di osservazione.
+          </div>
         </div>
       </div>
       <div class="cruscotto-box">

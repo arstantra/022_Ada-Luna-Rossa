@@ -286,6 +286,74 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
     setPendingSaltaInfo(null);
   };
 
+  // ── Coda dei contenuti (DetachedLesson) ────────────────────────────────────
+  // "Archivia": il contenuto resta nella storia del corso ma esce dalla coda attiva.
+  const handleArchiveDetachedLesson = (convoId: string, detachedId: string) => {
+    updateConversation(convoId, c => ({
+      ...c,
+      pendingContent: (c.pendingContent || []).map(d =>
+        d.id === detachedId ? { ...d, archiviata: true } : d
+      ),
+    }));
+    showToast('Contenuto archiviato nella storia del corso.', 'info');
+  };
+
+  // "Rimanda": ricolloca il contenuto sul primo blocco libero disponibile
+  // (nessuna rinumerazione, nessuno slittamento a cascata — feature 5 CLAUDE_PROTOCOL).
+  const handleRelocateDetachedLesson = (convoId: string, detachedId: string) => {
+    const sourceConvo = conversationsRef.current.find(c => c.id === convoId);
+    const detached = sourceConvo?.pendingContent?.find(d => d.id === detachedId);
+    if (!detached) return;
+
+    const sorted = conversationsRef.current
+      .filter(c => c.weekPlan)
+      .sort((a, b) => a.weekPlan!.weekNumber - b.weekPlan!.weekNumber);
+
+    let target: { convoId: string; blockIndex: number; weekNumber: number } | null = null;
+    for (const c of sorted) {
+      if (c.weekPlan!.weekNumber < detached.sourceWeekNumber) continue;
+      for (const [i, b] of c.weekPlan!.blocks.entries()) {
+        if (b.status === 'saltato' || b.status === 'annullato') continue;
+        const occupied =
+          b.objective?.trim() ||
+          b.lessonTitle?.trim() ||
+          (b.messages && b.messages.length > 0) ||
+          (b.contentBlocks && b.contentBlocks.length > 0);
+        if (!occupied) {
+          target = { convoId: c.id, blockIndex: i, weekNumber: c.weekPlan!.weekNumber };
+          break;
+        }
+      }
+      if (target) break;
+    }
+
+    if (!target) {
+      showToast('Nessun blocco libero disponibile: libera un blocco futuro o archivia il contenuto.', 'error');
+      return;
+    }
+
+    updateConversation(target.convoId, c => {
+      if (!c.weekPlan) return c;
+      const newBlocks = [...c.weekPlan.blocks];
+      newBlocks[target!.blockIndex] = {
+        ...newBlocks[target!.blockIndex],
+        objective: detached.objective,
+        lessonTitle: detached.lessonTitle,
+        lessonSyllabus: detached.lessonSyllabus,
+        messages: detached.messages,
+        contentBlocks: detached.contentBlocks,
+      };
+      return { ...c, weekPlan: { ...c.weekPlan, blocks: newBlocks } };
+    });
+    updateConversation(convoId, c => ({
+      ...c,
+      pendingContent: (c.pendingContent || []).map(d =>
+        d.id === detachedId ? { ...d, archiviata: true } : d
+      ),
+    }));
+    showToast(`Contenuto ricollocato: Settimana ${target.weekNumber}, Blocco ${target.blockIndex + 1}.`, 'success');
+  };
+
   return {
     applyBlockStatus,
     handleUpdateBlockModule,
@@ -298,5 +366,7 @@ export function createBlockStatusHandlers(deps: BlockStatusDeps) {
     handleToggleFuoriAula,
     handleUpdateLuogo,
     handleSaltaChoice,
+    handleArchiveDetachedLesson,
+    handleRelocateDetachedLesson,
   };
 }

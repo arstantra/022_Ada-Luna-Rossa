@@ -741,4 +741,531 @@ footer {
   .ada-node { grid-column: 1; width: 140px; height: 140px; margin: 0 auto; }
   .hub-svg { display: none; }
   .can-grid { grid-template-columns: 1fr; }
-  .tools-grid { grid-template-col
+  .tools-grid { grid-template-columns: 1fr; }
+  .tab-preview { grid-template-columns: 1fr; }
+  .cruscotto-box { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="eyebrow">ada · assistente didattico · guida</div>
+  <h1 class="page-title">Come funziona <em>Ada</em></h1>
+  <p class="page-subtitle">Ada è al centro del tuo lavoro. Non sostituisce il registro elettronico, né il libro di testo — sta in mezzo: pensa con te, ricorda il contesto, ti accompagna in aula.</p>
+
+  <!-- ══════════════════════════════════
+       IL PAESAGGIO DEGLI STRUMENTI
+  ══════════════════════════════════ -->
+  <div class="ls-section-label">il paesaggio degli strumenti</div>
+
+  <div class="ls-grid">
+
+    <!-- Libro di testo -->
+    <div class="ls-card ls-book">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">📚</div>
+        <div>
+          <div class="ls-card-name">Il Libro di Testo</div>
+          <div class="ls-card-role">il programma</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Organizza i contenuti disciplinari</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Propone sequenze e esercizi</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> È un <em>programma</em>, non un progetto: dice <em>cosa</em>, non <em>come</em></div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non conosce la tua classe, i tuoi studenti, il tuo contesto</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non si adatta né si aggiorna</div>
+      </div>
+    </div>
+
+    <!-- Google Classroom -->
+    <div class="ls-card ls-classroom">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">🎓</div>
+        <div>
+          <div class="ls-card-name">Google Classroom</div>
+          <div class="ls-card-role">la distribuzione</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Distribuisce compiti e materiali</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Mantiene il contatto con gli studenti</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Raccoglie consegne in modo ordinato</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> Distribuisce in modo <em>standard</em>: lo stesso per tutti</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non personalizza per le individualità</div>
+        <div style="margin-top:8px;"><span class="ls-ada-badge">✦ integrato con Ada</span></div>
+      </div>
+    </div>
+
+    <!-- Registro elettronico -->
+    <div class="ls-card ls-registro">
+      <div class="ls-card-head">
+        <div class="ls-card-icon">📋</div>
+        <div>
+          <div class="ls-card-name">Il Registro Elettronico</div>
+          <div class="ls-card-role">il documento ufficiale</div>
+        </div>
+      </div>
+      <div class="ls-card-body">
+        <div class="ls-row"><span class="ls-check">✓</span> Registra presenze e voti ufficiali</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Ha valore legale, è obbligatorio</div>
+        <div class="ls-row"><span class="ls-check">✓</span> Comunica con famiglie e segreteria</div>
+        <hr class="ls-sep">
+        <div class="ls-row"><span class="ls-x">✕</span> Non ragiona: è un archivio, non uno strumento di insegnamento</div>
+        <div class="ls-row"><span class="ls-x">✕</span> Non aiuta a capire <em>perché</em> uno studente è in difficoltà</div>
+      </div>
+    </div>
+
+  </div><!-- /.ls-grid -->
+
+  <!-- Il gap -->
+  <div class="gap-box">
+    <div class="gap-eyebrow">il gap</div>
+    <div class="gap-title">Cosa manca ancora</div>
+    <p class="gap-text">
+      Abbiamo strumenti per i <em>contenuti</em>, per la <em>distribuzione</em> e per la <em>documentazione ufficiale</em>.
+      Non abbiamo ancora nulla per la parte più importante: progettare <em>come</em> insegnare —
+      con quale ritmo, quale approccio metodologico, quale attenzione alle individualità.
+    </p>
+    <div class="gap-items">
+      <div class="gap-item">Come adattare il ritmo alla classe reale</div>
+      <div class="gap-item">Come tenere conto delle individualità degli studenti</div>
+      <div class="gap-item">Come collegare obiettivo, metodo e pratica quotidiana</div>
+      <div class="gap-item">Come riflettere su quello che è successo davvero in aula</div>
+    </div>
+  </div>
+
+  <!-- Bridge ad Ada -->
+  <div class="ada-bridge">
+    <span class="ab-spark">✦</span>
+    <p class="ab-text">
+      <strong>Ada colma questo spazio.</strong>
+      Non sostituisce nessuno degli strumenti sopra — li integra e aggiunge il livello che mancava:
+      la progettazione didattica consapevole, contestualizzata alla tua classe, che impara con te nel tempo.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════
+       HUB DIAGRAM
+  ══════════════════════════════════ -->
+  <div class="hub-outer">
+    <div class="hub" id="hub">
+
+      <!-- SVG overlay per le linee -->
+      <svg class="hub-svg" id="hub-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg-blue"   x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="lg-gray"   x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#6b7280" stop-opacity="0.3"/>
+          </linearGradient>
+          <linearGradient id="lg-indigo" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="lg-green"  x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <!-- TOP: Contenuti del Corso -->
+      <div class="sat sat-top" id="sat-top">
+        <div class="sat-num">02 · contenuti del corso</div>
+        <div class="sat-name">Progettazione &amp;<br>Analisi</div>
+        <div class="sat-items">
+          Progettazione del Corso<br>
+          Analisi del Corso
+        </div>
+        <div class="sat-badge badge-blue">📊 cruscotti visivi</div>
+      </div>
+
+      <!-- LEFT: Gestione del Corso -->
+      <div class="sat sat-left" id="sat-left">
+        <div class="sat-num">01 · gestione del corso</div>
+        <div class="sat-name">Setup &amp;<br>Fondamenta</div>
+        <div class="sat-items">
+          Documenti Fondanti<br>
+          La Rotta<br>
+          Personalità di Ada
+        </div>
+      </div>
+
+      <!-- CENTER: Ada -->
+      <div class="ada-node" id="ada-node">
+        <span class="ada-spark ada-spark-a">✦</span>
+        <span class="ada-spark ada-spark-b">✦</span>
+        <span class="ada-spark ada-spark-c">✦</span>
+        <span class="ada-spark ada-spark-d">✦</span>
+        <span class="ada-spark-main">✦</span>
+        <div class="ada-name">Ada</div>
+        <div class="ada-tag">sempre con te</div>
+      </div>
+
+      <!-- RIGHT: In Aula -->
+      <div class="sat sat-right" id="sat-right">
+        <div class="sat-num">03 · in aula</div>
+        <div class="sat-name">Lezione &amp;<br>Strumenti</div>
+        <div class="sat-items">
+          Preparazione · In Corso<br>
+          Archivio · Toolkit<br>
+          Notebook · Gruppi
+        </div>
+        <div class="sat-badge badge-indigo">✦ ai in aula</div>
+      </div>
+
+      <!-- BOTTOM: Monitoraggio -->
+      <div class="sat sat-bottom" id="sat-bottom">
+        <div class="sat-num">04 · monitoraggio</div>
+        <div class="sat-name">Andamento &amp;<br>Studenti</div>
+        <div class="sat-items">
+          Andamento Aula<br>
+          Gruppi · Studenti
+        </div>
+        <div class="sat-badge badge-green">📊 cruscotti live</div>
+      </div>
+
+    </div><!-- /.hub -->
+  </div><!-- /.hub-outer -->
+
+
+  <!-- ══════════════════════════════════
+       SEZIONI DETTAGLIO
+  ══════════════════════════════════ -->
+  <div class="section-label">Il flusso del tuo lavoro</div>
+
+  <!-- 01 — Gestione del Corso -->
+  <div class="detail-section ds-gestione">
+    <div class="detail-header">
+      <div class="detail-icon">⚙️</div>
+      <div>
+        <div class="detail-num">01 · si inizia da qui</div>
+        <div class="detail-name">Gestione del Corso</div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <p class="detail-desc">Prima di entrare in aula, costruisci le fondamenta. Questi documenti danno ad Ada il contesto preciso del tuo corso — senza di loro i suggerimenti restano generici.</p>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-title">Documenti Fondanti</div>
+          <div class="item-desc">Profilo del corso, Progetto Didattico, Patto Formativo, Equipaggio. Ada li legge e li usa come base per tutto ciò che genera.</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">La Rotta</div>
+          <div class="item-desc">Il calendario strutturato: quando ci sono le settimane, quanti blocchi per settimana, le date lunedì–domenica. Da qui nascono le card in Progettazione.</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Personalità di Ada</div>
+          <div class="item-desc">Istruzioni di sistema: il tono di Ada, il suo stile comunicativo, le priorità che hai scelto per come si comporta con te.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 — Contenuti del Corso -->
+  <div class="detail-section ds-contenuti">
+    <div class="detail-header">
+      <div class="detail-icon">📚</div>
+      <div>
+        <div class="detail-num">02 · pianifica e analizza</div>
+        <div class="detail-name">Contenuti del Corso</div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <p class="detail-desc">La progressione del corso, blocco per blocco. Ada ti suggerisce obiettivi e titoli per gli studenti. I cruscotti ti mostrano se il corso è bilanciato prima ancora di iniziare.</p>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-title">Progettazione del Corso</div>
+          <div class="item-desc">Organizza settimane e blocchi. Per ogni blocco: obiettivo didattico, titolo per gli studenti, tipologia di lezione, approccio metodologico. Ada suggerisce — tu decidi. Se salti un blocco già progettato, il contenuto finisce nella <strong>Coda dei contenuti</strong> (badge ambra nell'header): da lì puoi rimandarlo al primo blocco libero o archiviarlo.</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Analisi del Corso</div>
+          <div class="item-desc">Gantt attività per modulo. Heatmap tipologie × argomenti. Matrice metodologie. Radar di equilibrio didattico (frontale, lab, verifica, discussione). Contesto fisico con incrocio metodologia × fuori aula.</div>
+          <div class="item-badge" style="background:#1e3a5f; color:#93c5fd; border:1px solid #3b82f620;">📊 cruscotto di progetto</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 — In Aula -->
+  <div class="detail-section ds-aula">
+    <div class="detail-header">
+      <div class="detail-icon">🏫</div>
+      <div>
+        <div class="detail-num">03 · ogni giorno in classe</div>
+        <div class="detail-name">In Aula</div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <p class="detail-desc">La lezione come flusso in tre momenti. Ada è presente in tutti e tre: prepara con te, annota durante, analizza dopo.</p>
+      <div class="tab-preview">
+        <div class="tab-pane">
+          <div class="tab-pane-num">TAB 01</div>
+          <div class="tab-pane-name">Preparazione</div>
+          <div class="tab-pane-list">Materiali lezione<br>Suggerimenti tool Ada<br>Gruppi di lavoro<br>Link Classroom</div>
+        </div>
+        <div class="tab-pane">
+          <div class="tab-pane-num">TAB 02</div>
+          <div class="tab-pane-name">In Corso</div>
+          <div class="tab-pane-list">Presenze P / A / R<br>Valutazioni rapide<br>Note libere<br>Analisi Ada delle note</div>
+        </div>
+        <div class="tab-pane">
+          <div class="tab-pane-num">TAB 03</div>
+          <div class="tab-pane-name">Archivio</div>
+          <div class="tab-pane-list">Storico lezioni<br>Riepilogo presenze<br>Contenuto master<br>Analisi retrospettiva</div>
+        </div>
+      </div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-title">Laboratorio Blocco</div>
+          <div class="item-desc">Lo spazio di co-progettazione con Ada per ogni blocco. Chat contestuale al blocco, generazione contenuti, trasferimento al Master.</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Laboratori e Strumenti</div>
+          <div class="item-desc">Toolkit, I Miei Notebook (NotebookLM), Gruppi (archivio + composer Ada). Tutto accessibile senza uscire dall'app.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 — Monitoraggio -->
+  <div class="detail-section ds-monitor">
+    <div class="detail-header">
+      <div class="detail-icon">📊</div>
+      <div>
+        <div class="detail-num">04 · osserva nel tempo</div>
+        <div class="detail-name">Monitoraggio</div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <p class="detail-desc">I dati raccolti durante le lezioni diventano leggibili su tre livelli di zoom: <strong>Aula → Gruppi → Studente</strong>. Report grafici quantitativi e qualitativi, in sola lettura — Ada non genera nulla qui, mostra ciò che hai già raccolto.</p>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-title">Andamento Aula</div>
+          <div class="item-desc">Livello classe: KPI di sintesi (presenza media, engagement, alert), heatmap presenze, radar consuntivo vs progettato, sentiment aula a quadranti e Diario Qualitativo con le note di classe estratte da Ada. Click su uno studente per aprire la sua scheda.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · aula</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Report Gruppi</div>
+          <div class="item-desc">Livello gruppi: stato dei lavori (conclusi in tempo, in ritardo, aperti), dimensione dei gruppi — anche da uno solo, marcati "individuale" — partecipazione per studente e note qualitative dei gruppi. In cima all'Archivio Gruppi.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · gruppi</div>
+        </div>
+        <div class="item-card">
+          <div class="item-title">Studenti</div>
+          <div class="item-desc">Livello individuale: Radar Operativo a 5 dimensioni (partecipazione, puntualità, completamento, valutazioni, segnali Ada), lavori di gruppo dello studente, trend presenze, sentiment e alert.</div>
+          <div class="item-badge" style="background:#052e16; color:#6ee7b7; border:1px solid #10b98120;">📊 zoom · studente</div>
+        </div>
+      </div>
+      <div class="cruscotto-box">
+        <div class="icon">🔍</div>
+        <div>
+          <div class="cruscotto-label">La visione a zoom</div>
+          <div class="cruscotto-text">
+            Da <strong>Andamento Aula</strong> il pulsante "Report Gruppi →" scende al livello gruppi;<br>
+            da lì il click su uno studente apre la sua <em>Scheda Personale</em>, che a sua volta elenca i suoi lavori di gruppo.<br>
+            Stessa storia, tre altezze di osservazione.
+          </div>
+        </div>
+      </div>
+      <div class="cruscotto-box">
+        <div class="icon">📊</div>
+        <div>
+          <div class="cruscotto-label">Due radar, due storie</div>
+          <div class="cruscotto-text">
+            <strong>Analisi del Corso</strong> → radar di progetto: cosa hai pianificato.<br>
+            <em>Andamento Aula</em> → radar consuntivo: cosa hai fatto davvero.<br>
+            Confrontarli rivela gli scostamenti tra intenzione e pratica — e dove aggiustare.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       ADA PUÒ / NON PUÒ
+  ══════════════════════════════════ -->
+  <div class="section-label" style="margin-top:52px;">Ada — cosa sa fare</div>
+  <div class="can-grid">
+    <div class="can-box">
+      <div class="can-label">✦ Ada può aiutarti a</div>
+      <div class="can-item">Generare un titolo accattivante per gli studenti</div>
+      <div class="can-item">Suggerire l'obiettivo didattico di un blocco</div>
+      <div class="can-item">Analizzare le tue note di lezione</div>
+      <div class="can-item">Identificare segnali su singoli studenti</div>
+      <div class="can-item">Suggerire la composizione ottimale dei gruppi</div>
+      <div class="can-item">Consigliare quale tool usare per una lezione</div>
+      <div class="can-item">Costruire documenti del corso (Patto Formativo, ecc.)</div>
+      <div class="can-item">Rispondere a domande sul tuo corso e sulla tua classe</div>
+    </div>
+    <div class="cant-box">
+      <div class="cant-label">○ Ada non fa</div>
+      <div class="cant-item">Inviare comunicazioni a studenti o famiglie</div>
+      <div class="cant-item">Registrare voti ufficiali sul registro elettronico</div>
+      <div class="cant-item">Accedere a dati esterni (Argo, Axios, Classroom…)</div>
+      <div class="cant-item">Generare documenti con valore legale</div>
+      <div class="cant-item">Sostituire la tua valutazione professionale</div>
+      <div class="cant-item">Connettersi a internet durante la lezione</div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       STRUMENTI
+  ══════════════════════════════════ -->
+  <div class="section-label">Laboratori e strumenti</div>
+  <div class="tools-grid">
+    <div class="tool-card">
+      <div class="tool-icon">🧰</div>
+      <div class="tool-title">Toolkit</div>
+      <div class="tool-desc">Link rapidi agli strumenti che usi: Gemini Apps, Microsoft, registro elettronico, libro digitale, risorse disciplinari. Personalizzabile.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-icon">📓</div>
+      <div class="tool-title">I Miei Notebook</div>
+      <div class="tool-desc">Galleria dei tuoi NotebookLM. Aprili con un clic nel browser. Kit di prompt integrato per estrarre contenuti strutturati da incollare in Ada.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-icon">👥</div>
+      <div class="tool-title">Gruppi</div>
+      <div class="tool-desc">Archivio di tutte le composizioni passate. Ada suggerisce nuovi gruppi bilanciati (per abilità, genere, precedenti) in fase di preparazione.</div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       DA DOVE INIZIARE
+  ══════════════════════════════════ -->
+  <div class="section-label">Da dove iniziare</div>
+  <div class="tips-list">
+    <div class="tip">
+      <div class="tip-num">01</div>
+      <div>
+        <div class="tip-title">Compila il Profilo del Corso</div>
+        <div class="tip-desc">Vai in Gestione del Corso → Documenti Fondanti. Il Profilo è il punto di partenza: Ada lo usa come contesto per tutto quello che genera. Senza di lui, i suggerimenti sono generici.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-num">02</div>
+      <div>
+        <div class="tip-title">Incolla il Progetto Didattico</div>
+        <div class="tip-desc">Ada riconosce moduli, UDA, metodologie nel testo. Da quel momento i selettori in Progettazione diventano contestuali al tuo corso specifico.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-num">03</div>
+      <div>
+        <div class="tip-title">Configura La Rotta</div>
+        <div class="tip-desc">Imposta i giorni in cui tieni i blocchi e le date delle settimane. Da lì nascono le card in Progettazione del Corso.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-num">04</div>
+      <div>
+        <div class="tip-title">Aggiungi gli studenti</div>
+        <div class="tip-desc">Con la lista studenti compilata, Ada può lavorare su gruppi, presenze e profili individuali in Monitoraggio.</div>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-num">05</div>
+      <div>
+        <div class="tip-title">Inizia a progettare</div>
+        <div class="tip-desc">Apri Progettazione del Corso, espandi una settimana, compila i blocchi. Collegali ai moduli, scegli tipologia e approccio. Poi clicca "Progetta" per entrare nel Laboratorio con Ada.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       CHAT FOOTER
+  ══════════════════════════════════ -->
+  <div class="chat-footer">
+    <div class="chat-glow"></div>
+    <span class="footer-sparkle">✦</span>
+    <div class="footer-title">Ada è sempre con te</div>
+    <p class="footer-desc">Puoi parlare con Ada in qualsiasi momento — dalla Lobby o dal pulsante "Conversa con Ada" nella sidebar. Non devi aspettare di essere in una sezione specifica.</p>
+    <div class="footer-tag">✦ conversa con ada · disponibile ovunque</div>
+  </div>
+
+  <footer>ada · nuovadidattica.eu</footer>
+
+</div><!-- /.page -->
+
+<script>
+// Disegna le linee SVG di connessione dopo che il DOM è pronto
+window.addEventListener('load', function () {
+  var svg   = document.getElementById('hub-svg');
+  var hub   = document.getElementById('hub');
+  var ada   = document.getElementById('ada-node');
+  var nodes = [
+    { id: 'sat-top',    grad: 'url(#lg-blue)',   delay: '0s'   },
+    { id: 'sat-left',   grad: 'url(#lg-gray)',   delay: '0.6s' },
+    { id: 'sat-right',  grad: 'url(#lg-indigo)', delay: '1.2s' },
+    { id: 'sat-bottom', grad: 'url(#lg-green)',  delay: '1.8s' },
+  ];
+
+  function draw() {
+    // Rimuovi linee vecchie
+    svg.querySelectorAll('.conn-line').forEach(function(el){ el.remove(); });
+
+    var hubR  = hub.getBoundingClientRect();
+    var adaR  = ada.getBoundingClientRect();
+
+    svg.setAttribute('width',   hubR.width);
+    svg.setAttribute('height',  hubR.height);
+    svg.setAttribute('viewBox', '0 0 ' + hubR.width + ' ' + hubR.height);
+
+    var adaCx = adaR.left + adaR.width  / 2 - hubR.left;
+    var adaCy = adaR.top  + adaR.height / 2 - hubR.top;
+    var adaRadius = adaR.width / 2;
+
+    nodes.forEach(function(n) {
+      var el = document.getElementById(n.id);
+      if (!el) return;
+      var r   = el.getBoundingClientRect();
+      var cx  = r.left + r.width  / 2 - hubR.left;
+      var cy  = r.top  + r.height / 2 - hubR.top;
+
+      var dx   = cx - adaCx;
+      var dy   = cy - adaCy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) return;
+
+      // Partenza: bordo del cerchio Ada
+      var sx = adaCx + (dx / dist) * (adaRadius + 2);
+      var sy = adaCy + (dy / dist) * (adaRadius + 2);
+
+      // Arrivo: bordo del rettangolo satellite (approssimato come cerchio di raggio min/2)
+      var nodeR = Math.min(r.width, r.height) / 2;
+      var ex = cx - (dx / dist) * (nodeR + 2);
+      var ey = cy - (dy / dist) * (nodeR + 2);
+
+      var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', sx);
+      line.setAttribute('y1', sy);
+      line.setAttribute('x2', ex);
+      line.setAttribute('y2', ey);
+      line.setAttribute('stroke', n.grad);
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '5 4');
+      line.setAttribute('stroke-linecap', 'round');
+      line.classList.add('conn-line');
+      line.style.animationDelay = n.delay;
+      svg.appendChild(line);
+    });
+  }
+
+  draw();
+  window.addEventListener('resize', draw);
+});
+</script>
+</body>
+</html>

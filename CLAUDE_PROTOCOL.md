@@ -103,16 +103,18 @@ Implementazione: aggiungere `pendingContent?: DetachedLesson[]` su `Conversation
 - [x] `ObjectiveSuggestionModal` (3 varianti Sintetico/Bilanciato/Articolato)
 - [x] `classroomUrl` in `LessonPreparationTab`
 - [x] `ContestoFisicoChart` in GanttView (fuori aula per modulo)
+- [x] Contesto AI blocchi: `metodologia`, `isFuoriAula`/`luogo`, esperto esterno e `isFslPeriod` iniettati nel `blockContextPrompt` di `usePlanning.ts` (2026-07-06)
+- [x] `MetodologiaContestoChart` in GanttView: incrocio metodologia × fuori aula, sotto ContestoFisicoChart (2026-07-06)
+- [x] Radar dimensioni operative studente: `StudentDimensionRadar.tsx` (partecipazione, puntualità, completamento, valutazioni, segnali Ada — 0–100, `n.d.` se senza dati) in StudentProfileView (2026-07-06)
+- [x] Coda dei contenuti — UI: badge cliccabile in StrategicDashboardView apre pannello inline con Rimanda (primo blocco libero, no slittamenti) / Archivia. Handler `handleRelocateDetachedLesson` / `handleArchiveDetachedLesson` in `blockHandlers_status.ts` (2026-07-06)
+- [x] Monitoraggio a zoom Aula → Gruppi → Studente: KPI + Diario Qualitativo in ClassroomTrendView, `GroupsReportSection` in GroupsArchiveView (gruppi anche da 1 = "individuale"), drill-down click-studente ovunque (2026-07-06)
+- [x] Fix bug: `LessonPreparationTab` leggeva `block.lessonGroups` (mai scritto) — ora legge `block.allocations.data.groups` (2026-07-06)
 
 ### Da fare
-- [ ] `gemini.ts`: iniettare `metodologia` e `isFuoriAula`/`luogo` nel contesto AI dei blocchi (attualmente non passati al LLM)
-- [ ] `ContestoFisicoChart`: incrocio metodologia x fuori aula
 - [ ] Laboratorio di Preparazione Fasi A/B/C — spec in `docs/PROMPT_PREPARAZIONE.md`
-- [ ] Dimensioni radar per studente: mappatura EQF vs dimensioni operative (partecipazione, autonomia, completamento, comprensione)
-- [ ] Formato `DetachedLesson` e punto di ingresso UI per la coda contenuti (feature 5 — Coda dei contenuti)
 - [ ] URL Classroom costruibili dai dati ADA (classe, compito, attività asincrona)
 - [ ] Verifica sommativa in fase di progettazione (gap consapevole — ADA delega a Classroom via link)
 
 ---
 
-*Ultima revisione: 2026-06-05*
+*Ultima revisione: 2026-07-06*
