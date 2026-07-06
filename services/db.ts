@@ -106,6 +106,8 @@ export interface BackupData {
     notebooks: Notebook[];
     toolkit_shortcuts: ToolkitShortcut[];
     toolkit_categories: ToolkitCategory[];
+    /** v3 — opzionale per retrocompatibilità con i backup v2 */
+    activities?: Activity[];
     settings: { key: string, value: any }[];
 }
 
@@ -134,6 +136,9 @@ export const restoreFromBackup = async (data: BackupData): Promise<void> => {
         data.toolkit_shortcuts.forEach(item => putPromises.push(tx.objectStore(TOOLKIT_SHORTCUTS_STORE).put(item)));
         if (data.toolkit_categories) {
             data.toolkit_categories.forEach(item => putPromises.push(tx.objectStore(TOOLKIT_CATEGORIES_STORE).put(item)));
+        }
+        if (data.activities) { // v3 — assente nei backup v2
+            data.activities.forEach(item => putPromises.push(tx.objectStore(ACTIVITIES_STORE).put(item)));
         }
         data.settings.forEach(item => putPromises.push(tx.objectStore(SETTINGS_STORE).put(item.value, item.key)));
         

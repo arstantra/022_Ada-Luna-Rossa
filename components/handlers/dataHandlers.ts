@@ -36,7 +36,7 @@ export function createDataHandlers(deps: DataHandlerDeps) {
     showToast('Creazione del backup in corso...', 'info');
     try {
       const backupData = {
-        version: 2,
+        version: 3, // v3: aggiunge activities (retrocompatibile in import: campo opzionale)
         timestamp: new Date().toISOString(),
         data: {
           conversations: await db.getAllConversations(),
@@ -45,6 +45,7 @@ export function createDataHandlers(deps: DataHandlerDeps) {
           notebooks: await db.getAllNotebooks(),
           toolkit_shortcuts: await db.getAllShortcuts(),
           toolkit_categories: await db.getAllCategories(),
+          activities: await db.getAllActivities(),
           settings: await db.getAllSettings(),
         },
       };
