@@ -26,3 +26,6 @@ dist-ssr
 # Windows system files
 desktop.ini
 Thumbs.db
+
+# Materiali di lavoro non versionati (escluso da commit/push)
+_archivio/
