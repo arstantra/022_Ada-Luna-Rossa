@@ -1131,7 +1131,8 @@ const LessonPreparationTab: React.FC<LessonPreparationTabProps> = ({
                                                                 const specialStudent = groupStudents.find(s => s?.hasBES || s?.hasDSA || s?.hasPEI);
                                                                 if (specialStudent && hasSpecialNeeds) {
                                                                     const type = specialStudent.hasPEI ? 'PEI' : specialStudent.hasDSA ? 'DSA' : 'BES';
-                                                                    const notes = (type === 'BES' ? specialStudent.besNotes : type === 'DSA' ? specialStudent.dsaNotes : specialStudent.peiNotes) ?? '';
+                                                                    // Solo strumenti e misure: mai note sanitarie
+                                                                    const notes = [...(specialStudent.measures ?? []), specialStudent.otherMeasures].filter(Boolean).join('; ');
                                                                     handleGenerateOutput(outputType, group.name, { type, name: specialStudent.name, notes });
                                                                 } else {
                                                                     handleGenerateOutput(outputType, group.name);

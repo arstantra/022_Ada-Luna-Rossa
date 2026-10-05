@@ -82,7 +82,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       </div>
 
       <p className="text-center text-xs text-gray-700 font-mono">
-        Ada · Powered by Gemini API · I dati restano nel tuo browser
+        Ada · Gemini (Google) · L'archivio resta nel browser, le richieste vanno a Google
       </p>
     </div>
   );

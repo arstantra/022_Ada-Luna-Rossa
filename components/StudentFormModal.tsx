@@ -1,56 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Student } from '../types';
 import { XIcon } from './Icons';
+import { STUDENT_MEASURES } from '../constants';
+import { normalizeStudentCode, isValidStudentCode, findSensitiveTerms } from '../utils';
+
+/**
+ * Scheda studente — SOLO CODICI.
+ * Ada non conosce nomi e cognomi: lo studente è identificato da un codice (es. "S07")
+ * generato fuori da Ada. Al posto delle note sanitarie ci sono "Strumenti e misure":
+ * cosa serve per lavorare, mai il perché.
+ */
 
 interface StudentFormData {
-    firstName: string;
-    lastName: string;
+    code: string;
     hasBES: boolean;
     hasDSA: boolean;
     hasPEI: boolean;
-    besNotes: string;
-    dsaNotes: string;
-    peiNotes: string;
-    certificationNotes: string;
+    measures: string[];
+    otherMeasures: string;
     notes: string;
 }
 
 interface StudentFormModalProps {
     /** Studente da modificare, oppure null per nuovo inserimento */
     student?: Student | null;
+    /** Codici già presenti nella classe (per evitare duplicati) */
+    existingCodes?: string[];
     onSave: (data: Omit<Student, 'id' | 'evaluations' | 'adaSummary'>) => void;
     onClose: () => void;
 }
 
 const emptyForm = (): StudentFormData => ({
-    firstName: '',
-    lastName: '',
+    code: '',
     hasBES: false,
     hasDSA: false,
     hasPEI: false,
-    besNotes: '',
-    dsaNotes: '',
-    peiNotes: '',
-    certificationNotes: '',
+    measures: [],
+    otherMeasures: '',
     notes: '',
 });
 
-const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, onClose }) => {
+/** Il profilo contiene campi del vecchio formato (nome reale, note BES/DSA/PEI, certificazioni)? */
+const hasLegacyData = (s: Student): boolean =>
+    !!(s.firstName || s.lastName || s.besNotes || s.dsaNotes || s.peiNotes || s.certificationNotes) ||
+    !isValidStudentCode(normalizeStudentCode(s.name));
+
+const labelCls = 'block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5';
+const inputCls = 'w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors';
+
+const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, existingCodes = [], onSave, onClose }) => {
     const [form, setForm] = useState<StudentFormData>(() => {
         if (!student) return emptyForm();
+        const legacyCode = normalizeStudentCode(student.name);
         return {
-            firstName: student.firstName ?? student.name.split(' ').slice(0, -1).join(' '),
-            lastName:  student.lastName  ?? student.name.split(' ').at(-1) ?? '',
+            code: isValidStudentCode(legacyCode) ? legacyCode : '',
             hasBES: student.hasBES ?? false,
             hasDSA: student.hasDSA ?? false,
             hasPEI: student.hasPEI ?? false,
-            besNotes: student.besNotes ?? '',
-            dsaNotes: student.dsaNotes ?? '',
-            peiNotes: student.peiNotes ?? '',
-            certificationNotes: student.certificationNotes ?? '',
+            measures: student.measures ?? [],
+            otherMeasures: student.otherMeasures ?? '',
             notes: student.notes ?? '',
         };
     });
+    const showLegacyWarning = !!student && hasLegacyData(student);
 
     // Chiudi con Escape
     useEffect(() => {
@@ -62,28 +74,64 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
     const set = <K extends keyof StudentFormData>(key: K, value: StudentFormData[K]) =>
         setForm(prev => ({ ...prev, [key]: value }));
 
+    const toggleMeasure = (m: string) =>
+        setForm(prev => ({
+            ...prev,
+            measures: prev.measures.includes(m) ? prev.measures.filter(x => x !== m) : [...prev.measures, m],
+        }));
+
+    const code = normalizeStudentCode(form.code);
+    const otherCodes = existingCodes
+        .map(normalizeStudentCode)
+        .filter(c => !student || c !== normalizeStudentCode(student.name));
+    const codeError = !code
+        ? ''
+        : !isValidStudentCode(code)
+            ? 'Solo lettere, cifre e trattini, con almeno una cifra (es. S07). Niente nomi.'
+            : otherCodes.includes(code)
+                ? 'Codice già presente in questa classe.'
+                : '';
+
+    const sensitiveTerms = useMemo(
+        () => Array.from(new Set([...findSensitiveTerms(form.otherMeasures), ...findSensitiveTerms(form.notes)])),
+        [form.otherMeasures, form.notes]
+    );
+
+    const isValid = !!code && !codeError && sensitiveTerms.length === 0;
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const firstName = form.firstName.trim();
-        const lastName = form.lastName.trim();
-        if (!firstName || !lastName) return;
-        const name = `${firstName} ${lastName}`;
+        if (!isValid) return;
         onSave({
-            name,
-            firstName,
-            lastName,
+            name: code,
             hasBES: form.hasBES || undefined,
             hasDSA: form.hasDSA || undefined,
             hasPEI: form.hasPEI || undefined,
-            besNotes: form.besNotes.trim() || undefined,
-            dsaNotes: form.dsaNotes.trim() || undefined,
-            peiNotes: form.peiNotes.trim() || undefined,
-            certificationNotes: form.certificationNotes.trim() || undefined,
+            measures: form.measures.length > 0 ? form.measures : undefined,
+            otherMeasures: form.otherMeasures.trim() || undefined,
             notes: form.notes.trim() || undefined,
+            // Campi del vecchio formato: eliminati a ogni salvataggio
+            firstName: undefined,
+            lastName: undefined,
+            besNotes: undefined,
+            dsaNotes: undefined,
+            peiNotes: undefined,
+            certificationNotes: undefined,
         });
     };
 
-    const isValid = form.firstName.trim() && form.lastName.trim();
+    const flagBtn = (key: 'hasBES' | 'hasDSA' | 'hasPEI', label: string, on: string, dot: string) => (
+        <button
+            type="button"
+            onClick={() => set(key, !form[key])}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
+                form[key] ? on : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-400 hover:border-gray-600/50'
+            }`}
+        >
+            <span className={`w-2 h-2 rounded-full ${form[key] ? dot : 'bg-gray-600'}`} />
+            {label}
+        </button>
+    );
 
     return (
         /* Overlay */
@@ -91,11 +139,11 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
-            <div className="relative w-full max-w-md bg-gray-850 border border-gray-700/60 rounded-2xl shadow-2xl overflow-hidden"
+            <div className="relative w-full max-w-md max-h-[90vh] flex flex-col bg-gray-850 border border-gray-700/60 rounded-2xl shadow-2xl overflow-hidden"
                  style={{ backgroundColor: '#161b22' }}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
+                <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
                     <h3 className="text-sm font-semibold text-white">
                         {student ? 'Modifica studente' : 'Aggiungi studente'}
                     </h3>
@@ -104,159 +152,103 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({ student, onSave, on
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-                    {/* Nome + Cognome */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                                Nome <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                                autoFocus
-                                type="text"
-                                value={form.firstName}
-                                onChange={e => set('firstName', e.target.value)}
-                                placeholder="es. Sofia"
-                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                                Cognome <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={form.lastName}
-                                onChange={e => set('lastName', e.target.value)}
-                                placeholder="es. Bianchi"
-                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors"
-                            />
-                        </div>
+                <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5 overflow-y-auto">
+                    {showLegacyWarning && (
+                        <p className="text-[11px] leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+                            Questo profilo è nel vecchio formato (nome reale o note BES/DSA/PEI/certificazioni).
+                            Al salvataggio quei campi vengono eliminati: assegna un codice e indica solo strumenti e misure.
+                        </p>
+                    )}
+
+                    {/* Codice */}
+                    <div>
+                        <label className={labelCls}>
+                            Codice studente <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                            autoFocus
+                            type="text"
+                            value={form.code}
+                            onChange={e => set('code', e.target.value.toUpperCase())}
+                            placeholder="es. S07"
+                            maxLength={10}
+                            className={`${inputCls} font-mono tracking-wider`}
+                        />
+                        {codeError
+                            ? <p className="mt-1.5 text-[11px] text-red-400">{codeError}</p>
+                            : <p className="mt-1.5 text-[11px] text-gray-500">Mai nomi né cognomi: la corrispondenza codice ↔ studente la tieni fuori da Ada.</p>}
                     </div>
 
-                    {/* Separatore BES/DSA */}
+                    {/* Inclusione */}
                     <div className="pt-1">
                         <p className="text-[9px] font-mono tracking-[0.14em] uppercase text-gray-500/70 mb-3">
                             Inclusione
                         </p>
                         <div className="flex gap-3">
-                            {/* Toggle BES */}
-                            <button
-                                type="button"
-                                onClick={() => set('hasBES', !form.hasBES)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
-                                    form.hasBES
-                                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
-                                        : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-400 hover:border-gray-600/50'
-                                }`}
-                            >
-                                <span className={`w-2 h-2 rounded-full ${form.hasBES ? 'bg-amber-400' : 'bg-gray-600'}`} />
-                                BES
-                            </button>
-                            {/* Toggle DSA */}
-                            <button
-                                type="button"
-                                onClick={() => set('hasDSA', !form.hasDSA)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
-                                    form.hasDSA
-                                        ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
-                                        : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-400 hover:border-gray-600/50'
-                                }`}
-                            >
-                                <span className={`w-2 h-2 rounded-full ${form.hasDSA ? 'bg-blue-400' : 'bg-gray-600'}`} />
-                                DSA
-                            </button>
-                            {/* Toggle PEI */}
-                            <button
-                                type="button"
-                                onClick={() => set('hasPEI', !form.hasPEI)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
-                                    form.hasPEI
-                                        ? 'bg-violet-500/15 border-violet-500/40 text-violet-300'
-                                        : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-400 hover:border-gray-600/50'
-                                }`}
-                            >
-                                <span className={`w-2 h-2 rounded-full ${form.hasPEI ? 'bg-violet-400' : 'bg-gray-600'}`} />
-                                PEI
-                            </button>
+                            {flagBtn('hasBES', 'BES', 'bg-amber-500/15 border-amber-500/40 text-amber-300', 'bg-amber-400')}
+                            {flagBtn('hasDSA', 'DSA', 'bg-blue-500/15 border-blue-500/40 text-blue-300', 'bg-blue-400')}
+                            {flagBtn('hasPEI', 'PEI', 'bg-violet-500/15 border-violet-500/40 text-violet-300', 'bg-violet-400')}
                         </div>
+                        <p className="mt-2 text-[10px] font-mono text-red-400/70">Demo: solo profili inventati</p>
                     </div>
 
-                    {/* Note BES */}
-                    {form.hasBES && (
-                        <div>
-                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                                Note BES
-                            </label>
-                            <textarea
-                                value={form.besNotes}
-                                onChange={e => set('besNotes', e.target.value)}
-                                rows={2}
-                                placeholder="Descrivi i bisogni educativi speciali e le misure adottate…"
-                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
-                            />
-                        </div>
-                    )}
-
-                    {/* Note DSA */}
-                    {form.hasDSA && (
-                        <div>
-                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                                Note DSA
-                            </label>
-                            <textarea
-                                value={form.dsaNotes}
-                                onChange={e => set('dsaNotes', e.target.value)}
-                                rows={2}
-                                placeholder="Tipologia DSA, strumenti compensativi, misure dispensative…"
-                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
-                            />
-                        </div>
-                    )}
-
-                    {/* Note PEI */}
-                    {form.hasPEI && (
-                        <div>
-                            <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                                Note PEI
-                            </label>
-                            <textarea
-                                value={form.peiNotes}
-                                onChange={e => set('peiNotes', e.target.value)}
-                                rows={2}
-                                placeholder="Obiettivi del Piano Educativo Individualizzato, supporti, figure di riferimento…"
-                                className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
-                            />
-                        </div>
-                    )}
-
-                    {/* Note certificazioni */}
+                    {/* Strumenti e misure */}
                     <div>
-                        <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                            Note certificazioni / altre segnalazioni
-                        </label>
+                        <label className={labelCls}>Strumenti e misure</label>
+                        <div className="space-y-3">
+                            {STUDENT_MEASURES.map(g => (
+                                <div key={g.group}>
+                                    <p className="text-[10px] text-gray-500 mb-1.5">{g.group}</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {g.items.map(m => {
+                                            const on = form.measures.includes(m);
+                                            return (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => toggleMeasure(m)}
+                                                    aria-pressed={on}
+                                                    className={`text-[11px] px-2 py-1 rounded-md border transition-colors ${
+                                                        on
+                                                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                                            : 'bg-gray-900/50 border-gray-700/40 text-gray-500 hover:text-gray-300 hover:border-gray-600/60'
+                                                    }`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                         <textarea
-                            value={form.certificationNotes}
-                            onChange={e => set('certificationNotes', e.target.value)}
+                            value={form.otherMeasures}
+                            onChange={e => set('otherMeasures', e.target.value)}
                             rows={2}
-                            placeholder="Certificazioni mediche, segnalazioni del consiglio di classe…"
-                            className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
+                            placeholder="Altre misure didattiche (es. consegne lette ad alta voce). Mai diagnosi, certificazioni o informazioni sanitarie."
+                            className={`${inputCls} mt-3 resize-none`}
                         />
                     </div>
 
-                    {/* Note generali */}
+                    {/* Note didattiche */}
                     <div>
-                        <label className="block text-[10px] font-mono tracking-[0.12em] uppercase text-gray-500 mb-1.5">
-                            Note personali
-                        </label>
+                        <label className={labelCls}>Note didattiche</label>
                         <textarea
                             value={form.notes}
                             onChange={e => set('notes', e.target.value)}
                             rows={2}
-                            placeholder="Osservazioni personali, punti di forza, aree di sviluppo…"
-                            className="w-full bg-gray-900/70 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 transition-colors resize-none"
+                            placeholder="Punti di forza, aree di sviluppo, come lavora meglio…"
+                            className={`${inputCls} resize-none`}
                         />
                     </div>
+
+                    {sensitiveTerms.length > 0 && (
+                        <p className="text-[11px] leading-relaxed text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                            Il testo sembra contenere informazioni sanitarie ({sensitiveTerms.join(', ')}).
+                            Riformula descrivendo solo le misure didattiche: cosa serve, non il perché.
+                        </p>
+                    )}
 
                     {/* Footer */}
                     <div className="flex gap-3 pt-1">

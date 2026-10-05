@@ -91,7 +91,7 @@ export const routeCalendarToWeekInfos = (calendar: WeekEntry[]): WeekRouteInfo[]
  */
 export const parseTeacherName = (profile: string): string | null => {
     if (!profile) return null;
-    const match = profile.match(/Nome:\s*(.*)/);
+    const match = profile.match(/Nome:[ \t]*(.*)/); // [ \t]: non deve scavalcare la riga ("Nome:" vuoto)
     const name = match ? match[1].trim() : null;
     return name && name.length > 0 ? name : null;
 };
@@ -407,4 +407,47 @@ export const generateCourseBookHtml = (
         </body>
         </html>
     `;
+};
+
+// ── Privacy: codici studente e filtro termini sanitari ─────────────────────────
+
+/** Normalizza un codice studente: maiuscolo, senza spazi. */
+export const normalizeStudentCode = (raw: string): string =>
+    raw.toUpperCase().replace(/\s+/g, '');
+
+/**
+ * Un codice valido contiene solo lettere, cifre e trattini, almeno una cifra,
+ * 2-10 caratteri (es. "S07", "3B-12"). Esclude nomi propri ("MARCO").
+ */
+export const isValidStudentCode = (code: string): boolean =>
+    /^(?=.*\d)[A-Z0-9-]{2,10}$/.test(code);
+
+const SENSITIVE_PATTERNS: { re: RegExp; label: string }[] = [
+    { re: /\bdiagnos\w*/i, label: 'diagnosi' },
+    { re: /\bcertificaz\w*|\bcertificat[oaie]\b/i, label: 'certificazione' },
+    { re: /\bsindrom\w*/i, label: 'sindrome' },
+    { re: /\bdisturb\w*/i, label: 'disturbo' },
+    { re: /\bpatolog\w*/i, label: 'patologia' },
+    { re: /\bmalatti\w*/i, label: 'malattia' },
+    { re: /\bterapi\w*|\bterapeut\w*/i, label: 'terapia' },
+    { re: /\bfarmac\w*/i, label: 'farmaci' },
+    { re: /\bneuropsich\w*|\bpsichiatr\w*/i, label: 'neuropsichiatria' },
+    { re: /\bautis\w*|\bADHD\b|\basperger\b/i, label: 'condizione clinica' },
+    { re: /\bdisless\w*|\bdiscalcul\w*|\bdisgraf\w*|\bdisortograf\w*/i, label: 'tipologia DSA' },
+    { re: /\bepiless\w*|\bdiabet\w*|\basma\b|\ballergi\w*/i, label: 'condizione sanitaria' },
+    { re: /\binvalidit\w*|\blegge\s*104\b|\bL\.?\s*104\b/i, label: 'legge 104 / invalidità' },
+    { re: /\bICD[- ]?\d*|\bDSM[- ]?\d*|\bF\d{2}(\.\d)?\b/, label: 'codice clinico' },
+];
+
+/**
+ * Restituisce le etichette dei termini sanitari trovati nel testo (vuoto se nessuno).
+ * Serve a impedire che in Ada finiscano diagnosi o informazioni cliniche.
+ */
+export const findSensitiveTerms = (text: string | undefined): string[] => {
+    if (!text) return [];
+    const found = new Set<string>();
+    for (const { re, label } of SENSITIVE_PATTERNS) {
+        if (re.test(text)) found.add(label);
+    }
+    return Array.from(found);
 };

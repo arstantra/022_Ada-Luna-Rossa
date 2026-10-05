@@ -3,6 +3,9 @@ import { ND_LOGO_B64 } from '../logos';
 
 interface AppHeaderProps {
   disciplina?: string;
+  /** Mostra il badge DEMO (quando la striscia di avviso è stata chiusa) */
+  showDemoBadge?: boolean;
+  onDemoBadgeClick?: () => void;
 }
 
 /*
@@ -21,7 +24,7 @@ const AdaSparkles: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const AppHeader: React.FC<AppHeaderProps> = ({ disciplina }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ disciplina, showDemoBadge, onDemoBadgeClick }) => {
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 backdrop-blur-md"
@@ -69,7 +72,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({ disciplina }) => {
         </span>
       </a>
 
-      {/* Destra: NuovaDidattica.eu — leggero ma leggibile */}
+      {/* Destra: badge DEMO (se l'avviso è chiuso) + NuovaDidattica.eu */}
+      <div className="flex items-center gap-4">
+      {showDemoBadge && (
+        <button
+          type="button"
+          onClick={onDemoBadgeClick}
+          title="Versione dimostrativa: usa solo dati inventati. Clic per i dettagli."
+          className="text-[10px] font-mono font-semibold tracking-[0.2em] px-2 py-0.5 rounded border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors"
+        >
+          DEMO
+        </button>
+      )}
       <a
         href="https://nuovadidattica.eu"
         target="_blank"
@@ -78,6 +92,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ disciplina }) => {
       >
         nuovadidattica.eu
       </a>
+      </div>
     </header>
   );
 };

@@ -1,0 +1,3449 @@
+{
+ "version": 3,
+ "demo": true,
+ "description": "Classe di esempio 3B — interamente fittizia. Studenti identificati solo da codici S01-S22.",
+ "timestamp": "2026-10-05T00:00:00.000Z",
+ "data": {
+  "conversations": [
+   {
+    "id": "demo-conv-week-1",
+    "title": "Settimana 1",
+    "messages": [],
+    "weekPlan": {
+     "weekNumber": 1,
+     "dates": "14-20 set",
+     "totalBlocks": 3,
+     "theme": "Benvenuti in laboratorio",
+     "status": "completata",
+     "completionStatus": "completed",
+     "students": [
+      {
+       "id": "demo-s01",
+       "name": "S01"
+      },
+      {
+       "id": "demo-s02",
+       "name": "S02"
+      },
+      {
+       "id": "demo-s03",
+       "name": "S03"
+      },
+      {
+       "id": "demo-s04",
+       "name": "S04",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s05",
+       "name": "S05"
+      },
+      {
+       "id": "demo-s06",
+       "name": "S06"
+      },
+      {
+       "id": "demo-s07",
+       "name": "S07"
+      },
+      {
+       "id": "demo-s08",
+       "name": "S08"
+      },
+      {
+       "id": "demo-s09",
+       "name": "S09",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s10",
+       "name": "S10"
+      },
+      {
+       "id": "demo-s11",
+       "name": "S11"
+      },
+      {
+       "id": "demo-s12",
+       "name": "S12",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s13",
+       "name": "S13"
+      },
+      {
+       "id": "demo-s14",
+       "name": "S14"
+      },
+      {
+       "id": "demo-s15",
+       "name": "S15",
+       "hasPEI": true
+      },
+      {
+       "id": "demo-s16",
+       "name": "S16"
+      },
+      {
+       "id": "demo-s17",
+       "name": "S17"
+      },
+      {
+       "id": "demo-s18",
+       "name": "S18"
+      },
+      {
+       "id": "demo-s19",
+       "name": "S19",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s20",
+       "name": "S20"
+      },
+      {
+       "id": "demo-s21",
+       "name": "S21"
+      },
+      {
+       "id": "demo-s22",
+       "name": "S22"
+      }
+     ],
+     "activeBlockIndex": 0,
+     "blocks": [
+      {
+       "id": "demo-w1-b1",
+       "day": "Lunedì",
+       "status": "normale",
+       "module": "MODULO 0: Orientamento",
+       "objective": "Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+       "lessonSubject": "Il laboratorio e le sue regole",
+       "blockTitle": "Questa stanza è un attrezzo",
+       "tipologia": "discussione",
+       "metodologia": "tradizionale",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [
+        "demo-s22"
+       ],
+       "lessonNotes": "Classe curiosa, buon clima. S02 e S07 hanno fatto molte domande sul programma. S17 silenziosa ma attenta. Patto formativo letto e discusso.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "alto",
+        "studentSignals": [
+         {
+          "studentId": "demo-s02",
+          "signal": "Interviene spesso e trascina i compagni",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s07",
+          "signal": "Domande pertinenti sul percorso",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s17",
+          "signal": "Poco coinvolta nella discussione",
+          "type": "attenzione"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Clima positivo e collaborativo",
+         "Interesse per le attività pratiche"
+        ],
+        "rawNotes": "Classe curiosa, buon clima. S02 e S07 hanno fatto molte domande sul programma. S17 silenziosa ma attenta. Patto formativo letto e discusso.",
+        "analyzedAt": "2026-09-14T10:00:00.000Z"
+       }
+      },
+      {
+       "id": "demo-w1-b2",
+       "day": "Mercoledì",
+       "status": "normale",
+       "module": "MODULO 0: Orientamento",
+       "objective": "Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+       "lessonSubject": "Osservare un oggetto comune",
+       "blockTitle": "Che cosa ci dice una sedia?",
+       "tipologia": "laboratorio",
+       "metodologia": "cooperative_learning",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s06",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [
+        "demo-s01"
+       ],
+       "lessonNotes": "Lavoro a gruppi sull'osservazione di una sedia. Il gruppo di S15 ha prodotto il disegno più accurato. S09 ha lavorato bene in coppia con S02. Alcuni gruppi lenti nella consegna.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "medio",
+        "studentSignals": [
+         {
+          "studentId": "demo-s15",
+          "signal": "Disegno di osservazione molto accurato",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s09",
+          "signal": "Buon lavoro in coppia",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Tempi di consegna da gestire meglio"
+        ],
+        "rawNotes": "Lavoro a gruppi sull'osservazione di una sedia. Il gruppo di S15 ha prodotto il disegno più accurato. S09 ha lavorato bene in coppia con S02. Alcuni gruppi lenti nella consegna.",
+        "analyzedAt": "2026-09-16T10:00:00.000Z"
+       },
+       "lessonGroups": [
+        {
+         "name": "Gruppo 1",
+         "studentIds": [
+          "demo-s09",
+          "demo-s18",
+          "demo-s06",
+          "demo-s08"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-16T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 2",
+         "studentIds": [
+          "demo-s22",
+          "demo-s21",
+          "demo-s04",
+          "demo-s10"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-16T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 3",
+         "studentIds": [
+          "demo-s16",
+          "demo-s17",
+          "demo-s01",
+          "demo-s11"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-16T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 4",
+         "studentIds": [
+          "demo-s14",
+          "demo-s03",
+          "demo-s19",
+          "demo-s12"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-16T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 5",
+         "studentIds": [
+          "demo-s20",
+          "demo-s02",
+          "demo-s13",
+          "demo-s15"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-16T10:00:00.000Z"
+        }
+       ],
+       "allocations": {
+        "type": "group",
+        "data": {
+         "groups": [
+          {
+           "name": "Gruppo 1",
+           "studentIds": [
+            "demo-s09",
+            "demo-s18",
+            "demo-s06",
+            "demo-s08"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-16T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 2",
+           "studentIds": [
+            "demo-s22",
+            "demo-s21",
+            "demo-s04",
+            "demo-s10"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-16T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 3",
+           "studentIds": [
+            "demo-s16",
+            "demo-s17",
+            "demo-s01",
+            "demo-s11"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-16T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 4",
+           "studentIds": [
+            "demo-s14",
+            "demo-s03",
+            "demo-s19",
+            "demo-s12"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-16T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 5",
+           "studentIds": [
+            "demo-s20",
+            "demo-s02",
+            "demo-s13",
+            "demo-s15"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-16T10:00:00.000Z"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "demo-w1-b3",
+       "day": "Venerdì",
+       "status": "normale",
+       "module": "MODULO 0: Orientamento",
+       "objective": "Riconoscere il design come processo e non solo come forma.",
+       "lessonSubject": "Che cos'è il design",
+       "blockTitle": "Tutto è progettato",
+       "tipologia": "frontale_teorica",
+       "metodologia": "tradizionale",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [],
+       "lessonNotes": "Lezione frontale breve con immagini. Attenzione calata nella seconda ora. S12 ha chiesto di ripetere alcuni passaggi: verificare la posizione in aula.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "basso",
+        "studentSignals": [
+         {
+          "studentId": "demo-s12",
+          "signal": "Fatica a seguire la seconda parte",
+          "type": "attenzione"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Ridurre la durata della parte frontale",
+         "Inserire una pausa attiva"
+        ],
+        "rawNotes": "Lezione frontale breve con immagini. Attenzione calata nella seconda ora. S12 ha chiesto di ripetere alcuni passaggi: verificare la posizione in aula.",
+        "analyzedAt": "2026-09-18T10:00:00.000Z"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "id": "demo-conv-week-2",
+    "title": "Settimana 2",
+    "messages": [],
+    "weekPlan": {
+     "weekNumber": 2,
+     "dates": "21-27 set",
+     "totalBlocks": 3,
+     "theme": "Il colore racconta",
+     "status": "completata",
+     "completionStatus": "completed",
+     "students": [
+      {
+       "id": "demo-s01",
+       "name": "S01"
+      },
+      {
+       "id": "demo-s02",
+       "name": "S02"
+      },
+      {
+       "id": "demo-s03",
+       "name": "S03"
+      },
+      {
+       "id": "demo-s04",
+       "name": "S04",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s05",
+       "name": "S05"
+      },
+      {
+       "id": "demo-s06",
+       "name": "S06"
+      },
+      {
+       "id": "demo-s07",
+       "name": "S07"
+      },
+      {
+       "id": "demo-s08",
+       "name": "S08"
+      },
+      {
+       "id": "demo-s09",
+       "name": "S09",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s10",
+       "name": "S10"
+      },
+      {
+       "id": "demo-s11",
+       "name": "S11"
+      },
+      {
+       "id": "demo-s12",
+       "name": "S12",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s13",
+       "name": "S13"
+      },
+      {
+       "id": "demo-s14",
+       "name": "S14"
+      },
+      {
+       "id": "demo-s15",
+       "name": "S15",
+       "hasPEI": true
+      },
+      {
+       "id": "demo-s16",
+       "name": "S16"
+      },
+      {
+       "id": "demo-s17",
+       "name": "S17"
+      },
+      {
+       "id": "demo-s18",
+       "name": "S18"
+      },
+      {
+       "id": "demo-s19",
+       "name": "S19",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s20",
+       "name": "S20"
+      },
+      {
+       "id": "demo-s21",
+       "name": "S21"
+      },
+      {
+       "id": "demo-s22",
+       "name": "S22"
+      }
+     ],
+     "activeBlockIndex": 0,
+     "blocks": [
+      {
+       "id": "demo-w2-b1",
+       "day": "Lunedì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Conoscere il cerchio cromatico e i principali contrasti di colore.",
+       "lessonSubject": "Cerchio cromatico e contrasti",
+       "blockTitle": "Perché il rosso grida?",
+       "tipologia": "frontale_operativa",
+       "metodologia": "inquiry_based",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s22"
+       ],
+       "lateStudentIds": [],
+       "lessonNotes": "Esercizio sul cerchio cromatico. S04 ha lavorato con la mappa fornita e ha completato tutto. S19 veloce nella parte pratica. S21 assente.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "alto",
+        "studentSignals": [
+         {
+          "studentId": "demo-s04",
+          "signal": "Ha completato l'esercizio con la mappa",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s19",
+          "signal": "Rapido e preciso nella parte pratica",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "La mappa del cerchio cromatico è servita a molti"
+        ],
+        "rawNotes": "Esercizio sul cerchio cromatico. S04 ha lavorato con la mappa fornita e ha completato tutto. S19 veloce nella parte pratica. S21 assente.",
+        "analyzedAt": "2026-09-21T10:00:00.000Z"
+       }
+      },
+      {
+       "id": "demo-w2-b2",
+       "day": "Mercoledì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Costruire una moodboard cromatica a partire da un luogo reale.",
+       "lessonSubject": "Moodboard di colore",
+       "blockTitle": "Una palette per un luogo",
+       "tipologia": "laboratorio",
+       "metodologia": "project_based",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [
+        "demo-s22"
+       ],
+       "lessonNotes": "Moodboard a gruppi. Il gruppo 3 ha discusso molto senza produrre. S17 ha preso l'iniziativa nel gruppo 4. S11 brillante nella scelta delle palette.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "medio",
+        "studentSignals": [
+         {
+          "studentId": "demo-s17",
+          "signal": "Iniziativa nel lavoro di gruppo",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s11",
+          "signal": "Ottime scelte cromatiche",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Dare ruoli espliciti nei gruppi"
+        ],
+        "rawNotes": "Moodboard a gruppi. Il gruppo 3 ha discusso molto senza produrre. S17 ha preso l'iniziativa nel gruppo 4. S11 brillante nella scelta delle palette.",
+        "analyzedAt": "2026-09-23T10:00:00.000Z"
+       },
+       "lessonGroups": [
+        {
+         "name": "Gruppo 1",
+         "studentIds": [
+          "demo-s04",
+          "demo-s18",
+          "demo-s03",
+          "demo-s17"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 2",
+         "studentIds": [
+          "demo-s06",
+          "demo-s02",
+          "demo-s16",
+          "demo-s14"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 3",
+         "studentIds": [
+          "demo-s20",
+          "demo-s13",
+          "demo-s19",
+          "demo-s08"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 4",
+         "studentIds": [
+          "demo-s15",
+          "demo-s07",
+          "demo-s11",
+          "demo-s12"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 5",
+         "studentIds": [
+          "demo-s09",
+          "demo-s05",
+          "demo-s10",
+          "demo-s21"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 6",
+         "studentIds": [
+          "demo-s01",
+          "demo-s22"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-23T10:00:00.000Z"
+        }
+       ],
+       "allocations": {
+        "type": "group",
+        "data": {
+         "groups": [
+          {
+           "name": "Gruppo 1",
+           "studentIds": [
+            "demo-s04",
+            "demo-s18",
+            "demo-s03",
+            "demo-s17"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 2",
+           "studentIds": [
+            "demo-s06",
+            "demo-s02",
+            "demo-s16",
+            "demo-s14"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 3",
+           "studentIds": [
+            "demo-s20",
+            "demo-s13",
+            "demo-s19",
+            "demo-s08"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 4",
+           "studentIds": [
+            "demo-s15",
+            "demo-s07",
+            "demo-s11",
+            "demo-s12"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 5",
+           "studentIds": [
+            "demo-s09",
+            "demo-s05",
+            "demo-s10",
+            "demo-s21"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 6",
+           "studentIds": [
+            "demo-s01",
+            "demo-s22"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-23T10:00:00.000Z"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "demo-w2-b3",
+       "day": "Venerdì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Applicare tre contrasti di colore in una composizione.",
+       "lessonSubject": "Prova pratica sul colore",
+       "blockTitle": "Prova: tre contrasti",
+       "tipologia": "verifica",
+       "metodologia": "tradizionale",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s08",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [],
+       "lessonNotes": "Prova pratica. Applicate le misure previste: tempi aggiuntivi per S04, prova differenziata per S15, verifica orale per S19. Risultati complessivamente buoni.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "alto",
+        "studentSignals": [
+         {
+          "studentId": "demo-s15",
+          "signal": "Prova differenziata completata con autonomia",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Buoni risultati medi",
+         "Ripassare il contrasto di quantità"
+        ],
+        "rawNotes": "Prova pratica. Applicate le misure previste: tempi aggiuntivi per S04, prova differenziata per S15, verifica orale per S19. Risultati complessivamente buoni.",
+        "analyzedAt": "2026-09-25T10:00:00.000Z"
+       },
+       "lessonEvaluations": [
+        {
+         "id": "demo-ev-w2-S01",
+         "studentId": "demo-s01",
+         "value": "8",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S02",
+         "studentId": "demo-s02",
+         "value": "7",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S03",
+         "studentId": "demo-s03",
+         "value": "6",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S04",
+         "studentId": "demo-s04",
+         "value": "6",
+         "type": "pratico",
+         "notes": "Con tempi aggiuntivi",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S05",
+         "studentId": "demo-s05",
+         "value": "7",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S06",
+         "studentId": "demo-s06",
+         "value": "8.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S08",
+         "studentId": "demo-s08",
+         "value": "6",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S10",
+         "studentId": "demo-s10",
+         "value": "8.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S11",
+         "studentId": "demo-s11",
+         "value": "8",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S12",
+         "studentId": "demo-s12",
+         "value": "8.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S13",
+         "studentId": "demo-s13",
+         "value": "6.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S14",
+         "studentId": "demo-s14",
+         "value": "6.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S15",
+         "studentId": "demo-s15",
+         "value": "7.5",
+         "type": "pratico",
+         "notes": "Prova differenziata",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S16",
+         "studentId": "demo-s16",
+         "value": "8",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S17",
+         "studentId": "demo-s17",
+         "value": "7",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S18",
+         "studentId": "demo-s18",
+         "value": "7",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S19",
+         "studentId": "demo-s19",
+         "value": "8",
+         "type": "pratico",
+         "notes": "Integrata con verifica orale",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S20",
+         "studentId": "demo-s20",
+         "value": "9",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S21",
+         "studentId": "demo-s21",
+         "value": "8.5",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        },
+        {
+         "id": "demo-ev-w2-S22",
+         "studentId": "demo-s22",
+         "value": "6",
+         "type": "pratico",
+         "notes": "",
+         "date": "2026-09-25T10:00:00.000Z"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "demo-conv-week-3",
+    "title": "Settimana 3",
+    "messages": [],
+    "weekPlan": {
+     "weekNumber": 3,
+     "dates": "28 set - 4 ott",
+     "totalBlocks": 3,
+     "theme": "Le lettere hanno un carattere",
+     "status": "completata",
+     "completionStatus": "completed",
+     "students": [
+      {
+       "id": "demo-s01",
+       "name": "S01"
+      },
+      {
+       "id": "demo-s02",
+       "name": "S02"
+      },
+      {
+       "id": "demo-s03",
+       "name": "S03"
+      },
+      {
+       "id": "demo-s04",
+       "name": "S04",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s05",
+       "name": "S05"
+      },
+      {
+       "id": "demo-s06",
+       "name": "S06"
+      },
+      {
+       "id": "demo-s07",
+       "name": "S07"
+      },
+      {
+       "id": "demo-s08",
+       "name": "S08"
+      },
+      {
+       "id": "demo-s09",
+       "name": "S09",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s10",
+       "name": "S10"
+      },
+      {
+       "id": "demo-s11",
+       "name": "S11"
+      },
+      {
+       "id": "demo-s12",
+       "name": "S12",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s13",
+       "name": "S13"
+      },
+      {
+       "id": "demo-s14",
+       "name": "S14"
+      },
+      {
+       "id": "demo-s15",
+       "name": "S15",
+       "hasPEI": true
+      },
+      {
+       "id": "demo-s16",
+       "name": "S16"
+      },
+      {
+       "id": "demo-s17",
+       "name": "S17"
+      },
+      {
+       "id": "demo-s18",
+       "name": "S18"
+      },
+      {
+       "id": "demo-s19",
+       "name": "S19",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s20",
+       "name": "S20"
+      },
+      {
+       "id": "demo-s21",
+       "name": "S21"
+      },
+      {
+       "id": "demo-s22",
+       "name": "S22"
+      }
+     ],
+     "activeBlockIndex": 0,
+     "blocks": [
+      {
+       "id": "demo-w3-b1",
+       "day": "Lunedì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Distinguere le principali famiglie di caratteri e il loro uso.",
+       "lessonSubject": "Famiglie di caratteri",
+       "blockTitle": "Graziato o bastoni?",
+       "tipologia": "frontale_teorica",
+       "metodologia": "flipped_classroom",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [],
+       "lessonNotes": "Flipped: video visto a casa da circa metà classe. Discussione vivace. S07 ha portato esempi di insegne del quartiere. S12 al primo banco, segue meglio.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "medio",
+        "studentSignals": [
+         {
+          "studentId": "demo-s07",
+          "signal": "Ha portato esempi reali di insegne",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s12",
+          "signal": "Segue meglio dal primo banco",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Solo metà classe ha visto il video: prevedere un recupero in aula"
+        ],
+        "rawNotes": "Flipped: video visto a casa da circa metà classe. Discussione vivace. S07 ha portato esempi di insegne del quartiere. S12 al primo banco, segue meglio.",
+        "analyzedAt": "2026-09-28T10:00:00.000Z"
+       }
+      },
+      {
+       "id": "demo-w3-b2",
+       "day": "Mercoledì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+       "lessonSubject": "Un manifesto tipografico",
+       "blockTitle": "Una parola, cento voci",
+       "tipologia": "laboratorio",
+       "metodologia": "design_thinking",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s06",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s12",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [
+        "demo-s20"
+       ],
+       "lessonNotes": "Laboratorio sul manifesto. S15 molto motivata con i materiali di ritaglio. S09 si è bloccato sulla consegna lunga: spezzarla in passi ha funzionato. S20 in ritardo.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "alto",
+        "studentSignals": [
+         {
+          "studentId": "demo-s15",
+          "signal": "Molto motivata con i materiali concreti",
+          "type": "positivo"
+         },
+         {
+          "studentId": "demo-s09",
+          "signal": "Si blocca sulle consegne lunghe",
+          "type": "attenzione"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Le consegne in passi aiutano tutta la classe"
+        ],
+        "rawNotes": "Laboratorio sul manifesto. S15 molto motivata con i materiali di ritaglio. S09 si è bloccato sulla consegna lunga: spezzarla in passi ha funzionato. S20 in ritardo.",
+        "analyzedAt": "2026-09-30T10:00:00.000Z"
+       },
+       "lessonGroups": [
+        {
+         "name": "Gruppo 1",
+         "studentIds": [
+          "demo-s03",
+          "demo-s13",
+          "demo-s04",
+          "demo-s07"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 2",
+         "studentIds": [
+          "demo-s02",
+          "demo-s17",
+          "demo-s08",
+          "demo-s18"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 3",
+         "studentIds": [
+          "demo-s19",
+          "demo-s21",
+          "demo-s16",
+          "demo-s01"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 4",
+         "studentIds": [
+          "demo-s12",
+          "demo-s06",
+          "demo-s05",
+          "demo-s10"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 5",
+         "studentIds": [
+          "demo-s09",
+          "demo-s15",
+          "demo-s14",
+          "demo-s20"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        },
+        {
+         "name": "Gruppo 6",
+         "studentIds": [
+          "demo-s22",
+          "demo-s11"
+         ],
+         "justification": "Gruppi eterogenei.",
+         "isComplete": true,
+         "completionDate": "2026-09-30T10:00:00.000Z"
+        }
+       ],
+       "allocations": {
+        "type": "group",
+        "data": {
+         "groups": [
+          {
+           "name": "Gruppo 1",
+           "studentIds": [
+            "demo-s03",
+            "demo-s13",
+            "demo-s04",
+            "demo-s07"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 2",
+           "studentIds": [
+            "demo-s02",
+            "demo-s17",
+            "demo-s08",
+            "demo-s18"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 3",
+           "studentIds": [
+            "demo-s19",
+            "demo-s21",
+            "demo-s16",
+            "demo-s01"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 4",
+           "studentIds": [
+            "demo-s12",
+            "demo-s06",
+            "demo-s05",
+            "demo-s10"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 5",
+           "studentIds": [
+            "demo-s09",
+            "demo-s15",
+            "demo-s14",
+            "demo-s20"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          },
+          {
+           "name": "Gruppo 6",
+           "studentIds": [
+            "demo-s22",
+            "demo-s11"
+           ],
+           "justification": "Gruppi eterogenei.",
+           "isComplete": true,
+           "completionDate": "2026-09-30T10:00:00.000Z"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "demo-w3-b3",
+       "day": "Venerdì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "objective": "Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+       "lessonSubject": "Revisione dei manifesti",
+       "blockTitle": "Critica costruttiva",
+       "tipologia": "discussione",
+       "metodologia": "debate",
+       "messages": [],
+       "lessonState": "archiviata",
+       "isReviewed": true,
+       "presentStudentIds": [
+        "demo-s01",
+        "demo-s02",
+        "demo-s03",
+        "demo-s04",
+        "demo-s05",
+        "demo-s07",
+        "demo-s08",
+        "demo-s09",
+        "demo-s10",
+        "demo-s11",
+        "demo-s13",
+        "demo-s14",
+        "demo-s15",
+        "demo-s16",
+        "demo-s17",
+        "demo-s18",
+        "demo-s19",
+        "demo-s20",
+        "demo-s21",
+        "demo-s22"
+       ],
+       "lateStudentIds": [],
+       "lessonNotes": "Revisione a coppie dei manifesti. Feedback più maturi del previsto. S17 ha difeso bene il proprio lavoro. Qualcuno ancora generico nei commenti.",
+       "lessonNoteAnalysis": {
+        "engagementLevel": "medio",
+        "studentSignals": [
+         {
+          "studentId": "demo-s17",
+          "signal": "Argomenta con sicurezza il proprio lavoro",
+          "type": "positivo"
+         }
+        ],
+        "groupNotes": [],
+        "classNotes": [
+         "Fornire una griglia di feedback"
+        ],
+        "rawNotes": "Revisione a coppie dei manifesti. Feedback più maturi del previsto. S17 ha difeso bene il proprio lavoro. Qualcuno ancora generico nei commenti.",
+        "analyzedAt": "2026-10-02T10:00:00.000Z"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "id": "demo-conv-week-4",
+    "title": "Settimana 4",
+    "messages": [],
+    "weekPlan": {
+     "weekNumber": 4,
+     "dates": "5-11 ott",
+     "totalBlocks": 3,
+     "theme": "Comporre lo spazio della pagina",
+     "status": "in progettazione",
+     "students": [
+      {
+       "id": "demo-s01",
+       "name": "S01"
+      },
+      {
+       "id": "demo-s02",
+       "name": "S02"
+      },
+      {
+       "id": "demo-s03",
+       "name": "S03"
+      },
+      {
+       "id": "demo-s04",
+       "name": "S04",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s05",
+       "name": "S05"
+      },
+      {
+       "id": "demo-s06",
+       "name": "S06"
+      },
+      {
+       "id": "demo-s07",
+       "name": "S07"
+      },
+      {
+       "id": "demo-s08",
+       "name": "S08"
+      },
+      {
+       "id": "demo-s09",
+       "name": "S09",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s10",
+       "name": "S10"
+      },
+      {
+       "id": "demo-s11",
+       "name": "S11"
+      },
+      {
+       "id": "demo-s12",
+       "name": "S12",
+       "hasBES": true
+      },
+      {
+       "id": "demo-s13",
+       "name": "S13"
+      },
+      {
+       "id": "demo-s14",
+       "name": "S14"
+      },
+      {
+       "id": "demo-s15",
+       "name": "S15",
+       "hasPEI": true
+      },
+      {
+       "id": "demo-s16",
+       "name": "S16"
+      },
+      {
+       "id": "demo-s17",
+       "name": "S17"
+      },
+      {
+       "id": "demo-s18",
+       "name": "S18"
+      },
+      {
+       "id": "demo-s19",
+       "name": "S19",
+       "hasDSA": true
+      },
+      {
+       "id": "demo-s20",
+       "name": "S20"
+      },
+      {
+       "id": "demo-s21",
+       "name": "S21"
+      },
+      {
+       "id": "demo-s22",
+       "name": "S22"
+      }
+     ],
+     "activeBlockIndex": 0,
+     "blocks": [
+      {
+       "id": "demo-w4-b1",
+       "day": "Lunedì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "tipologia": "frontale_operativa",
+       "metodologia": "inquiry_based",
+       "lessonSubject": "Griglie e allineamenti",
+       "objective": "Riconoscere e usare una griglia per organizzare una composizione.",
+       "blockTitle": "La gabbia invisibile",
+       "lessonState": "progettata",
+       "messages": []
+      },
+      {
+       "id": "demo-w4-b2",
+       "day": "Mercoledì",
+       "status": "normale",
+       "module": "MODULO 1: Fondamenti del Design",
+       "tipologia": "laboratorio",
+       "metodologia": "cooperative_learning",
+       "lessonSubject": "Impaginare un manifesto",
+       "objective": "Applicare una griglia a un manifesto, a gruppi.",
+       "lessonState": "progettata",
+       "messages": []
+      },
+      {
+       "id": "demo-w4-b3",
+       "day": "Venerdì",
+       "status": "da definire",
+       "messages": []
+      }
+     ]
+    }
+   }
+  ],
+  "labels": [],
+  "students": [
+   {
+    "id": "demo-s01",
+    "name": "S01",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s02",
+    "name": "S02",
+    "notes": "Leadership naturale nei lavori di gruppo.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s03",
+    "name": "S03",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s04",
+    "name": "S04",
+    "notes": "Lavora molto bene a partire da esempi visivi.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ],
+    "hasDSA": true,
+    "measures": [
+     "Mappe concettuali",
+     "Font ad alta leggibilità",
+     "Sintesi vocale",
+     "Tempi aggiuntivi"
+    ]
+   },
+   {
+    "id": "demo-s05",
+    "name": "S05",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s06",
+    "name": "S06",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s07",
+    "name": "S07",
+    "notes": "Curiosa, fa domande di approfondimento.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s08",
+    "name": "S08",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s09",
+    "name": "S09",
+    "notes": "Si attiva nei lavori pratici.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ],
+    "hasBES": true,
+    "measures": [
+     "Consegne spezzate in passi",
+     "Lavoro in coppia con tutor"
+    ],
+    "otherMeasures": "Consegne lette anche ad alta voce."
+   },
+   {
+    "id": "demo-s10",
+    "name": "S10",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s11",
+    "name": "S11",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s12",
+    "name": "S12",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ],
+    "hasBES": true,
+    "measures": [
+     "Posto vicino alla lavagna",
+     "Riduzione delle consegne"
+    ]
+   },
+   {
+    "id": "demo-s13",
+    "name": "S13",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s14",
+    "name": "S14",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s15",
+    "name": "S15",
+    "notes": "Ottima manualità, predilige attività con materiali concreti.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ],
+    "hasPEI": true,
+    "measures": [
+     "Obiettivi minimi",
+     "Prova differenziata",
+     "Supporto del docente di sostegno",
+     "Pause programmate"
+    ]
+   },
+   {
+    "id": "demo-s16",
+    "name": "S16",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s17",
+    "name": "S17",
+    "notes": "Tende a lavorare da sola: favorire i gruppi.",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s18",
+    "name": "S18",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s19",
+    "name": "S19",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ],
+    "hasDSA": true,
+    "measures": [
+     "Calcolatrice",
+     "Formulari e schemi",
+     "Verifiche orali programmate",
+     "Valutazione del contenuto più che della forma"
+    ]
+   },
+   {
+    "id": "demo-s20",
+    "name": "S20",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s21",
+    "name": "S21",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Assente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   },
+   {
+    "id": "demo-s22",
+    "name": "S22",
+    "notes": "",
+    "evaluations": [
+     {
+      "date": "2026-09-14T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere spazi, strumenti e regole del laboratorio e condividere il patto formativo.",
+      "weekNumber": 1,
+      "blockIndex": 0,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-16T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Osservare e descrivere un oggetto quotidiano con un lessico tecnico di base.",
+      "weekNumber": 1,
+      "blockIndex": 1,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-18T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Riconoscere il design come processo e non solo come forma.",
+      "weekNumber": 1,
+      "blockIndex": 2,
+      "module": "MODULO 0: Orientamento"
+     },
+     {
+      "date": "2026-09-21T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Conoscere il cerchio cromatico e i principali contrasti di colore.",
+      "weekNumber": 2,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-23T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Costruire una moodboard cromatica a partire da un luogo reale.",
+      "weekNumber": 2,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-25T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Applicare tre contrasti di colore in una composizione.",
+      "weekNumber": 2,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-28T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Lunedì: Distinguere le principali famiglie di caratteri e il loro uso.",
+      "weekNumber": 3,
+      "blockIndex": 0,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-09-30T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Mercoledì: Progettare un manifesto tipografico usando contrasti di carattere e corpo.",
+      "weekNumber": 3,
+      "blockIndex": 1,
+      "module": "MODULO 1: Fondamenti del Design"
+     },
+     {
+      "date": "2026-10-02T10:00:00.000Z",
+      "value": "Presente",
+      "notes": "Blocco Venerdì: Dare e ricevere un feedback motivato sul lavoro dei compagni.",
+      "weekNumber": 3,
+      "blockIndex": 2,
+      "module": "MODULO 1: Fondamenti del Design"
+     }
+    ]
+   }
+  ],
+  "notebooks": [],
+  "toolkit_shortcuts": [],
+  "toolkit_categories": [],
+  "activities": [],
+  "settings": [
+   {
+    "key": "ada-constitution",
+    "value": "MODULO 0: Orientamento\nRuolo: Accoglienza della classe 3B, presentazione del percorso, del laboratorio e delle regole di lavoro.\nSignificato: Il gruppo-classe diventa comunità di pratica; si attivano le prime competenze di osservazione.\n\nMODULO 1: Fondamenti del Design\nRuolo: Linguaggi visivi, teoria del colore, tipografia e composizione.\nSignificato: Gli studenti costruiscono un vocabolario visivo condiviso e imparano a leggere gli oggetti con occhio critico.\n⦁ Concetti Chiave: Osservazione consapevole; Analisi visiva; Storia del design\n⦁ Competenze Operative: Teoria del colore; Tipografia; Composizione e layout\n⦁ Attività Chiave: Autopsia dell'oggetto; Moodboard; Brief di progetto\n\nMODULO 2: Processo Progettuale\nRuolo: Il metodo progettuale dalla ricerca al prototipo.\nSignificato: Gli studenti sperimentano un ciclo completo di design thinking.\n⦁ Concetti Chiave: Design Thinking; Ricerca utente; Problem framing\n⦁ Competenze Operative: Sketching; Prototipazione rapida; Presentazione del progetto\n⦁ Attività Chiave: Mappa di empatia; Prototipo di carta; Pitch di progetto\n\nUDA 1: Un oggetto per la scuola\nRuolo: Compito autentico di gruppo: progettare un piccolo oggetto utile per gli spazi comuni dell'istituto.\nSignificato: Mette insieme osservazione, metodo progettuale e comunicazione.\n\nEDUCAZIONE CIVICA: Design e sostenibilità\nRuolo: Ciclo di vita dei prodotti e scelte responsabili dei materiali.\n\nMODULO 3: Riflessione e Bilancio\nRuolo: Portfolio, autovalutazione e restituzione del percorso.\nSignificato: Gli studenti raccontano il proprio apprendimento."
+   },
+   {
+    "key": "ada-crew-context",
+    "value": "S01\nS02 — Note: Leadership naturale nei lavori di gruppo.\nS03\nS04 [DSA] — Misure: Mappe concettuali; Font ad alta leggibilità; Sintesi vocale; Tempi aggiuntivi | Note: Lavora molto bene a partire da esempi visivi.\nS05\nS06\nS07 — Note: Curiosa, fa domande di approfondimento.\nS08\nS09 [BES] — Misure: Consegne spezzate in passi; Lavoro in coppia con tutor | Altre misure: Consegne lette anche ad alta voce. | Note: Si attiva nei lavori pratici.\nS10\nS11\nS12 [BES] — Misure: Posto vicino alla lavagna; Riduzione delle consegne\nS13\nS14\nS15 [PEI] — Misure: Obiettivi minimi; Prova differenziata; Supporto del docente di sostegno; Pause programmate | Note: Ottima manualità, predilige attività con materiali concreti.\nS16\nS17 — Note: Tende a lavorare da sola: favorire i gruppi.\nS18\nS19 [DSA] — Misure: Calcolatrice; Formulari e schemi; Verifiche orali programmate; Valutazione del contenuto più che della forma\nS20\nS21\nS22"
+   },
+   {
+    "key": "ada-rules-context",
+    "value": "# Patto Formativo — Laboratorio di Design, 3B (classe fittizia)\n\n## Ambiente di lavoro\n- Il laboratorio è uno spazio condiviso: si lascia in ordine per chi viene dopo.\n- Si lavora spesso in gruppo: ognuno ha un ruolo e lo dichiara.\n\n## Valutazione\n- **Processo (40%)**: quaderno di progetto, schizzi, revisioni.\n- **Elaborati (40%)**: qualità tecnica e coerenza progettuale.\n- **Partecipazione e collaborazione (20%)**.\n- Le misure previste nei piani personalizzati si applicano a tutte le prove.\n\n## Feedback e recupero\n- Revisione settimanale dei lavori; ogni consegna può essere migliorata una volta."
+   },
+   {
+    "key": "ada-teacher-profile",
+    "value": "Nome: Docente Demo\nMateria: Laboratorio di Design\nRuolo: Docente curricolare\nScuola: Liceo artistico (scuola fittizia)\nClasse: 3B — classe fittizia di 22 studenti, identificati solo da codici\nOre: 3 blocchi da 2 ore a settimana (lunedì, mercoledì, venerdì)"
+   },
+   {
+    "key": "ada-disciplina",
+    "value": "Laboratorio di Design · 3B (demo)"
+   },
+   {
+    "key": "ada-route-context",
+    "value": "Settimana 1: 14-20 set (3 blocchi)\nSettimana 2: 21-27 set (3 blocchi)\nSettimana 3: 28 set - 4 ott (3 blocchi)\nSettimana 4: 5-11 ott (3 blocchi)\nSettimana 5: 12-18 ott (3 blocchi)\nSettimana 6: 19-25 ott (3 blocchi)\nSettimana 7: 26 ott - 1 nov (3 blocchi)\nSettimana 8: 2-8 nov (3 blocchi)\nSettimana 9: 9-15 nov (3 blocchi)\nSettimana 10: 16-22 nov (3 blocchi)\nSettimana 11: 23-29 nov (3 blocchi)\nSettimana 12: 30 nov - 6 dic (3 blocchi)\nSettimana 13: 7-13 dic (3 blocchi)\nSettimana 14: 14-20 dic (3 blocchi)"
+   },
+   {
+    "key": "ada-route-calendar",
+    "value": "[{\"weekNumber\":1,\"mondayDate\":\"2026-09-14\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":2,\"mondayDate\":\"2026-09-21\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":3,\"mondayDate\":\"2026-09-28\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":4,\"mondayDate\":\"2026-10-05\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":5,\"mondayDate\":\"2026-10-12\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":6,\"mondayDate\":\"2026-10-19\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":7,\"mondayDate\":\"2026-10-26\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":8,\"mondayDate\":\"2026-11-02\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":9,\"mondayDate\":\"2026-11-09\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":10,\"mondayDate\":\"2026-11-16\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":11,\"mondayDate\":\"2026-11-23\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":12,\"mondayDate\":\"2026-11-30\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":13,\"mondayDate\":\"2026-12-07\",\"activeBlocks\":[1,2,3]},{\"weekNumber\":14,\"mondayDate\":\"2026-12-14\",\"activeBlocks\":[1,2,3]}]"
+   },
+   {
+    "key": "ada-gemini-block-day-defaults",
+    "value": "{\"0\":\"Lunedì\",\"1\":\"Mercoledì\",\"2\":\"Venerdì\"}"
+   },
+   {
+    "key": "ada-block-hour-defaults",
+    "value": "{\"0\":2,\"1\":2,\"2\":2}"
+   },
+   {
+    "key": "ada-course-materia",
+    "value": "Laboratorio di Design"
+   },
+   {
+    "key": "ada-course-scuola",
+    "value": "Liceo artistico (scuola fittizia)"
+   },
+   {
+    "key": "ada-course-anno",
+    "value": "2026/27"
+   },
+   {
+    "key": "ada-course-docente",
+    "value": "Docente Demo"
+   },
+   {
+    "key": "ada-mode",
+    "value": "balanced"
+   }
+  ]
+ }
+}

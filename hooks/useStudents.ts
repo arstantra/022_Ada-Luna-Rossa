@@ -1,7 +1,7 @@
 // hooks/useStudents.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Student, Evaluation, BlockDetails } from '../types';
-// Student type ora include firstName, lastName, hasBES, hasDSA, besNotes, dsaNotes, certificationNotes
+// Student.name è il CODICE dello studente; strumenti e misure in measures/otherMeasures
 import { parseCrewContextToNames } from '../utils';
 import * as db from '../services/db';
 
@@ -215,18 +215,14 @@ export const useStudents = (crewContext: string) => {
     const addStructuredStudent = useCallback(async (data: Omit<Student, 'id' | 'evaluations' | 'adaSummary'>): Promise<Student> => {
         const newStudent: Student = {
             id: `student-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            name: data.name,
-            firstName: data.firstName,
-            lastName: data.lastName,
+            name: data.name, // codice studente (es. "S07"), mai nome e cognome
             notes: data.notes ?? '',
             evaluations: [],
             hasBES: data.hasBES,
             hasDSA: data.hasDSA,
             hasPEI: data.hasPEI,
-            besNotes: data.besNotes,
-            dsaNotes: data.dsaNotes,
-            peiNotes: data.peiNotes,
-            certificationNotes: data.certificationNotes,
+            measures: data.measures,
+            otherMeasures: data.otherMeasures,
         };
         setStudents(prev => [...prev, newStudent].sort((a, b) => a.name.localeCompare(b.name, 'it')));
         await db.saveStudent(newStudent);

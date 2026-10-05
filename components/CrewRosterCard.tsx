@@ -13,9 +13,9 @@ interface CrewRosterCardProps {
 }
 
 /**
- * Genera il crewContext testuale che Ada usa come contesto.
- * Il formato è leggibile e strutturato: un'riga per studente con eventuale
- * indicazione di BES/DSA e note, così Ada può ragionare su ogni profilo.
+ * Genera il crewContext testuale che Ada usa come contesto (e che viene inviato all'AI).
+ * Una riga per studente: CODICE [flag] — Misure: … | Altre misure: … | Note: …
+ * Non include MAI i campi del vecchio formato (nomi reali, note BES/DSA/PEI, certificazioni).
  */
 export const buildCrewContext = (students: Student[]): string => {
     if (students.length === 0) return '';
@@ -30,10 +30,8 @@ export const buildCrewContext = (students: Student[]): string => {
             if (s.hasPEI) flags.push('PEI');
             if (flags.length > 0) line += ` [${flags.join(', ')}]`;
             const details: string[] = [];
-            if (s.besNotes) details.push(`BES: ${s.besNotes}`);
-            if (s.dsaNotes) details.push(`DSA: ${s.dsaNotes}`);
-            if (s.peiNotes) details.push(`PEI: ${s.peiNotes}`);
-            if (s.certificationNotes) details.push(`Certificazioni: ${s.certificationNotes}`);
+            if (s.measures && s.measures.length > 0) details.push(`Misure: ${s.measures.join('; ')}`);
+            if (s.otherMeasures) details.push(`Altre misure: ${s.otherMeasures}`);
             if (s.notes) details.push(`Note: ${s.notes}`);
             if (details.length > 0) line += ` — ${details.join(' | ')}`;
             return line;
@@ -41,11 +39,10 @@ export const buildCrewContext = (students: Student[]): string => {
         .join('\n');
 };
 
-/** Iniziali per l'avatar */
-const initials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+/** Etichetta breve per l'avatar: le cifre finali del codice (es. "S07" → "07") */
+const initials = (code: string) => {
+    const digits = code.replace(/\D/g, '');
+    return (digits ? digits.slice(-2) : code.slice(0, 2)).toUpperCase();
 };
 
 /** Colore avatar deterministico dal nome */
@@ -186,6 +183,7 @@ const CrewRosterCard: React.FC<CrewRosterCardProps> = ({
             {modalOpen && (
                 <StudentFormModal
                     student={editingStudent}
+                    existingCodes={students.map(s => s.name)}
                     onSave={handleSave}
                     onClose={() => { setModalOpen(false); setEditingStudent(null); }}
                 />

@@ -101,23 +101,53 @@ Settimana 21: 9-13 marzo 2026 (3 blocchi) - Portfolio e documentazione
 Settimana 22: 16-20 marzo 2026 (3 blocchi) - Riflessione metacognitiva
 Settimana 23: 23-27 marzo 2026 (3 blocchi) - Bilancio del percorso e autovalutazione`;
 
-export const DEFAULT_CREW_CONTEXT = `[Sostituisci con i nomi reali delle tue studentesse/studenti, uno per riga]
+// Ada non usa mai nomi e cognomi: solo codici (es. S01). Questi sono codici di esempio.
+export const DEFAULT_CREW_CONTEXT = `S01
+S02
+S03
+S04
+S05
+S06
+S07
+S08
+S09
+S10
+S11
+S12
+S13
+S14
+S15`;
 
-Sofia Bianchi
-Giulia Rossi
-Martina Ferrari
-Elena Conti
-Alessia Ricci
-Sara Lombardi
-Valentina Greco
-Chiara Romano
-Federica Esposito
-Alice Moretti
-Laura Fontana
-Emma De Luca
-Giorgia Barbieri
-Beatrice Gallo
-Francesca Marini`;
+/**
+ * Strumenti compensativi e misure didattiche selezionabili nella scheda studente.
+ * Descrivono COSA SERVE per lavorare, mai il perché (nessuna diagnosi).
+ */
+export const STUDENT_MEASURES: { group: string; items: string[] }[] = [
+    { group: 'Strumenti', items: [
+        'Mappe concettuali',
+        'Formulari e schemi',
+        'Calcolatrice',
+        'Sintesi vocale',
+        'Font ad alta leggibilità',
+        'Testo ingrandito',
+        'Tabelle e glossari',
+    ]},
+    { group: 'Prove e consegne', items: [
+        'Tempi aggiuntivi',
+        'Riduzione delle consegne',
+        'Consegne spezzate in passi',
+        'Verifiche orali programmate',
+        'Prova differenziata',
+        'Obiettivi minimi',
+        'Valutazione del contenuto più che della forma',
+    ]},
+    { group: 'Organizzazione', items: [
+        'Posto vicino alla lavagna',
+        'Pause programmate',
+        'Lavoro in coppia con tutor',
+        'Supporto del docente di sostegno',
+    ]},
+];
 
 export const DEFAULT_RULES_CONTEXT = `# Sistema di Valutazione — Laboratorio di Design
 

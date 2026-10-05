@@ -38,7 +38,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, isModal = false,
         <p className="mt-2 text-sm text-gray-400">
           {isModal
             ? 'Inserisci la nuova chiave API Gemini per aggiornare le impostazioni.'
-            : 'Per iniziare, inserisci la tua chiave API Google Gemini. È gratuita e resta sul tuo browser.'}
+            : 'Per iniziare, inserisci la tua chiave API Google Gemini. Per provare la demo va bene la chiave gratuita: usa solo dati inventati, mai dati reali di studenti.'}
         </p>
       </div>
 
@@ -72,7 +72,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, isModal = false,
       </form>
 
       <div className="border-t border-gray-700 pt-5 space-y-3">
-        <p className="text-xs text-gray-500 text-center font-semibold uppercase tracking-wide">Come ottenere la chiave gratuita</p>
+        <p className="text-xs text-gray-500 text-center font-semibold uppercase tracking-wide">Come ottenere la chiave</p>
         <ol className="text-xs text-gray-400 space-y-2 list-decimal list-inside">
           <li>Vai su <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">aistudio.google.com/apikey</a></li>
           <li>Accedi con il tuo account Google</li>
@@ -80,7 +80,8 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet, isModal = false,
           <li>Copia la chiave e incollala qui sopra</li>
         </ol>
         <p className="text-xs text-gray-600 text-center pt-1">
-          La chiave viene salvata solo nel tuo browser e non viene mai inviata a server terzi.
+          La chiave è salvata solo in questo browser e viene inviata solo a Google, insieme alle richieste che fai ad Ada.
+          Con la chiave gratuita Google può usare i contenuti per migliorare i suoi servizi: per questo la demo va usata solo con dati inventati.
         </p>
       </div>
 

@@ -6,6 +6,7 @@ import FoundingDocumentsView from './components/FoundingDocumentsView';
 import ApiKeySetup from './components/ApiKeySetup';
 import AppHeader from './components/AppHeader';
 import AppFooter from './components/AppFooter';
+import DemoBanner, { DEMO_BANNER_HIDDEN_KEY } from './components/DemoBanner';
 import { SparklesIcon } from './components/Icons';
 import { ADA_API_KEY_STORAGE } from './services/gemini';
 
@@ -13,6 +14,13 @@ const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem(ADA_API_KEY_STORAGE) || '');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const masterContext = useMasterContext();
+  const [demoBannerHidden, setDemoBannerHidden] = useState<boolean>(() => {
+    try { return sessionStorage.getItem(DEMO_BANNER_HIDDEN_KEY) === '1'; } catch { return false; }
+  });
+  const setDemoBanner = (hidden: boolean) => {
+    setDemoBannerHidden(hidden);
+    try { sessionStorage.setItem(DEMO_BANNER_HIDDEN_KEY, hidden ? '1' : '0'); } catch { /* storage non disponibile */ }
+  };
 
   const handleApiKeySet = (key: string) => {
     localStorage.setItem(ADA_API_KEY_STORAGE, key);
@@ -56,9 +64,16 @@ const App: React.FC = () => {
         />
       )}
       <div className="flex flex-col h-screen w-screen">
-        <AppHeader disciplina={masterContext.disciplina} />
-        <div className="flex-1 overflow-hidden pt-14">
-          <MainApp masterContext={masterContext} onOpenApiSettings={() => setShowApiKeyModal(true)} />
+        <AppHeader
+          disciplina={masterContext.disciplina}
+          showDemoBadge={demoBannerHidden}
+          onDemoBadgeClick={() => setDemoBanner(false)}
+        />
+        <div className="flex-1 overflow-hidden pt-14 flex flex-col">
+          {!demoBannerHidden && <DemoBanner onClose={() => setDemoBanner(true)} />}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <MainApp masterContext={masterContext} onOpenApiSettings={() => setShowApiKeyModal(true)} />
+          </div>
         </div>
         <AppFooter disciplina={masterContext.disciplina} />
       </div>
