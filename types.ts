@@ -54,13 +54,21 @@ export interface Evaluation {
 
 export interface Student {
     id: string;
-    /** Nome completo — usato ovunque per retro-compatibilità. Derivato da firstName+lastName se disponibili. */
+    /**
+     * CODICE dello studente (es. "S07"). Ada non conosce nomi e cognomi: la corrispondenza
+     * codice ↔ persona vive solo fuori da Ada (app locale cifrata). Il campo si chiama ancora
+     * `name` per retro-compatibilità: è l'etichetta usata ovunque nell'interfaccia.
+     */
     name: string;
-    /** Nome (inserimento strutturato da modale Equipaggio) */
+    /** @deprecated non più usato: Ada lavora solo con codici */
     firstName?: string;
-    /** Cognome (inserimento strutturato da modale Equipaggio) */
+    /** @deprecated non più usato: Ada lavora solo con codici */
     lastName?: string;
     notes?: string;
+    /** Strumenti compensativi e misure didattiche (voci di STUDENT_MEASURES). Mai diagnosi. */
+    measures?: string[];
+    /** Altre misure didattiche in testo libero (filtrato contro termini sanitari). */
+    otherMeasures?: string;
     evaluations: Evaluation[];
     adaSummary?: {
         content: string;
@@ -70,9 +78,13 @@ export interface Student {
     hasBES?: boolean;
     hasDSA?: boolean;
     hasPEI?: boolean;
+    /** @deprecated sostituito da measures/otherMeasures; non viene più inviato all'AI */
     besNotes?: string;
+    /** @deprecated sostituito da measures/otherMeasures; non viene più inviato all'AI */
     dsaNotes?: string;
+    /** @deprecated sostituito da measures/otherMeasures; non viene più inviato all'AI */
     peiNotes?: string;
+    /** @deprecated campo eliminato (dati sanitari); non viene più inviato all'AI */
     certificationNotes?: string;
 }
 

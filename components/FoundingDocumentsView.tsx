@@ -448,7 +448,7 @@ const FoundingDocumentsView: React.FC<FoundingDocumentsViewProps> = ({
                                 {equipState.isOpen && (
                                     <div className="border-t border-gray-700/40 px-5 pb-5 pt-4">
                                         <p className="text-gray-400 text-xs mb-4 leading-relaxed">
-                                            Le studentesse e gli studenti del corso. Aggiungi ognuno con nome, cognome e — se necessario — segnalazioni BES/DSA. Ada usa questi profili per adattare suggerimenti e attività.
+                                            Le studentesse e gli studenti del corso, identificati solo da un codice (es. S07): mai nomi né cognomi. Per ognuno puoi indicare strumenti e misure didattiche, mai diagnosi. Ada usa questi profili per adattare suggerimenti e attività.
                                         </p>
                                         <CrewRosterCard
                                             students={students}

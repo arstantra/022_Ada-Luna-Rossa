@@ -499,7 +499,7 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
                                                         }
                                                     }}
                                                     rows={2}
-                                                    placeholder="Nota rapida (salvata al blur)..."
+                                                    placeholder="Nota rapida (codici, mai nomi)..."
                                                     className="w-full p-2 bg-gray-800/60 border border-gray-700/50 rounded-md text-xs text-gray-300 placeholder-gray-600 resize-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                                                 />
                                             )}
@@ -716,7 +716,7 @@ const LessonInCorsoTab: React.FC<LessonInCorsoTabProps> = ({
                                 onChange={e => setLocalNotes(e.target.value)}
                                 rows={6}
                                 className="w-full mt-3 p-3 bg-gray-900/60 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 resize-y font-serif focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
-                                placeholder="Osservazioni, imprevisti, reazioni della classe... (salvataggio automatico)"
+                                placeholder="Osservazioni, imprevisti, reazioni della classe... Scrivi i codici (S07), mai i nomi. (salvataggio automatico)"
                             />
 
                             {analysis && (

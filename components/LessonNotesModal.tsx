@@ -43,7 +43,7 @@ const LessonNotesModal: React.FC<LessonNotesModalProps> = ({ isOpen, onClose, on
                 ref={textareaRef}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Es: Lezione molto positiva. Viola e Martina brillanti sull'analisi dell'oggetto. Qualche difficoltà generale sul concetto di 'ciclo di vita'..."
+                placeholder="Es: Lezione molto positiva. S03 e S11 brillanti sull'analisi dell'oggetto. Qualche difficoltà generale sul concetto di 'ciclo di vita'... (usa i codici, mai i nomi)"
                 className="w-full h-64 p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 text-gray-200 resize-y"
             />
         </Modal>

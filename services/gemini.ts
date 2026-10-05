@@ -196,7 +196,7 @@ export const streamChatResponse = async (
         : '';
     const systemInstruction = `${masterContext.systemInstruction}${teacherContext}\n\n${getModePrompt(currentModeId)}`;
 
-    const studentContext = students ? `Contesto studentesse in classe: ${students.map(s => s.name).join(', ')}.` : '';
+    const studentContext = students ? `Studenti in classe (identificati solo da codici, mai nomi): ${students.map(s => s.name).join(', ')}.` : '';
 
     const dynamicStrategicMap = renderStrategicDashboardToMarkdown(conversations, availableWeeks);
 
@@ -290,28 +290,6 @@ const groupSuggestionSchema: FunctionDeclaration = {
     }
 };
 
-export const generateGroupSuggestions = async (students: Student[], objective: string, maxGroupSize: number): Promise<{ groups: GroupDefinition[] }> => {
-    const studentList = students.map(s => `- ${s.name} (ID: ${s.id})`).join('\n');
-    const prompt = `Obiettivo: ${objective}\nLista Studentesse:\n${studentList}\n\nCrea gruppi di lavoro bilanciati. Considera possibili dinamiche di gruppo e crea combinazioni eterogenee o omogenee a seconda dell'obiettivo, fornendo una motivazione per ogni gruppo. Ogni gruppo deve avere un massimo di ${maxGroupSize} studentesse. Se il numero totale di studentesse non è divisibile equamente, crea gruppi di dimensioni il più possibile simili, rispettando questo limite massimo (ad esempio, alcuni gruppi potrebbero avere una studentessa in più o in meno).`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-            tools: [{ functionDeclarations: [groupSuggestionSchema] }],
-            toolConfig: { functionCallingConfig: { mode: FUNCTION_CALLING_MODE_ANY } },
-            thinkingConfig: { thinkingBudget: 8192 }
-        }
-    });
-
-    const call = response.functionCalls?.[0];
-    if (call?.name === 'create_student_groups') {
-        const args = extractArgs<{ groups?: GroupDefinition[] }>(call.args);
-        if (args.groups) return { groups: args.groups };
-    }
-    throw new Error("La risposta dell'AI non conteneva una struttura di gruppi valida.");
-};
-
 export const generateGroupSuggestionWithCriteria = async (
     students: Student[],
     criteria: string[],
@@ -327,7 +305,8 @@ export const generateGroupSuggestionWithCriteria = async (
     const studentList = students
         .map((s, idx) => {
             // Tronca le note a 120 caratteri per evitare prompt eccessivamente lunghi
-            const notes = [s.notes, s.besNotes, s.dsaNotes]
+            // Solo misure didattiche e note del docente: mai i campi sanitari del vecchio formato
+            const notes = [s.measures?.join(', '), s.otherMeasures, s.notes]
                 .filter(Boolean)
                 .map(n => (n ?? '').slice(0, 120))
                 .join(' — ');
@@ -372,7 +351,7 @@ const lessonAnalysisSchema: FunctionDeclaration = {
         type: Type.OBJECT,
         properties: {
             performance: { type: Type.STRING, description: "Una valutazione qualitativa generale della performance della classe (es. 'Ottima', 'Discreta con aree di miglioramento')." },
-            highlightedStudents: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Nomi delle studentesse che si sono distinte in positivo." },
+            highlightedStudents: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Codici degli studenti che si sono distinti in positivo." },
             difficulties: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Aree di difficoltà o concetti non compresi dalla maggior parte della classe." },
             suggestion: { type: Type.STRING, description: "Un suggerimento strategico per la prossima lezione basato sull'analisi." }
         },
@@ -381,7 +360,7 @@ const lessonAnalysisSchema: FunctionDeclaration = {
 };
 
 export const generateLessonAnalysis = async (notes: string, studentNames: string[]): Promise<AdaAnalysis> => {
-    const prompt = `Analizza le seguenti note di lezione. I nomi delle studentesse sono: ${studentNames.join(', ')}.\n\nNOTE:\n${notes}`;
+    const prompt = `Analizza le seguenti note di lezione. Gli studenti sono identificati da codici: ${studentNames.join(', ')}.\n\nNOTE:\n${notes}`;
 
     const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -436,54 +415,6 @@ export const analyzeEvaluationText = async (evaluationText: string, studentName:
     throw new Error("L'AI non è riuscita a strutturare la valutazione. Prova a riformattare il testo.");
 };
 
-
-
-
-export const generateClassroomTrendAnalysis = async (qualitativeData: string, qualitativeNotes: string): Promise<string> => {
-    const prompt = `Sei un'analista didattico. Ti fornirò dati qualitativi sull'andamento della classe (derivati da inferenze) e le note qualitative generali del docente. Il tuo compito è incrociare queste informazioni per generare una sintesi strategica.\n\n**DATI QUALITATIVI E TREND INFERITI:**\n${qualitativeData}\n\n**NOTE QUALITATIVE DEL DOCENTE:**\n${qualitativeNotes}\n\n**TUA ANALISI:**\nBasandoti su tutto questo, fornisci una sintesi che includa:\n1. Un'analisi del trend generale dell'energia della classe.\n2. Identificazione di cluster di studentesse (es. profili di crescita simili).\n3. Suggerimenti strategici concreti per le prossime lezioni basati sulla mappa dei concetti.`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-            thinkingConfig: { thinkingBudget: 8192 }
-        }
-    });
-    return response.text.trim();
-};
-
-export const generateStudentSummary = async (studentName: string, notes: string, evaluations: Evaluation[]): Promise<string> => {
-    const formattedEvaluations = evaluations
-        .map(e => `- Settimana ${e.weekNumber}, Blocco ${e.blockIndex}: [${e.value}] ${e.notes}`)
-        .join('\n');
-
-    const prompt = `Sei Ada, un'AI esperta in pedagogia. Analizza i dati raccolti per la studentessa "${studentName}" e crea una sintesi pedagogica.
-
-**NOTE QUALITATIVE DEL DOCENTE:**
-${notes || "Nessuna nota qualitativa fornita."}
-
-**DIARIO DI BORDO (Attività e Presenze):**
-${formattedEvaluations || "Nessun dato nel diario di bordo."}
-
-**TUA ANALISI:**
-Basandoti su tutto questo, fornisci una sintesi che includa:
-1.  **Punti di Forza:** Identifica le aree in cui la studentessa eccelle o mostra un forte interesse.
-2.  **Aree di Miglioramento:** Evidenzia i concetti o le abilità su cui la studentessa potrebbe concentrarsi.
-3.  **Stile di Apprendimento (Inferito):** Basandoti sulle note, prova a ipotizzare lo stile di apprendimento preferito dalla studentessa (es. pratico, visivo, collaborativo).
-4.  **Prossimi Passi Suggeriti:** Fornisci uno o due suggerimenti pratici per il docente per supportare la crescita della studentessa.
-
-Usa un tono costruttivo e professionale. Formatta la risposta in Markdown.`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-            temperature: 0.5,
-            thinkingConfig: { thinkingBudget: 8192 }
-        }
-    });
-    return response.text.trim();
-};
 
 const weekThemeSchema: FunctionDeclaration = {
     name: "suggest_week_theme",
@@ -886,7 +817,7 @@ export const generateLessonNoteAnalysis = async (
 NOTE DEL DOCENTE:
 ${notes}
 
-STUDENTI (usa gli ID nei campi studentId):
+STUDENTI — identificati da codici, come compaiono nelle note (usa gli ID nei campi studentId):
 ${studentList}
 
 Rispondi SOLO con un oggetto JSON con questa struttura:
@@ -1015,119 +946,6 @@ Usa la funzione 'generate_block_details' per la tua risposta. Il syllabus e i ma
         };
     }
     throw new Error("L'AI non ha fornito i dettagli del blocco in un formato valido.");
-};
-
-export const generateActivityObservationInsights = async (
-    observations: import('../types').ActivityObservation[],
-    studentName: string,
-    activityTitle: string
-): Promise<{ sentiment: 'positivo' | 'neutro' | 'critico'; tags: string[]; alerts: string[]; summary: string }> => {
-    const obsText = observations.map((o, i) => `${i + 1}. [${o.timestamp.slice(0, 10)}] ${o.text}`).join('\n');
-    const prompt = `Sei Ada, assistente AI per un insegnante. Analizza le seguenti note di osservazione su uno studente relative all'attività indicata e restituisci un'analisi strutturata in JSON puro (senza markdown).
-
-STUDENTE: ${studentName}
-ATTIVITÀ: ${activityTitle}
-
-NOTE DI OSSERVAZIONE:
-${obsText || '(nessuna nota)'}
-
-Rispondi SOLO con un oggetto JSON con questa struttura:
-{
-  "sentiment": "positivo" | "neutro" | "critico",
-  "tags": ["<tag1>", "<tag2>"],
-  "alerts": ["<segnale che richiede attenzione>"],
-  "summary": "<sintesi in 2-3 righe, tono professionale, no voti>"
-}
-
-Regole:
-- sentiment: valutazione complessiva dell'andamento dello studente in questa attività
-- tags: max 5, brevi (es. "autonomia", "difficoltà organizzativa", "partecipazione attiva")
-- alerts: segnali che richiedono attenzione del docente; può essere array vuoto se nessuno
-- summary: sintetica e fattuale, senza giudizi valutativi numerici`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { temperature: 0.3, thinkingConfig: { thinkingBudget: 0 } }
-    });
-
-    try {
-        const cleaned = response.text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        return {
-            sentiment: (['positivo', 'neutro', 'critico'] as const).includes(parsed.sentiment) ? parsed.sentiment : 'neutro',
-            tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
-            alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
-            summary: typeof parsed.summary === 'string' ? parsed.summary : '',
-        };
-    } catch {
-        throw new Error("L'AI non ha restituito un'analisi strutturata valida.");
-    }
-};
-
-export const generateAssignmentPlan = async (
-    groups: import('../types').GroupDefinition[],
-    materials: import('../types').LessonMaterial[],
-    students: import('../types').Student[],
-    blockObjective: string,
-    systemInstruction: string
-): Promise<import('../types').LessonAssignment[]> => {
-    const studentMap = new Map(students.map(s => [s.id, s]));
-
-    const groupDescriptions = groups.map((g, i) => {
-        const label = g.name || `Gruppo ${i + 1}`;
-        const memberDescriptions = g.studentIds.map(sid => {
-            const st = studentMap.get(sid);
-            if (!st) return sid;
-            const flags = [st.hasBES && 'BES', st.hasDSA && 'DSA', st.hasPEI && 'PEI'].filter(Boolean).join(', ');
-            return `${st.name}${flags ? ` (${flags})` : ''}${st.notes ? `: ${st.notes.slice(0, 80)}` : ''}`;
-        }).join('\n  ');
-        return `**${label}** (${g.studentIds.length === 1 ? 'individuale' : `${g.studentIds.length} studenti`}):\n  ${memberDescriptions}`;
-    }).join('\n\n');
-
-    const materialDescriptions = materials.map(m =>
-        `- id:"${m.id}" | tipo:${m.type} | titolo:"${m.title}"${m.productionBrief ? ` | brief:"${m.productionBrief.slice(0, 100)}"` : ''}${m.notes ? ` | note:"${m.notes}"` : ''}`
-    ).join('\n');
-
-    const prompt = `${systemInstruction}
-
-Sei Ada, assistente AI per la didattica. Devi creare un piano di consegne personalizzato per i gruppi di questa lezione.
-
-## Obiettivo didattico del blocco
-${blockObjective || 'Non specificato'}
-
-## Gruppi da servire
-${groupDescriptions}
-
-## Materiali disponibili (usa i loro id esatti)
-${materialDescriptions || 'Nessun materiale disponibile — usa array vuoto per materialIds.'}
-
-## Istruzioni
-Per ogni gruppo, scegli i materiali più adatti tenendo conto di: livello, BES/DSA/PEI, punti di forza dalle note.
-- Un gruppo può ricevere più materiali
-- Un gruppo può ricevere 0 materiali (es. lavora sul master del blocco)
-- Scrivi una rationale sintetica (1-2 frasi) che spiega la scelta
-
-Rispondi SOLO con un array JSON valido, senza markdown, senza commenti:
-[
-  {
-    "groupId": "nome gruppo o studentId se individuale",
-    "groupLabel": "etichetta leggibile",
-    "isIndividual": true/false,
-    "materialIds": ["id1", "id2"],
-    "rationale": "motivazione sintetica"
-  }
-]`;
-
-    const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { temperature: 0.4, thinkingConfig: { thinkingBudget: 0 } }
-    });
-
-    const raw = response.text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    const parsed: Omit<import('../types').LessonAssignment, 'id'>[] = JSON.parse(raw);
-    return parsed.map(a => ({ ...a, id: crypto.randomUUID() }));
 };
 
 export const generateActivityBriefing = async (

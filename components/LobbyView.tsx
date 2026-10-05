@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { SparklesIcon, SendIcon, XIcon } from './Icons';
 import { parseTeacherName } from '../utils';
+import * as db from '../services/db';
 
 // ── Posizioni fisse del pattern stelline — distribuzione irregolare intenzionale
 const SPARKLE_PATTERN = [
@@ -36,6 +37,24 @@ interface LobbyViewProps {
 const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) => {
   const [input, setInput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [demoStep, setDemoStep] = useState<'idle' | 'confirm' | 'loading' | 'error'>('idle');
+
+  // Carica la classe di esempio (interamente fittizia, studenti solo codici) sostituendo i dati attuali
+  const loadDemoClass = useCallback(async () => {
+    setDemoStep('loading');
+    try {
+      const res = await fetch('/demo/classe-esempio.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const backup = await res.json();
+      if (!backup?.data) throw new Error('File della classe di esempio non valido');
+      await db.restoreFromBackup(backup.data);
+      sessionStorage.setItem('backupRestored', 'true');
+      window.location.reload();
+    } catch (err) {
+      console.error('[LobbyView] Caricamento classe di esempio fallito', err);
+      setDemoStep('error');
+    }
+  }, []);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const teacherName = parseTeacherName(teacherProfile);
   const firstName = teacherName ? teacherName.split(' ')[0] : null;
@@ -192,6 +211,33 @@ const LobbyView: React.FC<LobbyViewProps> = ({ teacherProfile, onStartChat }) =>
           <span className="text-[11px] font-mono tracking-wider">Come funziona Ada</span>
           <span className="text-[10px] text-purple-500/35 group-hover:text-purple-400/60 transition-colors duration-200 ml-0.5">→</span>
         </button>
+
+        {/* Classe di esempio — dati interamente fittizi, per provare la demo */}
+        <div className="flex flex-col items-center gap-2 text-[11px] font-mono">
+          {demoStep === 'idle' && (
+            <button
+              onClick={() => setDemoStep('confirm')}
+              className="text-gray-500 hover:text-gray-300 underline decoration-gray-700 underline-offset-4 hover:decoration-gray-500 transition-colors"
+            >
+              Prova con una classe di esempio (3B fittizia, studenti S01–S22)
+            </button>
+          )}
+          {demoStep === 'confirm' && (
+            <div className="flex flex-col items-center gap-2 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/5">
+              <span className="text-amber-300/90 text-center">Sostituisce tutti i dati presenti in questo browser. Continuare?</span>
+              <div className="flex gap-2">
+                <button onClick={loadDemoClass} className="px-3 py-1 rounded-md bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition-colors">Carica la classe</button>
+                <button onClick={() => setDemoStep('idle')} className="px-3 py-1 rounded-md text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors">Annulla</button>
+              </div>
+            </div>
+          )}
+          {demoStep === 'loading' && <span className="text-gray-500">Caricamento della classe di esempio…</span>}
+          {demoStep === 'error' && (
+            <button onClick={() => setDemoStep('idle')} className="text-red-400/80 hover:text-red-300">
+              Non è stato possibile caricare la classe di esempio. Riprova
+            </button>
+          )}
+        </div>
 
       </div>
     </main>
